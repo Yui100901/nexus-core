@@ -49,23 +49,23 @@ func (m *Mapper[T]) GetByID(id string) (*T, error) {
 }
 
 // GetPaginatedList 分页查询
-func (m *Mapper[T]) GetPaginatedList(page, pageSize int) ([]T, error) {
-	var list []T
+func (m *Mapper[T]) GetPaginatedList(page, pageSize int) ([]*T, error) {
+	var list []*T
 	offset := (page - 1) * pageSize
 	result := m.db.Limit(pageSize).Offset(offset).Find(&list)
 	return list, result.Error
 }
 
 // GetByCondition 条件查询
-func (m *Mapper[T]) GetByCondition(conditions map[string]interface{}) ([]T, error) {
-	var list []T
+func (m *Mapper[T]) GetByCondition(conditions map[string]interface{}) ([]*T, error) {
+	var list []*T
 	result := m.db.Where(conditions).Find(&list)
 	return list, result.Error
 }
 
 // GetSortedList 查询并排序
-func (m *Mapper[T]) GetSortedList(orderBy string) ([]T, error) {
-	var list []T
+func (m *Mapper[T]) GetSortedList(orderBy string) ([]*T, error) {
+	var list []*T
 	result := m.db.Order(orderBy).Find(&list)
 	return list, result.Error
 }
