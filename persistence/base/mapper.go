@@ -11,14 +11,18 @@ import (
 //
 
 type Mapper[T Model] struct {
-	model T
-	db    *gorm.DB
+	db *gorm.DB
 }
 
-func NewMapper[T Model](model T) *Mapper[T] {
+func NewMapper[T Model]() *Mapper[T] {
 	return &Mapper[T]{
-		model: model,
-		db:    Connect(),
+		db: Connect(),
+	}
+}
+
+func NewMapperWithDB[T Model](db *gorm.DB) *Mapper[T] {
+	return &Mapper[T]{
+		db: db,
 	}
 }
 
