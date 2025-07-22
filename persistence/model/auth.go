@@ -7,6 +7,8 @@ import "time"
 // @Date 2025/7/21 15 15
 //
 
+//认证表
+
 type Auth struct {
 	DeviceId      string    `gorm:"primaryKey;type:varchar(100)"`
 	CreatedAt     time.Time //创建时间
