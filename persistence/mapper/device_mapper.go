@@ -11,11 +11,11 @@ import (
 //
 
 type DeviceMapper struct {
-	bm *base.Mapper[model.Device]
+	*base.Mapper[model.Device]
 }
 
 func NewDeviceMapper() *DeviceMapper {
 	return &DeviceMapper{
-		bm: base.NewMapper[model.Device](),
+		Mapper: base.NewMapper[model.Device](),
 	}
 }

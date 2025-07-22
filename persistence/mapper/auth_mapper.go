@@ -11,11 +11,11 @@ import (
 //
 
 type AuthMapper struct {
-	bm *base.Mapper[model.Auth]
+	*base.Mapper[model.Auth]
 }
 
 func NewAuthMapper() *AuthMapper {
 	return &AuthMapper{
-		bm: base.NewMapper[model.Auth](),
+		Mapper: base.NewMapper[model.Auth](),
 	}
 }
