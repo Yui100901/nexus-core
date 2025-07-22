@@ -13,3 +13,9 @@ import (
 type DeviceMapper struct {
 	bm *base.Mapper[model.Device]
 }
+
+func NewDeviceMapper() *DeviceMapper {
+	return &DeviceMapper{
+		bm: base.NewMapper[model.Device](),
+	}
+}
