@@ -19,5 +19,5 @@ type Auth struct {
 }
 
 func (Auth) TableName() string {
-	return "device"
+	return "auth"
 }
