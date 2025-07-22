@@ -15,6 +15,13 @@ type Mapper[T Model] struct {
 	db    *gorm.DB
 }
 
+func NewMapper[T Model](model T) *Mapper[T] {
+	return &Mapper[T]{
+		model: model,
+		db:    Connect(),
+	}
+}
+
 // SaveOrUpdate 插入或更新
 func (m *Mapper[T]) SaveOrUpdate(t *T) (int64, error) {
 	result := m.db.Save(t)
