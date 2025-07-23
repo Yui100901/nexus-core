@@ -11,14 +11,14 @@ import "time"
 var validDurationUnit = time.Hour
 
 type Device struct {
-	ID          string //id
-	Name        string //名称
-	DeviceType  string //设备类型
-	Model       string //设备型号
-	Description string //备注
-	Protocol    string //网络协议
-	IP          string //设备ip
-	Auth        *Auth  //设备认证
+	ID          string  //id
+	Name        string  //名称
+	DeviceType  *string //设备类型
+	Model       *string //设备型号
+	Description *string //备注
+	Protocol    *string //网络协议
+	IP          *string //设备ip
+	Auth        *Auth   //设备认证
 }
 
 // AdjustValidDuration 调整有效时间 增减有效期

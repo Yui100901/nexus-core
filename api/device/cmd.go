@@ -23,11 +23,11 @@ func (c *CreateDeviceCommand) ToDomain() *entity.Device {
 	return &entity.Device{
 		ID:          c.ID,
 		Name:        c.Name,
-		DeviceType:  c.DeviceType,
-		Model:       c.Model,
-		Description: c.Description,
-		Protocol:    "",
-		IP:          "",
+		DeviceType:  &c.DeviceType,
+		Model:       &c.Model,
+		Description: &c.Description,
+		Protocol:    nil,
+		IP:          nil,
 		Auth: &entity.Auth{
 			CreatedAt:     time.Now(),
 			ActivatedAt:   nil,
