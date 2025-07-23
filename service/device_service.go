@@ -1,6 +1,9 @@
 package service
 
-import "nexus-core/persistence/repository"
+import (
+	"nexus-core/domain/entity"
+	"nexus-core/persistence/repository"
+)
 
 //
 // @Author yfy2001
@@ -9,4 +12,14 @@ import "nexus-core/persistence/repository"
 
 type DeviceService struct {
 	dr *repository.DeviceRepository
+}
+
+func NewDeviceService() *DeviceService {
+	return &DeviceService{
+		dr: repository.NewDeviceRepository(),
+	}
+}
+
+func (ds *DeviceService) CreateDevice(e *entity.Device) {
+	ds.dr.SaveOrUpdate(e)
 }
