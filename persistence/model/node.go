@@ -5,8 +5,6 @@ package model
 // @Date 2026/1/16 10 16
 //
 
-import "time"
-
 const (
 	BoundStatusActive  = iota // 0 已绑定
 	BoundStatusUnbound        // 1 已解绑
@@ -26,11 +24,9 @@ func (Node) TableName() string {
 // NodeBinding 节点绑定关系
 type NodeBinding struct {
 	BaseModel
-	NodeID      uint       `gorm:"index;not null"` // 节点唯一标识 Node.ID
-	LicenseID   uint       `gorm:"index;not null"` // 对应 License.ID
-	BoundAt     time.Time  `gorm:"not null"`       // 绑定时间
-	UnboundAt   *time.Time // 解绑时间，nil表示未解绑
-	BoundStatus int        `gorm:"type:int;index;not null"` // 绑定状态枚举
+	NodeID      uint `gorm:"index;not null"`          // 节点唯一标识 Node.ID
+	LicenseID   uint `gorm:"index;not null"`          // 对应 License.ID
+	BoundStatus int  `gorm:"type:int;index;not null"` // 绑定状态枚举
 }
 
 func (NodeBinding) TableName() string {
