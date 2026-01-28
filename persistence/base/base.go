@@ -2,20 +2,20 @@ package base
 
 import (
 	"fmt"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"sync"
+
+	"nexus-core/config"
+	"nexus-core/persistence/model"
+
+	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 //
 // @Author yfy2001
 // @Date 2025/7/21 15 26
 //
-
-type Model interface {
-	TableName() string
-}
 
 var (
 	dbInstance *gorm.DB
@@ -24,9 +24,21 @@ var (
 
 func Connect() *gorm.DB {
 	once.Do(func() {
-		db, err := InitDatabaseSqlite("test.db")
+		cfg := config.Get()
+		db, err := InitDatabaseSqlite(cfg.DBPath)
 		if err != nil {
 			panic(fmt.Sprintf("failed to initialize database: %v", err))
+		}
+		// 自动迁移模型，确保表存在
+		if err := db.AutoMigrate(
+			&model.License{},
+			&model.LicenseScope{},
+			&model.Product{},
+			&model.ProductVersion{},
+			&model.Node{},
+			&model.NodeBinding{},
+		); err != nil {
+			panic(fmt.Sprintf("failed to automigrate database: %v", err))
 		}
 		dbInstance = db
 	})
