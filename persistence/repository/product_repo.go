@@ -199,6 +199,7 @@ func toEntityProduct(m *model.Product, versions []model.ProductVersion) *entity.
 	var versionList []entity.Version
 	for _, v := range versions {
 		versionList = append(versionList, entity.Version{
+			ID:          v.ID,
 			VersionCode: v.VersionCode,
 			ReleaseDate: v.ReleaseDate,
 			Description: v.Description,
