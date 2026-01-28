@@ -24,12 +24,23 @@ type NodeBinding struct {
 	BoundStatus int  // 绑定状态，表示当前绑定的状态
 }
 
-func (i *Node) AddBinging(binding NodeBinding) error {
-	for _, b := range i.Bindings {
-		if b.LicenseID == binding.LicenseID {
-			return fmt.Errorf("binding for node %d already exists", binding.LicenseID)
+func (n *Node) Unbind(licenseID uint) error {
+	for _, b := range n.Bindings {
+		if b.LicenseID == licenseID {
+			b.BoundStatus = StatusInactive
+			return nil
 		}
 	}
-	i.Bindings = append(i.Bindings, binding)
-	return nil
+	return fmt.Errorf("binding for node %d not found", licenseID)
+}
+
+func (n *Node) Bind(binding NodeBinding) {
+	for _, b := range n.Bindings {
+		if b.LicenseID == binding.LicenseID {
+			if b.BoundStatus != StatusActive {
+				b.BoundStatus = StatusActive
+			}
+		}
+	}
+	n.Bindings = append(n.Bindings, binding)
 }
