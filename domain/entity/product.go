@@ -1,6 +1,9 @@
 package entity
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 //
 // @Author yfy2001
@@ -17,6 +20,27 @@ type Product struct {
 	VersionList           []Version // 产品版本列表
 }
 
+// NewProduct 工厂方法
+// 创建一个新的产品对象，默认版本列表为空
+func NewProduct(name string, description string, minSupportedVersionID uint, versions []Version) (*Product, error) {
+	if name == "" {
+		return nil, fmt.Errorf("product name cannot be empty")
+	}
+
+	product := &Product{
+		Name:                  name,
+		Description:           description,
+		MinSupportedVersionID: minSupportedVersionID,
+		VersionList:           []Version{},
+	}
+
+	if len(versions) > 0 {
+		product.VersionList = versions
+	}
+
+	return product, nil
+}
+
 // Version 表示产品的具体版本信息
 type Version struct {
 	ID          uint
@@ -26,20 +50,63 @@ type Version struct {
 	IsEnabled   int       // 版本状态，用于标识版本是否可用
 }
 
+// NewVersion 工厂方法
+// 创建一个新的版本对象，默认状态为启用
+func NewVersion(versionCode string, releaseDate time.Time, description string) (*Version, error) {
+	if versionCode == "" {
+		return nil, fmt.Errorf("version code cannot be empty")
+	}
+
+	version := &Version{
+		VersionCode: versionCode,
+		ReleaseDate: releaseDate,
+		Description: description,
+		IsEnabled:   1, // 默认启用
+	}
+
+	return version, nil
+}
+
+// ReleaseVersion 发布新版本
+// 为产品添加一个新的版本，默认启用
+func (p *Product) ReleaseVersion(newVersion Version) error {
+
+	// 检查版本号是否已存在
+	for _, v := range p.VersionList {
+		if v.VersionCode == newVersion.VersionCode {
+			return fmt.Errorf("newVersion %s already exists", newVersion.VersionCode)
+		}
+	}
+
+	// 添加到版本列表
+	p.VersionList = append(p.VersionList, newVersion)
+
+	// 如果产品还没有最低支持版本，则设置为当前版本
+	if p.MinSupportedVersionID == 0 {
+		p.MinSupportedVersionID = newVersion.ID
+	}
+
+	return nil
+}
+
 // IsVersionSupported 判断某个产品是否支持某个版本
 func (p *Product) IsVersionSupported(targetVersion Version) bool {
 	if targetVersion.IsEnabled != 1 {
 		return false
 	}
-	var minSupportVersion Version
+
+	var minSupportVersion *Version
 	for _, v := range p.VersionList {
 		if v.ID == p.MinSupportedVersionID {
-			minSupportVersion = v
+			minSupportVersion = &v
+			break
 		}
 	}
-	if targetVersion.ReleaseDate.After(minSupportVersion.ReleaseDate) {
-		return true
-	} else {
-		return false
+
+	if minSupportVersion == nil {
+		return false // 没找到最低支持版本，视为不支持
 	}
+
+	// 等于或晚于最低支持版本的发布时间才算支持
+	return !targetVersion.ReleaseDate.Before(minSupportVersion.ReleaseDate)
 }
