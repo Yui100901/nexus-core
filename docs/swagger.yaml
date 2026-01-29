@@ -1,0 +1,915 @@
+basePath: /
+definitions:
+  api.APIResponse:
+    properties:
+      code:
+        description: 业务状态码
+        type: integer
+      data:
+        description: 响应数据，可选
+      message:
+        description: 响应消息
+        type: string
+    type: object
+  dto.AddBindingCommand:
+    description: Command to add a binding to a node
+    properties:
+      license_id:
+        description: 许可证ID
+        type: integer
+      node_id:
+        description: 节点ID
+        type: integer
+    required:
+    - license_id
+    - node_id
+    type: object
+  dto.CreateLicenseCommand:
+    description: Command to create a license
+    properties:
+      license_key:
+        description: 许可证密钥
+        type: string
+      scope_list:
+        description: 授权范围列表
+        items:
+          $ref: '#/definitions/dto.ScopeDTO'
+        type: array
+      validity_hours:
+        description: 有效时长（小时）
+        type: integer
+    required:
+    - license_key
+    - scope_list
+    - validity_hours
+    type: object
+  dto.CreateNodeCommand:
+    description: Command to create a node
+    properties:
+      device_code:
+        description: 设备唯一识别码
+        type: string
+      meta_info:
+        description: 设备元信息
+        type: string
+    required:
+    - device_code
+    type: object
+  dto.CreateProductCommand:
+    description: Command to create a product
+    properties:
+      description:
+        description: 产品描述
+        type: string
+      name:
+        description: 产品名称
+        type: string
+      version_list:
+        description: 版本列表
+        items:
+          $ref: '#/definitions/dto.ProductVDTO'
+        type: array
+    required:
+    - name
+    type: object
+  dto.ForceUnbindCommand:
+    description: Command to force unbind a node binding using node and license IDs
+    properties:
+      license_id:
+        description: 许可证ID
+        type: integer
+      node_id:
+        description: 节点ID
+        type: integer
+    required:
+    - license_id
+    - node_id
+    type: object
+  dto.HeartbeatCommand:
+    description: Heartbeat payload from client containing device and license info
+    properties:
+      concurrent:
+        description: 'Optional: concurrent sessions or other telemetry from client'
+        type: integer
+      device_code:
+        description: 设备唯一识别码
+        type: string
+      license_key:
+        description: 许可证密钥
+        type: string
+      product_id:
+        description: 产品ID
+        type: integer
+      version_code:
+        description: 产品版本号
+        type: string
+    required:
+    - device_code
+    - license_key
+    - product_id
+    - version_code
+    type: object
+  dto.ProductVDTO:
+    description: Product version DTO
+    properties:
+      description:
+        description: 版本描述
+        type: string
+      status:
+        description: ReleaseDate omitted for simplicity in DTO
+        type: integer
+      version_code:
+        description: 版本号
+        type: string
+    type: object
+  dto.ScopeDTO:
+    description: Scope transfer object
+    properties:
+      concurrent_limit:
+        description: 并发限制
+        type: integer
+      feature_mask:
+        description: 功能模块掩码
+        type: string
+      max_nodes:
+        description: 最大节点数
+        type: integer
+      product_id:
+        description: 产品ID
+        type: integer
+    required:
+    - product_id
+    type: object
+  dto.UpdateBindingStatusCommand:
+    description: Command to update binding status
+    properties:
+      id:
+        description: 绑定ID
+        type: integer
+      status:
+        description: 新状态
+        type: integer
+    required:
+    - id
+    - status
+    type: object
+  dto.UpdateLicenseCommand:
+    description: Command to update a license
+    properties:
+      id:
+        description: 许可证ID
+        type: integer
+      license_key:
+        description: 许可证密钥
+        type: string
+      remark:
+        description: 备注
+        type: string
+      status:
+        description: 状态
+        type: integer
+      validity_hours:
+        description: 有效时长（小时）
+        type: integer
+    required:
+    - id
+    - license_key
+    type: object
+  dto.UpdateLicenseStatusCommand:
+    properties:
+      id:
+        description: 许可证ID
+        type: integer
+      status:
+        description: 新状态
+        type: integer
+    required:
+    - id
+    - status
+    type: object
+  dto.UpdateMinVersionCommand:
+    description: Command to update min supported version
+    properties:
+      product_id:
+        description: 产品ID
+        type: integer
+      version_id:
+        description: 版本ID
+        type: integer
+    required:
+    - product_id
+    - version_id
+    type: object
+  entity.Node:
+    properties:
+      bindings:
+        description: 与此节点关联的许可证绑定关系
+        items:
+          $ref: '#/definitions/entity.NodeBinding'
+        type: array
+      deviceCode:
+        description: 设备唯一识别码，用于区分不同设备
+        type: string
+      id:
+        description: 节点唯一标识符
+        type: integer
+      metaInfo:
+        description: 设备元信息，包含操作系统、版本等信息
+        type: string
+    type: object
+  entity.NodeBinding:
+    properties:
+      boundAt:
+        description: 绑定时间，记录绑定发生的时间
+        type: string
+      boundStatus:
+        description: 绑定状态，表示当前绑定的状态
+        type: integer
+      id:
+        description: 绑定关系唯一标识符
+        type: integer
+      licenseID:
+        description: 关联的许可证ID，指向License实体
+        type: integer
+      unboundAt:
+        description: 解绑时间，记录解绑发生的时间，nil表示未解绑
+        type: string
+    type: object
+  entity.Product:
+    properties:
+      description:
+        description: 产品详细描述
+        type: string
+      id:
+        description: 产品唯一标识符
+        type: integer
+      minSupportedVersionID:
+        description: 最低支持的版本ID，用于版本兼容性检查
+        type: integer
+      name:
+        description: 产品名称，具有唯一性
+        type: string
+      versionList:
+        description: 产品版本列表
+        items:
+          $ref: '#/definitions/entity.Version'
+        type: array
+    type: object
+  entity.Version:
+    properties:
+      description:
+        description: 版本详细说明
+        type: string
+      releaseDate:
+        description: 版本发布时间
+        type: string
+      status:
+        description: 版本状态，用于标识版本是否可用
+        type: integer
+      versionCode:
+        description: 版本号，遵循语义化版本规范
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 简易个人订阅制软件管理平台 API
+  title: Nexus Core API
+  version: 0.0.1
+paths:
+  /device/heartbeat:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Heartbeat
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.HeartbeatCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Client heartbeat
+      tags:
+      - device
+  /license/batchCreate:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple licenses in batch
+      parameters:
+      - description: Create Licenses
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dto.CreateLicenseCommand'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Batch create licenses
+      tags:
+      - licenses
+  /license/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new license with scopes
+      parameters:
+      - description: Create License
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateLicenseCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create a license
+      tags:
+      - licenses
+  /license/deleteExpired:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Delete expired licenses
+      tags:
+      - licenses
+  /license/getByID:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: License ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get license by ID
+      tags:
+      - licenses
+  /license/getByKey:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: License Key
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get license by key
+      tags:
+      - licenses
+  /license/update:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update License
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateLicenseCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update license
+      tags:
+      - licenses
+  /license/updateStatus:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateLicenseStatusCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update license status
+      tags:
+      - licenses
+  /node/addBinding:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Add Binding
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddBindingCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.NodeBinding'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Add node binding
+      tags:
+      - nodes
+  /node/batchCreate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Nodes
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dto.CreateNodeCommand'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entity.Node'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Batch create nodes
+      tags:
+      - nodes
+  /node/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Node
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateNodeCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Node'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create a node
+      tags:
+      - nodes
+  /node/delete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Delete a node
+      tags:
+      - nodes
+  /node/getByDevice:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device Code
+        in: query
+        name: device_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Node'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get node by device code
+      tags:
+      - nodes
+  /node/getByID:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Node ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Node'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get node by ID
+      tags:
+      - nodes
+  /node/unbind:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Force unbind command
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ForceUnbindCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Force unbind a node binding using node and license IDs
+      tags:
+      - nodes
+  /node/updateBindingStatus:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update binding status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateBindingStatusCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Update binding status
+      tags:
+      - nodes
+  /product/batchCreate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Products
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dto.CreateProductCommand'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entity.Product'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Batch create products
+      tags:
+      - products
+  /product/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Product
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProductCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Create a product
+      tags:
+      - products
+  /product/delete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Delete product
+      tags:
+      - products
+  /product/getByID:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get product by ID
+      tags:
+      - products
+  /product/getByName:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product Name
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Get product by name
+      tags:
+      - products
+  /product/setMinVersion:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Set Min Version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateMinVersionCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: Set min supported version
+      tags:
+      - products
+schemes:
+- http
+swagger: "2.0"
