@@ -2,7 +2,10 @@ package entity
 
 import (
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 //
@@ -33,12 +36,42 @@ type License struct {
 	ScopeList       []Scope    // 授权范围列表，定义了许可证对产品的使用权限
 }
 
+// NewLicense 工厂方法
+// 创建一个新的许可证对象，默认状态为未激活
+func NewLicense(key string, validityHours int, maxNodes int, concurrentLimit int, remark string, scopes []Scope) (*License, error) {
+	if key == "" {
+		return nil, fmt.Errorf("license key cannot be empty")
+	}
+	if validityHours <= 0 {
+		return nil, fmt.Errorf("validity hours must be positive")
+	}
+
+	license := &License{
+		LicenseKey:      strings.ReplaceAll(uuid.New().String(), "-", ""),
+		ValidityHours:   validityHours,
+		Status:          StatusInactive, // 初始状态必须是未激活
+		MaxNodes:        maxNodes,
+		ConcurrentLimit: concurrentLimit,
+		Remark:          remark,
+		ScopeList:       scopes,
+	}
+
+	return license, nil
+}
+
 // Scope 定义许可证对特定产品的授权范围
 // 包括功能模块掩码、节点数限制和并发限制
 type Scope struct {
 	ID          uint
 	ProductID   uint   // 关联的产品ID，指向Product实体
 	FeatureMask string // 功能模块掩码，用于控制功能模块访问权限
+}
+
+func NewScope(productID uint, featureMask string) *Scope {
+	return &Scope{
+		ProductID:   productID,
+		FeatureMask: featureMask,
+	}
 }
 
 // Activate 激活许可证
@@ -99,13 +132,13 @@ func (l *License) Renew(now time.Time, extraHours int) error {
 
 // Revoke 吊销许可证
 // 将许可证状态设置为已吊销，使其立即失效
-func (l *License) Revoke(now time.Time) error {
+func (l *License) Revoke(now time.Time) bool {
 	if l.Status == StatusRevoked {
-		return fmt.Errorf("license already revoked")
+		return false
 	}
 	l.ExpiredAt = &now
 	l.Status = StatusRevoked
-	return nil
+	return true
 }
 
 // IsExpired 检查许可证是否已过期
@@ -126,39 +159,39 @@ func (l *License) CheckStatus(now time.Time) {
 }
 
 // AddScope 添加授权范围
-// 为许可证添加对特定产品的授权，如果该产品已存在授权则返回错误
-func (l *License) AddScope(scope Scope) error {
+// 为许可证添加对特定产品的授权
+func (l *License) AddScope(scope Scope) bool {
 	for _, s := range l.ScopeList {
 		if s.ProductID == scope.ProductID {
-			return fmt.Errorf("scope for product %d already exists", scope.ProductID)
+			return false
 		}
 	}
 	l.ScopeList = append(l.ScopeList, scope)
-	return nil
+	return true
 }
 
 // UpdateScope 更新特定产品的授权范围
 // 根据产品ID找到对应的授权范围并替换为新的授权范围
-func (l *License) UpdateScope(productID uint, newScope Scope) error {
+func (l *License) UpdateScope(productID uint, newScope Scope) bool {
 	for i, s := range l.ScopeList {
 		if s.ProductID == productID {
 			l.ScopeList[i] = newScope
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("scope for product %d not found", productID)
+	return false
 }
 
 // RemoveScope 删除特定产品的授权范围
 // 根据产品ID移除对应的授权范围
-func (l *License) RemoveScope(productID uint) error {
+func (l *License) RemoveScope(productID uint) bool {
 	for i, s := range l.ScopeList {
 		if s.ProductID == productID {
 			l.ScopeList = append(l.ScopeList[:i], l.ScopeList[i+1:]...)
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("scope for product %d not found", productID)
+	return false
 }
 
 // ValidateScope 验证对特定产品的访问权限
