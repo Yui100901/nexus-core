@@ -74,6 +74,15 @@ func NewScope(productID uint, featureMask string) *Scope {
 	}
 }
 
+// GetScopeProductIdList 获取授权范围中的产品ID列表
+func (l *License) GetScopeProductIdList() []uint {
+	ids := make([]uint, 0, len(l.ScopeList))
+	for _, p := range l.ScopeList {
+		ids = append(ids, p.ID)
+	}
+	return ids
+}
+
 // Activate 激活许可证
 // 将许可证从未激活状态转为激活状态，并设置激活时间和过期时间
 func (l *License) Activate(now time.Time) error {
