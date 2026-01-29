@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
+	"time"
 )
 
 // ProductService 提供产品相关的业务逻辑服务
@@ -72,4 +73,51 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, 
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 	return s.pr.DeleteProduct(ctx, id)
+}
+
+// CreateNewVersion 创建新产品版本
+func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v *entity.Version) error {
+	product, err := s.pr.GetByID(ctx, productID)
+	if err != nil {
+		return err
+	}
+	if err := product.CreateNewVersion(*v); err != nil {
+		return err
+	}
+	if err := s.pr.CreateNewVersion(ctx, product.ID, v); err != nil {
+		return err
+	}
+
+	// 如果设置了发布时间，则注册定时任务
+	if v.ReleaseDate != nil {
+		s.scheduleReleaseTask(product.ID, v.ID, *v.ReleaseDate)
+	}
+
+	return nil
+}
+
+func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate time.Time) error {
+	product, err := s.pr.GetByID(ctx, productID)
+	if err != nil {
+		return err
+	}
+	err = product.ReleaseVersion(versionID, releaseDate)
+	if err != nil {
+		return err
+	}
+	return s.pr.ReleaseVersion(ctx, versionID, releaseDate)
+}
+
+// 简易定时发布
+func (s *ProductService) scheduleReleaseTask(productID, versionID uint, releaseDate time.Time) {
+	delay := time.Until(releaseDate)
+	if delay <= 0 {
+		// 已经过了发布时间，直接发布
+		_ = s.ReleaseVersion(context.Background(), productID, versionID, releaseDate)
+		return
+	}
+	go func() {
+		<-time.After(delay)
+		_ = s.ReleaseVersion(context.Background(), productID, versionID, releaseDate)
+	}()
 }

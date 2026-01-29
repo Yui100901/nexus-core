@@ -5,6 +5,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -98,6 +99,35 @@ func (r *ProductRepository) GetByName(ctx context.Context, name string) (*entity
 	}
 
 	return toEntityProduct(m, versions), nil
+}
+
+// CreateNewVersion 创建新产品版本
+func (r *ProductRepository) CreateNewVersion(ctx context.Context, productID uint, v *entity.Version) error {
+	m := &model.ProductVersion{
+		ProductID:   productID,
+		VersionCode: v.VersionCode,
+		ReleaseDate: v.ReleaseDate,
+		Description: v.Description,
+		IsEnabled:   v.IsEnabled,
+	}
+	err := gorm.G[model.ProductVersion](r.db).
+		Create(ctx, m)
+	if err != nil {
+		return err
+	}
+	v.ID = m.ID
+	return nil
+}
+
+// ReleaseVersion 发布新版本
+func (r *ProductRepository) ReleaseVersion(ctx context.Context, versionID uint, releaseDate time.Time) error {
+	_, err := gorm.G[model.ProductVersion](r.db).
+		Where("id = ?", versionID).
+		Updates(ctx, model.ProductVersion{
+			IsEnabled:   1,
+			ReleaseDate: &releaseDate,
+		})
+	return err
 }
 
 // GetVersionsByProductID 获取产品的版本列表

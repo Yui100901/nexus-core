@@ -103,7 +103,7 @@ func (p *Product) CreateNewVersion(newVersion Version) error {
 
 // ReleaseVersion 发布新版本
 // 将指定版本标记为启用状态
-func (p *Product) ReleaseVersion(versionID uint) error {
+func (p *Product) ReleaseVersion(versionID uint, releaseDate time.Time) error {
 	var targetVersion *Version
 	for i := range p.VersionList {
 		if p.VersionList[i].ID == versionID {
@@ -124,8 +124,7 @@ func (p *Product) ReleaseVersion(versionID uint) error {
 	// 更新状态为启用
 	targetVersion.IsEnabled = 1
 	if targetVersion.ReleaseDate == nil {
-		now := time.Now()
-		targetVersion.ReleaseDate = &now
+		targetVersion.ReleaseDate = &releaseDate
 	}
 
 	// 如果产品还没有最低支持版本，在首次发布时自动设置
