@@ -1,0 +1,108 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"nexus-core/domain/entity"
+	"nexus-core/persistence/repository"
+
+	"github.com/Masterminds/semver"
+)
+
+// ProductService 提供产品相关的业务逻辑服务
+// 管理产品的创建、查询、版本控制等操作
+type ProductService struct {
+	pr *repository.ProductRepository // 产品仓库，用于数据持久化操作
+}
+
+// NewProductService 创建新的产品服务实例
+func NewProductService() *ProductService {
+	return &ProductService{
+		pr: repository.NewProductRepository(),
+	}
+}
+
+// CreateProduct 创建新产品
+// 包括产品基本信息和版本列表的持久化存储
+func (s *ProductService) CreateProduct(ctx context.Context, p *entity.Product) error {
+	return s.pr.CreateProduct(ctx, p)
+}
+
+// BatchCreateProduct 批量创建产品
+// 支持一次性创建多个产品及其版本信息
+func (s *ProductService) BatchCreateProduct(ctx context.Context, products []*entity.Product) error {
+	// 1. 校验重复名称
+	seen := make(map[string]bool)
+	for _, p := range products {
+		if seen[p.Name] {
+			return fmt.Errorf("duplicate product name: %s", p.Name)
+		}
+		seen[p.Name] = true
+	}
+
+	// 2. 调用仓储层批量创建
+	return s.pr.BatchCreateProduct(ctx, products)
+}
+
+// GetByID 根据ID获取产品信息
+// 返回指定ID的完整产品信息，包括所有版本
+func (s *ProductService) GetByID(ctx context.Context, id uint) (*entity.Product, error) {
+	return s.pr.GetByID(ctx, id)
+}
+
+// GetByName 根据名称获取产品信息
+// 返回指定名称的完整产品信息，包括所有版本
+func (s *ProductService) GetByName(ctx context.Context, name string) (*entity.Product, error) {
+	return s.pr.GetByName(ctx, name)
+}
+
+// SetMinSupportedVersion 设置产品的最低支持版本
+// 用于控制产品版本的兼容性要求
+func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
+	return s.pr.SetMinSupportedVersion(ctx, productID, versionID)
+}
+
+// DeleteProduct 删除产品
+// 同时删除产品相关的所有版本信息
+func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
+	return s.pr.DeleteProduct(ctx, id)
+}
+
+// HasSupportedVersion 检查产品是否有受支持的版本
+// 验证指定版本是否满足产品的最低支持版本要求
+func (s *ProductService) HasSupportedVersion(ctx context.Context, productID uint, versionCode string) (bool, error) {
+	pr := repository.NewProductRepository()
+	v, err := pr.GetVersionByProductAndCode(ctx, productID, versionCode)
+	if err != nil {
+		return false, err
+	}
+	p, err := pr.GetByID(ctx, productID)
+	if err != nil {
+		return false, err
+	}
+	// If product.MinSupportedVersionID == 0, treat as no min version
+	if p.MinSupportedVersionID == 0 {
+		return true, nil
+	}
+	// get min supported version code by ID
+	minVModel, err := pr.GetVersionByID(ctx, p.MinSupportedVersionID)
+	if err != nil {
+		return false, err
+	}
+	minCode := minVModel.VersionCode
+	// compare semver
+	minSem, err := semver.NewVersion(minCode)
+	if err != nil {
+		// fallback: accept
+		return true, nil
+	}
+	ver, err := semver.NewVersion(v.VersionCode)
+	if err != nil {
+		// cannot parse client version => reject
+		return false, err
+	}
+	if ver.LessThan(minSem) {
+		return false, nil
+	}
+	return true, nil
+}

@@ -34,29 +34,9 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, product *entity.P
 	if err := gorm.G[model.Product](r.db).Create(ctx, pProduct); err != nil {
 		return err
 	}
-	// 回填 ID
-	productID := pProduct.ID
 
-	// 保存版本列表
-	var pVersions []model.ProductVersion
-	for _, v := range product.VersionList {
-		pVersions = append(pVersions, model.ProductVersion{
-			ProductID:   productID,
-			VersionCode: v.VersionCode,
-			ReleaseDate: v.ReleaseDate,
-			Description: v.Description,
-			Status:      v.Status,
-		})
-	}
-	if len(pVersions) > 0 {
-		if err := gorm.G[model.ProductVersion](r.db).CreateInBatches(ctx, &pVersions, 0); err != nil {
-			return err
-		}
-		// 回填版本信息（ID）
-		for i := range product.VersionList {
-			product.VersionList[i].Status = pVersions[i].Status
-		}
-	}
+	// 回填 ID
+	product.ID = pProduct.ID
 
 	return nil
 }
@@ -79,27 +59,7 @@ func (r *ProductRepository) BatchCreateProduct(ctx context.Context, products []*
 
 		// 回填 ID
 		for i := range products {
-			products[i].MinSupportedVersionID = pProducts[i].MinSupportedVersionID
-		}
-
-		// 保存版本列表
-		var pVersions []model.ProductVersion
-		for i, product := range products {
-			for _, v := range product.VersionList {
-				pVersions = append(pVersions, model.ProductVersion{
-					ProductID:   pProducts[i].ID,
-					VersionCode: v.VersionCode,
-					ReleaseDate: v.ReleaseDate,
-					Description: v.Description,
-					Status:      v.Status,
-				})
-			}
-		}
-
-		if len(pVersions) > 0 {
-			if err := gorm.G[model.ProductVersion](tx).CreateInBatches(ctx, &pVersions, 100); err != nil {
-				return err
-			}
+			products[i].ID = pProducts[i].ID
 		}
 
 		return nil
@@ -203,7 +163,7 @@ func toEntityProduct(m *model.Product, versions []model.ProductVersion) *entity.
 			VersionCode: v.VersionCode,
 			ReleaseDate: v.ReleaseDate,
 			Description: v.Description,
-			Status:      v.Status,
+			IsEnabled:   v.IsEnabled,
 		})
 	}
 	return &entity.Product{
