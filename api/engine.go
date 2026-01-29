@@ -72,7 +72,7 @@ func RegisterDefaultRoutes() {
 	NewLicenseController().RegisterRoutes(WebEngine)
 	NewProductController().RegisterRoutes(WebEngine)
 	NewNodeController().RegisterRoutes(WebEngine)
-	NewDeviceController().RegisterRoutes(WebEngine)
+	NewAccessController().RegisterRoutes(WebEngine)
 
 	// serve swagger UI under /docs to avoid conflicts with potential /swagger/doc.json
 	WebEngine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/swagger.json")))
