@@ -12,13 +12,13 @@ import "fmt"
 type Node struct {
 	ID         uint          // 节点唯一标识符
 	DeviceCode string        // 设备唯一识别码，用于区分不同设备
-	MetaInfo   string        // 设备元信息，包含操作系统、版本等信息
+	MetaInfo   *string       // 设备元信息，包含操作系统、版本等信息
 	Bindings   []NodeBinding // 与此节点关联的许可证绑定关系
 }
 
 // NewNode 工厂方法
 // 创建一个新的节点对象，默认没有绑定关系
-func NewNode(deviceCode string, metaInfo string, bindings []NodeBinding) (*Node, error) {
+func NewNode(deviceCode string, metaInfo *string, bindings []NodeBinding) (*Node, error) {
 	if deviceCode == "" {
 		return nil, fmt.Errorf("device code cannot be empty")
 	}
