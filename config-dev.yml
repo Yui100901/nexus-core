@@ -1,0 +1,5 @@
+port: 8080
+db_path: test.db
+swagger_enabled: true
+auto_open_browser: true
+
