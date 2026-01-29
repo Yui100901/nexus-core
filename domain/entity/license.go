@@ -32,13 +32,13 @@ type License struct {
 	Status          int        // 当前状态，使用LicenseStatus枚举值
 	MaxNodes        int        // 最大节点数限制，0表示无限制
 	ConcurrentLimit int        // 并发数限制，0表示无限制
-	Remark          string     // 备注信息
+	Remark          *string    // 备注信息
 	ScopeList       []Scope    // 授权范围列表，定义了许可证对产品的使用权限
 }
 
 // NewLicense 工厂方法
 // 创建一个新的许可证对象，默认状态为未激活
-func NewLicense(key string, validityHours int, maxNodes int, concurrentLimit int, remark string, scopes []Scope) (*License, error) {
+func NewLicense(key string, validityHours int, maxNodes int, concurrentLimit int, remark *string, scopes []Scope) (*License, error) {
 	if key == "" {
 		return nil, fmt.Errorf("license key cannot be empty")
 	}
