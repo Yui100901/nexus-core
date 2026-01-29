@@ -135,7 +135,25 @@ func (p *Product) ReleaseVersion(versionID uint, releaseDate time.Time) error {
 	return nil
 }
 
-// IsVersionSupported 判断某个产品是否支持某个版本
+// CheckVersionSupportedById 根据id判断某个产品是否支持某个版本
+func (p *Product) CheckVersionSupportedById(versionID uint) bool {
+	targetVersion, err := p.GetVersionByID(versionID)
+	if err != nil {
+		return false
+	}
+	return p.IsVersionSupported(*targetVersion)
+}
+
+// CheckVersionSupportedByCode 根据id判断某个产品是否支持某个版本
+func (p *Product) CheckVersionSupportedByCode(code string) bool {
+	targetVersion, err := p.GetVersionByCode(code)
+	if err != nil {
+		return false
+	}
+	return p.IsVersionSupported(*targetVersion)
+}
+
+// IsVersionSupported 检测某个版本是否支持
 func (p *Product) IsVersionSupported(targetVersion Version) bool {
 	if targetVersion.IsEnabled != 1 {
 		return false
@@ -165,5 +183,23 @@ func (p *Product) IsVersionSupported(targetVersion Version) bool {
 	}
 	// 等于或晚于最低支持版本的发布时间才算支持
 	return !targetVersion.ReleaseDate.Before(*minSupportVersion.ReleaseDate)
+}
 
+// GetVersionByID 根据id获取版本信息
+func (p *Product) GetVersionByID(versionID uint) (*Version, error) {
+	for i := range p.VersionList {
+		if p.VersionList[i].ID == versionID {
+			return &p.VersionList[i], nil
+		}
+	}
+	return nil, fmt.Errorf("version with ID %d not found", versionID)
+}
+
+func (p *Product) GetVersionByCode(versionCode string) (*Version, error) {
+	for i := range p.VersionList {
+		if p.VersionList[i].VersionCode == versionCode {
+			return &p.VersionList[i], nil
+		}
+	}
+	return nil, fmt.Errorf("version with code %s not found", versionCode)
 }
