@@ -18,7 +18,7 @@ type Node struct {
 
 // NewNode 工厂方法
 // 创建一个新的节点对象，默认没有绑定关系
-func NewNode(deviceCode string, metaInfo *string, bindings []NodeBinding) (*Node, error) {
+func NewNode(deviceCode string, metaInfo *string) (*Node, error) {
 	if deviceCode == "" {
 		return nil, fmt.Errorf("device code cannot be empty")
 	}
@@ -27,11 +27,6 @@ func NewNode(deviceCode string, metaInfo *string, bindings []NodeBinding) (*Node
 		DeviceCode: deviceCode,
 		MetaInfo:   metaInfo,
 		Bindings:   []NodeBinding{}, // 初始化为空列表
-	}
-	if len(bindings) > 0 {
-		for _, b := range bindings {
-			node.Bind(b)
-		}
 	}
 
 	return node, nil
@@ -74,7 +69,7 @@ func (n *Node) Unbind(licenseID uint) bool {
 	return false
 }
 
-func (n *Node) Bind(binding NodeBinding) bool {
+func (n *Node) Bind(binding *NodeBinding) bool {
 	for i := range n.Bindings {
 		if n.Bindings[i].LicenseID == binding.LicenseID {
 			if n.Bindings[i].IsBound == StatusActive {
@@ -86,6 +81,6 @@ func (n *Node) Bind(binding NodeBinding) bool {
 	}
 	// 不存在绑定关系，新增绑定
 	binding.IsBound = StatusActive
-	n.Bindings = append(n.Bindings, binding)
+	n.Bindings = append(n.Bindings, *binding)
 	return true
 }
