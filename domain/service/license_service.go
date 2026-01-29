@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"nexus-core/domain/entity"
@@ -55,7 +56,33 @@ func (s *LicenseService) CreateLicense(ctx context.Context, license *entity.Lice
 // BatchCreateLicense 批量创建许可证
 // 支持一次性创建多个许可证及其授权范围
 func (s *LicenseService) BatchCreateLicense(ctx context.Context, licenses []*entity.License) error {
-	// 业务规则校验，比如批量大小限制、LicenseKey 唯一性等
+	if len(licenses) == 0 {
+		return fmt.Errorf("licenses list cannot be empty")
+	}
+
+	// 收集所有需要的产品 ID
+	allIDs := make(map[uint]struct{})
+	for _, license := range licenses {
+		for _, id := range license.GetScopeProductIdList() {
+			allIDs[id] = struct{}{}
+		}
+	}
+
+	// 一次性查询数据库
+	var allIDList []uint
+	for k, _ := range allIDs {
+		allIDList = append(allIDList, k)
+	}
+	exists, err := s.pr.ExistIds(ctx, allIDList) // 假设 repo
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("some products in scope do not exist")
+	}
+
+	// 批量插入
 	return s.lr.BatchCreateLicense(ctx, licenses)
 }
 
