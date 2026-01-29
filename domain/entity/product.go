@@ -40,15 +40,15 @@ func NewProduct(name string, description *string, minSupportedVersionID *uint) (
 // Version 表示产品的具体版本信息
 type Version struct {
 	ID          uint
-	VersionCode string    // 版本号，遵循语义化版本规范
-	ReleaseDate time.Time // 版本发布时间
-	Description *string   // 版本详细说明
-	IsEnabled   int       // 版本状态，用于标识版本是否可用
+	VersionCode string     // 版本号，遵循语义化版本规范
+	ReleaseDate *time.Time // 版本发布时间
+	Description *string    // 版本详细说明
+	IsEnabled   int        // 版本状态，用于标识版本是否可用
 }
 
 // NewVersion 工厂方法
 // 创建一个新的版本对象，默认状态为启用
-func NewVersion(versionCode string, releaseDate time.Time, description *string) (*Version, error) {
+func NewVersion(versionCode string, releaseDate *time.Time, description *string) (*Version, error) {
 	if versionCode == "" {
 		return nil, fmt.Errorf("version code cannot be empty")
 	}
@@ -84,9 +84,9 @@ func (p *Product) SetMinSupportedVersion(versionID uint) error {
 	return nil
 }
 
-// ReleaseVersion 发布新版本
-// 为产品添加一个新的版本，默认启用
-func (p *Product) ReleaseVersion(newVersion Version) error {
+// CreateNewVersion 创建新版本
+// 为产品添加一个新的版本，默认未启用
+func (p *Product) CreateNewVersion(newVersion Version) error {
 
 	// 检查版本号是否已存在
 	for _, v := range p.VersionList {
@@ -98,9 +98,39 @@ func (p *Product) ReleaseVersion(newVersion Version) error {
 	// 添加到版本列表
 	p.VersionList = append(p.VersionList, newVersion)
 
-	// 如果产品还没有最低支持版本，则设置为当前版本
+	return nil
+}
+
+// ReleaseVersion 发布新版本
+// 将指定版本标记为启用状态
+func (p *Product) ReleaseVersion(versionID uint) error {
+	var targetVersion *Version
+	for i := range p.VersionList {
+		if p.VersionList[i].ID == versionID {
+			targetVersion = &p.VersionList[i]
+			break
+		}
+	}
+
+	if targetVersion == nil {
+		return fmt.Errorf("version with ID %d not found", versionID)
+	}
+
+	//如果已经发布则视为成功直接返回
+	if targetVersion.IsEnabled == 1 {
+		return nil
+	}
+
+	// 更新状态为启用
+	targetVersion.IsEnabled = 1
+	if targetVersion.ReleaseDate == nil {
+		now := time.Now()
+		targetVersion.ReleaseDate = &now
+	}
+
+	// 如果产品还没有最低支持版本，在首次发布时自动设置
 	if p.MinSupportedVersionID == nil {
-		p.MinSupportedVersionID = &newVersion.ID
+		p.MinSupportedVersionID = &targetVersion.ID
 	}
 
 	return nil
@@ -109,6 +139,10 @@ func (p *Product) ReleaseVersion(newVersion Version) error {
 // IsVersionSupported 判断某个产品是否支持某个版本
 func (p *Product) IsVersionSupported(targetVersion Version) bool {
 	if targetVersion.IsEnabled != 1 {
+		return false
+	}
+	// 版本没有发布时间说明未发布，不支持
+	if targetVersion.ReleaseDate == nil {
 		return false
 	}
 
@@ -126,6 +160,11 @@ func (p *Product) IsVersionSupported(targetVersion Version) bool {
 		return false // 没找到最低支持版本，视为不支持
 	}
 
+	//最低支持版本没有发布时间说明未发布，不支持
+	if minSupportVersion.ReleaseDate == nil {
+		return false
+	}
 	// 等于或晚于最低支持版本的发布时间才算支持
-	return !targetVersion.ReleaseDate.Before(minSupportVersion.ReleaseDate)
+	return !targetVersion.ReleaseDate.Before(*minSupportVersion.ReleaseDate)
+
 }
