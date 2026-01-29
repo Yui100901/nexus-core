@@ -23,12 +23,12 @@ type Version struct {
 	VersionCode string    // 版本号，遵循语义化版本规范
 	ReleaseDate time.Time // 版本发布时间
 	Description string    // 版本详细说明
-	Status      int       // 版本状态，用于标识版本是否可用
+	IsEnabled   int       // 版本状态，用于标识版本是否可用
 }
 
 // IsVersionSupported 判断某个产品是否支持某个版本
 func (p *Product) IsVersionSupported(targetVersion Version) bool {
-	if targetVersion.Status != 0 {
+	if targetVersion.IsEnabled != 1 {
 		return false
 	}
 	var minSupportVersion Version

@@ -24,9 +24,9 @@ func (Node) TableName() string {
 // NodeBinding 节点绑定关系
 type NodeBinding struct {
 	BaseModel
-	NodeID      uint `gorm:"index;not null"`          // 节点唯一标识 Node.ID
-	LicenseID   uint `gorm:"index;not null"`          // 对应 License.ID
-	BoundStatus int  `gorm:"type:int;index;not null"` // 绑定状态枚举
+	NodeID    uint `gorm:"index;not null"`          // 节点唯一标识 Node.ID
+	LicenseID uint `gorm:"index;not null"`          // 对应 License.ID
+	IsBound   int  `gorm:"type:int;index;not null"` // 是否绑定
 }
 
 func (NodeBinding) TableName() string {

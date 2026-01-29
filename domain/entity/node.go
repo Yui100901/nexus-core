@@ -19,15 +19,15 @@ type Node struct {
 // NodeBinding 定义节点与许可证之间的绑定关系
 // 表示某个许可证在特定节点上的使用权
 type NodeBinding struct {
-	ID          uint // 绑定关系唯一标识符
-	LicenseID   uint // 关联的许可证ID，指向License实体
-	BoundStatus int  // 绑定状态，表示当前绑定的状态
+	ID        uint // 绑定关系唯一标识符
+	LicenseID uint // 关联的许可证ID，指向License实体
+	IsBound   int  // 绑定状态，表示当前绑定的状态
 }
 
 func (n *Node) Unbind(licenseID uint) error {
 	for _, b := range n.Bindings {
 		if b.LicenseID == licenseID {
-			b.BoundStatus = StatusInactive
+			b.IsBound = StatusInactive
 			return nil
 		}
 	}
@@ -37,8 +37,8 @@ func (n *Node) Unbind(licenseID uint) error {
 func (n *Node) Bind(binding NodeBinding) {
 	for _, b := range n.Bindings {
 		if b.LicenseID == binding.LicenseID {
-			if b.BoundStatus != StatusActive {
-				b.BoundStatus = StatusActive
+			if b.IsBound != StatusActive {
+				b.IsBound = StatusActive
 			}
 		}
 	}
