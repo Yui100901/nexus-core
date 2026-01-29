@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
@@ -99,6 +100,24 @@ func (r *ProductRepository) GetByName(ctx context.Context, name string) (*entity
 	}
 
 	return toEntityProduct(m, versions), nil
+}
+
+func (r *ProductRepository) ExistIds(ctx context.Context, ids []uint) (bool, error) {
+	if len(ids) == 0 {
+		return false, fmt.Errorf("id list cannot be empty")
+	}
+
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&model.Product{}).
+		Where("id IN ?", ids).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	// 如果数据库里找到的数量和传入的数量一致，说明都存在
+	return count == int64(len(ids)), nil
 }
 
 // CreateNewVersion 创建新产品版本
