@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
-
-	"github.com/Masterminds/semver"
 )
 
 // ProductService 提供产品相关的业务逻辑服务
@@ -59,50 +57,19 @@ func (s *ProductService) GetByName(ctx context.Context, name string) (*entity.Pr
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
 func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
-	return s.pr.SetMinSupportedVersion(ctx, productID, versionID)
+	product, err := s.pr.GetByID(ctx, productID)
+	if err != nil {
+		return err
+	}
+	err = product.SetMinSupportedVersion(versionID)
+	if err != nil {
+		return err
+	}
+	return s.pr.UpdateMinSupportedVersion(ctx, product.ID, *product.MinSupportedVersionID)
 }
 
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 	return s.pr.DeleteProduct(ctx, id)
-}
-
-// HasSupportedVersion 检查产品是否有受支持的版本
-// 验证指定版本是否满足产品的最低支持版本要求
-func (s *ProductService) HasSupportedVersion(ctx context.Context, productID uint, versionCode string) (bool, error) {
-	pr := repository.NewProductRepository()
-	v, err := pr.GetVersionByProductAndCode(ctx, productID, versionCode)
-	if err != nil {
-		return false, err
-	}
-	p, err := pr.GetByID(ctx, productID)
-	if err != nil {
-		return false, err
-	}
-	// If product.MinSupportedVersionID == 0, treat as no min version
-	if p.MinSupportedVersionID == 0 {
-		return true, nil
-	}
-	// get min supported version code by ID
-	minVModel, err := pr.GetVersionByID(ctx, p.MinSupportedVersionID)
-	if err != nil {
-		return false, err
-	}
-	minCode := minVModel.VersionCode
-	// compare semver
-	minSem, err := semver.NewVersion(minCode)
-	if err != nil {
-		// fallback: accept
-		return true, nil
-	}
-	ver, err := semver.NewVersion(v.VersionCode)
-	if err != nil {
-		// cannot parse client version => reject
-		return false, err
-	}
-	if ver.LessThan(minSem) {
-		return false, nil
-	}
-	return true, nil
 }

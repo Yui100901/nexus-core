@@ -22,7 +22,7 @@ type Product struct {
 
 // NewProduct 工厂方法
 // 创建一个新的产品对象，默认版本列表为空
-func NewProduct(name string, description *string, minSupportedVersionID *uint, versions []Version) (*Product, error) {
+func NewProduct(name string, description *string, minSupportedVersionID *uint) (*Product, error) {
 	if name == "" {
 		return nil, fmt.Errorf("product name cannot be empty")
 	}
@@ -32,10 +32,6 @@ func NewProduct(name string, description *string, minSupportedVersionID *uint, v
 		Description:           description,
 		MinSupportedVersionID: minSupportedVersionID,
 		VersionList:           []Version{},
-	}
-
-	if len(versions) > 0 {
-		product.VersionList = versions
 	}
 
 	return product, nil
@@ -65,6 +61,27 @@ func NewVersion(versionCode string, releaseDate time.Time, description *string) 
 	}
 
 	return version, nil
+}
+
+func (p *Product) SetMinSupportedVersion(versionID uint) error {
+	var targetVersion *Version
+	for _, v := range p.VersionList {
+		if v.ID == versionID {
+			targetVersion = &v
+			break
+		}
+	}
+
+	if targetVersion == nil {
+		return fmt.Errorf("version with ID %d not found", versionID)
+	}
+
+	if targetVersion.IsEnabled != 1 {
+		return fmt.Errorf("version with ID %d is not enabled", versionID)
+	}
+
+	p.MinSupportedVersionID = &targetVersion.ID
+	return nil
 }
 
 // ReleaseVersion 发布新版本

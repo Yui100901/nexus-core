@@ -107,8 +107,8 @@ func (r *ProductRepository) GetVersionsByProductID(ctx context.Context, productI
 		Find(ctx)
 }
 
-// SetMinSupportedVersion 设置产品的最低支持版本
-func (r *ProductRepository) SetMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
+// UpdateMinSupportedVersion 设置产品的最低支持版本
+func (r *ProductRepository) UpdateMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
 	_, err := gorm.G[model.Product](r.db).
 		Where("id = ?", productID).
 		Update(ctx, "min_supported_version_id", versionID)
