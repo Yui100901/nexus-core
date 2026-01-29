@@ -25,7 +25,7 @@ type License struct {
 	Status          int        `gorm:"type:int;index;not null"`                // 状态枚举
 	MaxNodes        int        `gorm:"type:int;not null;default:0"`            // 最大节点数 (0 = 不限制)
 	ConcurrentLimit int        `gorm:"type:int;not null;default:0"`            // 并发限制 (0 = 不限制)
-	Remark          string     `gorm:"type:text"`                              // 备注
+	Remark          *string    `gorm:"type:text"`                              // 备注
 }
 
 func (License) TableName() string {

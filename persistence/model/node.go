@@ -13,8 +13,8 @@ const (
 // Node 节点信息
 type Node struct {
 	BaseModel
-	DeviceCode string `gorm:"type:varchar(100);uniqueIndex;not null"` // 设备唯一识别码
-	MetaInfo   string `gorm:"type:text"`                              // 其他信息（操作系统、版本等）
+	DeviceCode string  `gorm:"type:varchar(100);uniqueIndex;not null"` // 设备唯一识别码
+	MetaInfo   *string `gorm:"type:text"`                              // 其他信息（操作系统、版本等）
 }
 
 func (Node) TableName() string {
