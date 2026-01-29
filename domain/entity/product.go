@@ -15,14 +15,14 @@ import (
 type Product struct {
 	ID                    uint      // 产品唯一标识符
 	Name                  string    // 产品名称，具有唯一性
-	Description           string    // 产品详细描述
-	MinSupportedVersionID uint      // 最低支持的版本ID，用于版本兼容性检查
+	Description           *string   // 产品详细描述
+	MinSupportedVersionID *uint     // 最低支持的版本ID，用于版本兼容性检查
 	VersionList           []Version // 产品版本列表
 }
 
 // NewProduct 工厂方法
 // 创建一个新的产品对象，默认版本列表为空
-func NewProduct(name string, description string, minSupportedVersionID uint, versions []Version) (*Product, error) {
+func NewProduct(name string, description *string, minSupportedVersionID *uint, versions []Version) (*Product, error) {
 	if name == "" {
 		return nil, fmt.Errorf("product name cannot be empty")
 	}
@@ -46,13 +46,13 @@ type Version struct {
 	ID          uint
 	VersionCode string    // 版本号，遵循语义化版本规范
 	ReleaseDate time.Time // 版本发布时间
-	Description string    // 版本详细说明
+	Description *string   // 版本详细说明
 	IsEnabled   int       // 版本状态，用于标识版本是否可用
 }
 
 // NewVersion 工厂方法
 // 创建一个新的版本对象，默认状态为启用
-func NewVersion(versionCode string, releaseDate time.Time, description string) (*Version, error) {
+func NewVersion(versionCode string, releaseDate time.Time, description *string) (*Version, error) {
 	if versionCode == "" {
 		return nil, fmt.Errorf("version code cannot be empty")
 	}
@@ -82,8 +82,8 @@ func (p *Product) ReleaseVersion(newVersion Version) error {
 	p.VersionList = append(p.VersionList, newVersion)
 
 	// 如果产品还没有最低支持版本，则设置为当前版本
-	if p.MinSupportedVersionID == 0 {
-		p.MinSupportedVersionID = newVersion.ID
+	if p.MinSupportedVersionID == nil {
+		p.MinSupportedVersionID = &newVersion.ID
 	}
 
 	return nil
@@ -97,9 +97,11 @@ func (p *Product) IsVersionSupported(targetVersion Version) bool {
 
 	var minSupportVersion *Version
 	for _, v := range p.VersionList {
-		if v.ID == p.MinSupportedVersionID {
-			minSupportVersion = &v
-			break
+		if p.MinSupportedVersionID != nil {
+			if v.ID == *p.MinSupportedVersionID {
+				minSupportVersion = &v
+				break
+			}
 		}
 	}
 
