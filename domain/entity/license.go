@@ -38,10 +38,7 @@ type License struct {
 
 // NewLicense 工厂方法
 // 创建一个新的许可证对象，默认状态为未激活
-func NewLicense(key string, validityHours int, maxNodes int, concurrentLimit int, remark *string, scopes []Scope) (*License, error) {
-	if key == "" {
-		return nil, fmt.Errorf("license key cannot be empty")
-	}
+func NewLicense(validityHours int, maxNodes int, concurrentLimit int, remark *string, scopes []Scope) (*License, error) {
 	if validityHours <= 0 {
 		return nil, fmt.Errorf("validity hours must be positive")
 	}
