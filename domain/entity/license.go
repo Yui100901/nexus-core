@@ -80,6 +80,10 @@ func (l *License) GetScopeProductIdList() []uint {
 	return ids
 }
 
+func (l *License) IsActive() bool {
+	return l.Status == StatusActive
+}
+
 // Activate 激活许可证
 // 将许可证从未激活状态转为激活状态，并设置激活时间和过期时间
 func (l *License) Activate(now time.Time) error {

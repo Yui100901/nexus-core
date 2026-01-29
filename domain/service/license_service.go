@@ -86,13 +86,14 @@ func (s *LicenseService) BatchCreateLicense(ctx context.Context, licenses []*ent
 	return s.lr.BatchCreateLicense(ctx, licenses)
 }
 
-// ActivateLicense 激活许可证
-func (s *LicenseService) ActivateLicense(ctx context.Context, licenseID uint) error {
-	license, err := s.lr.GetByID(ctx, licenseID)
-	if err != nil {
-		return err
+// ActivateLicenseIfNeeded 激活许可证
+func (s *LicenseService) ActivateLicenseIfNeeded(ctx context.Context, license *entity.License) error {
+
+	if license.IsActive() {
+		return nil
 	}
-	err = license.Activate(time.Now())
+
+	err := license.Activate(time.Now())
 	if err != nil {
 		return err
 	}
@@ -140,24 +141,6 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx context.Context) error {
 // 使用UUID生成器创建全局唯一的许可证密钥
 func (s *LicenseService) GenerateLicenseKey() string {
 	return uuid.New().String()
-}
-
-// ActivateLicenseIfNeeded 按需激活许可证
-// 如果许可证处于非激活状态，则激活它并更新数据库
-func (s *LicenseService) ActivateLicenseIfNeeded(ctx context.Context, license *entity.License) error {
-	if license.Status == entity.StatusActive {
-		return nil
-	}
-	if license.Status == entity.StatusRevoked {
-		return errors.New("license revoked")
-	}
-	if license.ValidityHours <= 0 {
-		return errors.New("invalid validity hours")
-	}
-	if err := license.Activate(time.Now()); err != nil {
-		return err
-	}
-	return s.lr.UpdateLicense(ctx, license)
 }
 
 // ValidateLicenseForUsage 验证许可证对特定产品的使用权限

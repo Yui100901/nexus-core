@@ -57,28 +57,29 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	// 1. 找到 license
-	lic, err := c.ls.GetLicenseByKey(context.Background(), cmd.LicenseKey)
+	// 1. 先找产品
+	product, err := c.ps.GetByID(context.Background(), cmd.ProductID)
+	if err != nil || product == nil {
+		BadRequest(ctx, "product not found")
+		return
+	}
+	// 2. 验证产品版本
+	if !product.CheckVersionSupportedByCode(cmd.VersionCode) {
+		BadRequest(ctx, "product version not supported")
+		return
+	}
+	// 3. 找到 license
+	license, err := c.ls.GetLicenseByKey(context.Background(), cmd.LicenseKey)
 	if err != nil {
 		BadRequest(ctx, "license not found")
 		return
 	}
-	// 1.5 检查版本是否被产品支持
-	ok, err := c.ps.HasSupportedVersion(context.Background(), cmd.ProductID, cmd.VersionCode)
-	if err != nil {
+	// 4. 激活 license 如果需要
+	if err := c.ls.ActivateLicenseIfNeeded(context.Background(), license); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-	if !ok {
-		BadRequest(ctx, "product version not supported")
-		return
-	}
-	// 2. 激活 license 如果需要
-	if err := c.ls.ActivateLicenseIfNeeded(context.Background(), lic); err != nil {
-		InternalError(ctx, err.Error())
-		return
-	}
-	// 3. 查找或创建 node
+	// 5. 查找或创建 node
 	node, err := c.ns.GetByDeviceCode(context.Background(), cmd.DeviceCode)
 	if err != nil {
 		// create new node
@@ -90,13 +91,13 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		node = n
 	}
 	// 4. 更新运行时并发统计（记录当前节点的 concurrent）
-	totalNodes, totalConcurrent := runtimecache.SetNodeConcurrent(lic.ID, cmd.ProductID, node.ID, cmd.Concurrent)
+	totalNodes, totalConcurrent := runtimecache.SetNodeConcurrent(license.ID, cmd.ProductID, node.ID)
 
 	// 5. 检查是否已有绑定
-	binding, err := c.nr.GetBindingByNodeAndLicenseProduct(context.Background(), node.ID, lic.ID, cmd.ProductID)
+	binding, err := c.nr.GetBindingByNodeAndLicenseProduct(context.Background(), node.ID, license.ID, cmd.ProductID)
 	if err == nil && binding != nil {
 		// already bound, check license validity for usage using runtime totals
-		valid, err := c.ls.ValidateLicenseForUsage(ctx, lic, cmd.ProductID, totalNodes, totalConcurrent)
+		valid, err := c.ls.ValidateLicenseForUsage(ctx, license, cmd.ProductID, totalNodes, totalConcurrent)
 		if !valid || err != nil {
 			BadRequest(ctx, "license validation failed: "+err.Error())
 			return
@@ -105,9 +106,9 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 	// 6. enforce MaxNodes limit before creating binding
-	if lic != nil {
+	if license != nil {
 		maxNodes := 0
-		for _, s := range lic.ScopeList {
+		for _, s := range license.ScopeList {
 			if s.ProductID == cmd.ProductID {
 				maxNodes = s.MaxNodes
 				break
@@ -119,7 +120,7 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		}
 	}
 	// 7. 添加绑定
-	nb := &entity.NodeBinding{LicenseID: lic.ID, NodeID: node.ID, IsBound: 0}
+	nb := &entity.NodeBinding{LicenseID: license.ID, NodeID: node.ID, IsBound: 0}
 	if err := c.ns.AddBinding(context.Background(), node.ID, nb); err != nil {
 		InternalError(ctx, err.Error())
 		return
