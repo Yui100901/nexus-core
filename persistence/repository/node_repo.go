@@ -101,9 +101,9 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string)
 // AddBinding 添加节点绑定关系（回填 ID）
 func (r *NodeRepository) AddBinding(ctx context.Context, nodeId uint, binding *entity.NodeBinding) error {
 	pBinding := &model.NodeBinding{
-		NodeID:      nodeId,
-		LicenseID:   binding.LicenseID,
-		BoundStatus: binding.BoundStatus,
+		NodeID:    nodeId,
+		LicenseID: binding.LicenseID,
+		IsBound:   binding.IsBound,
 	}
 	if err := gorm.G[model.NodeBinding](r.db).Create(ctx, pBinding); err != nil {
 		return err
@@ -153,9 +153,9 @@ func (r *NodeRepository) GetBindingByNodeAndLicense(ctx context.Context, nodeID,
 		return nil, err
 	}
 	return &entity.NodeBinding{
-		ID:          m.ID,
-		LicenseID:   m.LicenseID,
-		BoundStatus: m.BoundStatus,
+		ID:        m.ID,
+		LicenseID: m.LicenseID,
+		IsBound:   m.IsBound,
 	}, nil
 }
 
@@ -168,13 +168,13 @@ func (r *NodeRepository) GetBindingByNodeAndLicenseProduct(ctx context.Context, 
 		return nil, err
 	}
 	return &entity.NodeBinding{
-		ID:          m.ID,
-		LicenseID:   m.LicenseID,
-		BoundStatus: m.BoundStatus,
+		ID:        m.ID,
+		LicenseID: m.LicenseID,
+		IsBound:   m.IsBound,
 	}, nil
 }
 
-// CountActiveBindingsByLicenseAndProduct 统计某许可下某产品已绑定的节点数量（BoundStatus = active (0)）
+// CountActiveBindingsByLicenseAndProduct 统计某许可下某产品已绑定的节点数量（IsBound = active (0)）
 func (r *NodeRepository) CountActiveBindingsByLicenseAndProduct(ctx context.Context, licenseID, productID uint) (int64, error) {
 	var cnt int64
 	if err := r.db.WithContext(ctx).
@@ -192,7 +192,7 @@ func (r *NodeRepository) ForceUnbind(ctx context.Context, bindingID uint) error 
 	_, err := gorm.G[model.NodeBinding](r.db).
 		Where("id = ?", bindingID).
 		Updates(ctx, model.NodeBinding{
-			BoundStatus: model.BoundStatusUnbound,
+			IsBound: model.BoundStatusUnbound,
 		})
 	return err
 }
@@ -206,9 +206,9 @@ func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.N
 		return nil, err
 	}
 	return &entity.NodeBinding{
-		ID:          m.ID,
-		LicenseID:   m.LicenseID,
-		BoundStatus: m.BoundStatus,
+		ID:        m.ID,
+		LicenseID: m.LicenseID,
+		IsBound:   m.IsBound,
 	}, nil
 }
 
@@ -224,9 +224,9 @@ func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, lic
 	var bindings []entity.NodeBinding
 	for _, mb := range modelBindings {
 		bindings = append(bindings, entity.NodeBinding{
-			ID:          mb.ID,
-			LicenseID:   mb.LicenseID,
-			BoundStatus: mb.BoundStatus,
+			ID:        mb.ID,
+			LicenseID: mb.LicenseID,
+			IsBound:   mb.IsBound,
 		})
 	}
 	return bindings, nil
@@ -237,9 +237,9 @@ func toEntityNode(m *model.Node, bindings []model.NodeBinding) *entity.Node {
 	var bindingList []entity.NodeBinding
 	for _, b := range bindings {
 		bindingList = append(bindingList, entity.NodeBinding{
-			ID:          b.ID,
-			LicenseID:   b.LicenseID,
-			BoundStatus: b.BoundStatus,
+			ID:        b.ID,
+			LicenseID: b.LicenseID,
+			IsBound:   b.IsBound,
 		})
 	}
 	return &entity.Node{
