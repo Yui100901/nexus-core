@@ -98,12 +98,12 @@ func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
 	return toEntityNodeLicenseBinding(m), true, nil
 }
 
-// CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = active (0)）
+// CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = 1）
 func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.Context, licenseID uint) (int64, error) {
 	var cnt int64
 	if err := r.db.WithContext(ctx).
 		Model(&model.NodeLicenseBinding{}).
-		Where("license_id = ? AND bound_status = ?", licenseID, model.BoundStatusActive).
+		Where("license_id = ? AND is_bound = ?", licenseID, 1).
 		Count(&cnt).Error; err != nil {
 		return 0, err
 	}
