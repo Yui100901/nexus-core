@@ -1,0 +1,31 @@
+package entity
+
+import "fmt"
+
+//
+// @Author yfy2001
+// @Date 2026/1/30 13 53
+//
+
+// NodeLicenseBinding 定义节点与许可证之间的绑定关系
+// 表示某个许可证在特定节点上的使用权
+type NodeLicenseBinding struct {
+	ID        uint // 绑定关系唯一标识符
+	LicenseID uint // 关联的许可证ID，指向License实体
+	IsBound   int  // 绑定状态，表示当前绑定的状态
+}
+
+// NewNodeBinding 工厂方法
+// 创建一个新的节点绑定关系，默认状态为未激活
+func NewNodeBinding(licenseID uint) (*NodeLicenseBinding, error) {
+	if licenseID == 0 {
+		return nil, fmt.Errorf("licenseID must be positive")
+	}
+
+	binding := &NodeLicenseBinding{
+		LicenseID: licenseID,
+		IsBound:   StatusInactive,
+	}
+
+	return binding, nil
+}
