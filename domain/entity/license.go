@@ -81,7 +81,7 @@ func (l *License) GetScopeProductIdList() []uint {
 }
 
 func (l *License) IsActive() bool {
-	return l.Status == StatusActive
+	return l.CheckStatus(time.Now()) == StatusActive
 }
 
 // Activate 激活许可证
@@ -162,10 +162,11 @@ func (l *License) IsExpired(now time.Time) bool {
 
 // CheckStatus 自动检查并更新许可证状态
 // 如果许可证处于活动状态且已过期，则将其状态更新为过期
-func (l *License) CheckStatus(now time.Time) {
+func (l *License) CheckStatus(now time.Time) int {
 	if l.Status == StatusActive && l.ExpiredAt != nil && now.After(*l.ExpiredAt) {
 		l.Status = StatusExpired
 	}
+	return l.Status
 }
 
 // AddScope 添加授权范围
@@ -205,15 +206,12 @@ func (l *License) RemoveScope(productID uint) bool {
 }
 
 // ValidateScope 验证对特定产品的访问权限
-// 检查节点数量和并发数是否在授权范围内
-func (l *License) ValidateScope(nodes int, concurrent int) bool {
-	l.CheckStatus(time.Now())
-	if l.Status != StatusActive {
-		return false
-	}
-	if (l.MaxNodes == 0 || nodes <= l.MaxNodes) &&
-		(l.ConcurrentLimit == 0 || concurrent <= l.ConcurrentLimit) {
-		return true
+// 检查许可证的授权范围中是否包含指定的产品ID
+func (l *License) ValidateScope(productID uint) bool {
+	for _, s := range l.ScopeList {
+		if s.ProductID == productID {
+			return true
+		}
 	}
 	return false
 }
