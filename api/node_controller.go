@@ -141,7 +141,7 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.AddBindingCommand true "Add Binding"
-// @Success 200 {object} entity.NodeBinding
+// @Success 200 {object} entity.NodeLicenseBinding
 // @Failure 400 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
 // @Router /node/addBinding [post]

@@ -28,8 +28,8 @@ func ToEntityNode(cmd CreateNodeCommand) *entity.Node {
 }
 
 // ToEntityBinding 将添加绑定命令转换为实体对象
-func ToEntityBinding(cmd AddBindingCommand) *entity.NodeBinding {
-	return &entity.NodeBinding{
+func ToEntityBinding(cmd AddBindingCommand) *entity.NodeLicenseBinding {
+	return &entity.NodeLicenseBinding{
 		LicenseID: cmd.LicenseID,
 		IsBound:   0,
 	}
