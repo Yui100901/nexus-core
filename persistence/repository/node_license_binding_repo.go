@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
@@ -77,18 +78,28 @@ func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx context.Contex
 }
 
 // GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
-func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(ctx context.Context, nodeID, licenseID uint) (*entity.NodeLicenseBinding, error) {
+func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
+	ctx context.Context,
+	nodeID,
+	licenseID uint,
+) (*entity.NodeLicenseBinding, bool, error) {
 	m, err := gorm.G[*model.NodeLicenseBinding](r.db).
 		Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 		First(ctx)
 	if err != nil {
-		return nil, err
+		// 如果是未找到记录的错误，返回 false
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, false, nil
+		}
+		// 其他错误直接返回
+		return nil, false, err
 	}
-	return toEntityNodeLicenseBinding(m), nil
+	// 找到记录，返回 true
+	return toEntityNodeLicenseBinding(m), true, nil
 }
 
-// CountActiveBindingsByLicenseAndProduct 统计某许可已绑定的节点数量（IsBound = active (0)）
-func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseAndProduct(ctx context.Context, licenseID uint) (int64, error) {
+// CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = active (0)）
+func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.Context, licenseID uint) (int64, error) {
 	var cnt int64
 	if err := r.db.WithContext(ctx).
 		Model(&model.NodeLicenseBinding{}).
@@ -102,6 +113,7 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseAndProduct(ct
 func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicenseBinding {
 	return &entity.NodeLicenseBinding{
 		ID:        b.ID,
+		NodeID:    b.NodeID,
 		LicenseID: b.LicenseID,
 		IsBound:   b.IsBound,
 	}

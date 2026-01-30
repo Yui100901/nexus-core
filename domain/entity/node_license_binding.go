@@ -11,18 +11,20 @@ import "fmt"
 // 表示某个许可证在特定节点上的使用权
 type NodeLicenseBinding struct {
 	ID        uint // 绑定关系唯一标识符
+	NodeID    uint // 绑定的节点ID，指向Node实体
 	LicenseID uint // 关联的许可证ID，指向License实体
 	IsBound   int  // 绑定状态，表示当前绑定的状态
 }
 
-// NewNodeBinding 工厂方法
+// NewNodeLicenseBinding 工厂方法
 // 创建一个新的节点绑定关系，默认状态为未激活
-func NewNodeBinding(licenseID uint) (*NodeLicenseBinding, error) {
+func NewNodeLicenseBinding(nodeID, licenseID uint) (*NodeLicenseBinding, error) {
 	if licenseID == 0 {
 		return nil, fmt.Errorf("licenseID must be positive")
 	}
 
 	binding := &NodeLicenseBinding{
+		NodeID:    nodeID,
 		LicenseID: licenseID,
 		IsBound:   StatusInactive,
 	}
