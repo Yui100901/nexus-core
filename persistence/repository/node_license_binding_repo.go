@@ -47,17 +47,33 @@ func (r *NodeLicenseBindingRepository) UpdateBindingStatus(ctx context.Context, 
 }
 
 // GetBindingsByNodeID 获取节点的绑定关系列表
-func (r *NodeLicenseBindingRepository) GetBindingsByNodeID(ctx context.Context, nodeID uint) ([]model.NodeLicenseBinding, error) {
-	return gorm.G[model.NodeLicenseBinding](r.db).
+func (r *NodeLicenseBindingRepository) GetBindingsByNodeID(ctx context.Context, nodeID uint) ([]entity.NodeLicenseBinding, error) {
+	var res []entity.NodeLicenseBinding
+	ms, err := gorm.G[model.NodeLicenseBinding](r.db).
 		Where("node_id = ?", nodeID).
 		Find(ctx)
+	if err != nil {
+		return res, err
+	}
+	for _, b := range ms {
+		res = append(res, *toEntityNodeLicenseBinding(&b))
+	}
+	return res, nil
 }
 
 // GetBindingsByLicenseID 获取许可证的绑定关系列表
-func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx context.Context, licenseID uint) ([]model.NodeLicenseBinding, error) {
-	return gorm.G[model.NodeLicenseBinding](r.db).
+func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx context.Context, licenseID uint) ([]entity.NodeLicenseBinding, error) {
+	var res []entity.NodeLicenseBinding
+	ms, err := gorm.G[model.NodeLicenseBinding](r.db).
 		Where("license_id = ?", licenseID).
 		Find(ctx)
+	if err != nil {
+		return res, err
+	}
+	for _, b := range ms {
+		res = append(res, *toEntityNodeLicenseBinding(&b))
+	}
+	return res, nil
 }
 
 // GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
@@ -68,11 +84,7 @@ func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(ctx context.Co
 	if err != nil {
 		return nil, err
 	}
-	return &entity.NodeLicenseBinding{
-		ID:        m.ID,
-		LicenseID: m.LicenseID,
-		IsBound:   m.IsBound,
-	}, nil
+	return toEntityNodeLicenseBinding(m), nil
 }
 
 // CountActiveBindingsByLicenseAndProduct 统计某许可已绑定的节点数量（IsBound = active (0)）
@@ -85,4 +97,12 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseAndProduct(ct
 		return 0, err
 	}
 	return cnt, nil
+}
+
+func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicenseBinding {
+	return &entity.NodeLicenseBinding{
+		ID:        b.ID,
+		LicenseID: b.LicenseID,
+		IsBound:   b.IsBound,
+	}
 }
