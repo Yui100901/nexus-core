@@ -55,6 +55,15 @@ func NewNodeBinding(licenseID uint) (*NodeBinding, error) {
 	return binding, nil
 }
 
+func (n *Node) GetBindingByLicenseID(licenseID uint) *NodeBinding {
+	for _, b := range n.Bindings {
+		if b.LicenseID == licenseID {
+			return &b
+		}
+	}
+	return nil
+}
+
 func (n *Node) Unbind(licenseID uint) bool {
 	for i := range n.Bindings {
 		if n.Bindings[i].LicenseID == licenseID {
