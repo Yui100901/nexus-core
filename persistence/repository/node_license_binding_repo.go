@@ -26,9 +26,9 @@ func NewNodeLicenseBindingRepository() *NodeLicenseBindingRepository {
 }
 
 // AddBinding 添加节点绑定关系（回填 ID）
-func (r *NodeLicenseBindingRepository) AddBinding(ctx context.Context, nodeId uint, binding *entity.NodeLicenseBinding) error {
+func (r *NodeLicenseBindingRepository) AddBinding(ctx context.Context, binding *entity.NodeLicenseBinding) error {
 	pBinding := &model.NodeLicenseBinding{
-		NodeID:    nodeId,
+		NodeID:    binding.NodeID,
 		LicenseID: binding.LicenseID,
 		IsBound:   binding.IsBound,
 	}

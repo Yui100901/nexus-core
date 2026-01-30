@@ -26,7 +26,7 @@ func NewNodeLicenseBinding(nodeID, licenseID uint) (*NodeLicenseBinding, error) 
 	binding := &NodeLicenseBinding{
 		NodeID:    nodeID,
 		LicenseID: licenseID,
-		IsBound:   StatusInactive,
+		IsBound:   0,
 	}
 
 	return binding, nil
