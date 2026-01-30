@@ -98,39 +98,10 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string)
 	return toEntityNode(m, bindings), nil
 }
 
-// AddBinding 添加节点绑定关系（回填 ID）
-func (r *NodeRepository) AddBinding(ctx context.Context, nodeId uint, binding *entity.NodeBinding) error {
-	pBinding := &model.NodeBinding{
-		NodeID:    nodeId,
-		LicenseID: binding.LicenseID,
-		IsBound:   binding.IsBound,
-	}
-	if err := gorm.G[model.NodeBinding](r.db).Create(ctx, pBinding); err != nil {
-		return err
-	}
-	binding.ID = pBinding.ID
-	return nil
-}
-
-// UpdateBindingStatus 更新绑定状态
-func (r *NodeRepository) UpdateBindingStatus(ctx context.Context, id uint, status int) error {
-	_, err := gorm.G[model.NodeBinding](r.db).
-		Where("id = ?", id).
-		Update(ctx, "bound_status", status)
-	return err
-}
-
-// GetBindingsByNodeID 获取节点的绑定关系列表
-func (r *NodeRepository) GetBindingsByNodeID(ctx context.Context, nodeID uint) ([]model.NodeBinding, error) {
-	return gorm.G[model.NodeBinding](r.db).
-		Where("node_id = ?", nodeID).
-		Find(ctx)
-}
-
 // DeleteNode 删除节点及其绑定关系
 func (r *NodeRepository) DeleteNode(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := gorm.G[model.NodeBinding](tx).
+		if _, err := gorm.G[model.NodeLicenseBinding](tx).
 			Where("node_id = ?", id).
 			Delete(ctx); err != nil {
 			return err
@@ -144,68 +115,26 @@ func (r *NodeRepository) DeleteNode(ctx context.Context, id uint) error {
 	})
 }
 
-// GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
-func (r *NodeRepository) GetBindingByNodeAndLicense(ctx context.Context, nodeID, licenseID uint) (*entity.NodeBinding, error) {
-	m, err := gorm.G[*model.NodeBinding](r.db).
-		Where("node_id = ? AND license_id = ?", nodeID, licenseID).
-		First(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &entity.NodeBinding{
-		ID:        m.ID,
-		LicenseID: m.LicenseID,
-		IsBound:   m.IsBound,
-	}, nil
-}
-
-// GetBindingByNodeAndLicenseProduct 查询指定节点上指定许可和产品的绑定关系
-func (r *NodeRepository) GetBindingByNodeAndLicenseProduct(ctx context.Context, nodeID, licenseID, productID uint) (*entity.NodeBinding, error) {
-	m, err := gorm.G[*model.NodeBinding](r.db).
-		Where("node_id = ? AND license_id = ?", nodeID, licenseID).
-		First(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &entity.NodeBinding{
-		ID:        m.ID,
-		LicenseID: m.LicenseID,
-		IsBound:   m.IsBound,
-	}, nil
-}
-
-// CountActiveBindingsByLicenseAndProduct 统计某许可下某产品已绑定的节点数量（IsBound = active (0)）
-func (r *NodeRepository) CountActiveBindingsByLicenseAndProduct(ctx context.Context, licenseID, productID uint) (int64, error) {
-	var cnt int64
-	if err := r.db.WithContext(ctx).
-		Model(&model.NodeBinding{}).
-		Where("license_id = ? AND bound_status = ?", licenseID, model.BoundStatusActive).
-		Count(&cnt).Error; err != nil {
-		return 0, err
-	}
-	return cnt, nil
-}
-
 // ForceUnbind 强制解绑节点绑定
 // 将指定绑定的解绑时间设置为当前时间并将状态更新为解绑状态
 func (r *NodeRepository) ForceUnbind(ctx context.Context, bindingID uint) error {
-	_, err := gorm.G[model.NodeBinding](r.db).
+	_, err := gorm.G[model.NodeLicenseBinding](r.db).
 		Where("id = ?", bindingID).
-		Updates(ctx, model.NodeBinding{
+		Updates(ctx, model.NodeLicenseBinding{
 			IsBound: model.BoundStatusUnbound,
 		})
 	return err
 }
 
 // GetBindingByID 根据ID获取绑定信息
-func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.NodeBinding, error) {
-	m, err := gorm.G[*model.NodeBinding](r.db).
+func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.NodeLicenseBinding, error) {
+	m, err := gorm.G[*model.NodeLicenseBinding](r.db).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &entity.NodeBinding{
+	return &entity.NodeLicenseBinding{
 		ID:        m.ID,
 		LicenseID: m.LicenseID,
 		IsBound:   m.IsBound,
@@ -213,17 +142,17 @@ func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.N
 }
 
 // GetBindingsByLicenseAndProduct 根据许可证获取绑定列表
-func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, licenseID, productID uint) ([]entity.NodeBinding, error) {
-	modelBindings, err := gorm.G[model.NodeBinding](r.db).
+func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, licenseID, productID uint) ([]entity.NodeLicenseBinding, error) {
+	modelBindings, err := gorm.G[model.NodeLicenseBinding](r.db).
 		Where("license_id = ?", licenseID).
 		Find(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var bindings []entity.NodeBinding
+	var bindings []entity.NodeLicenseBinding
 	for _, mb := range modelBindings {
-		bindings = append(bindings, entity.NodeBinding{
+		bindings = append(bindings, entity.NodeLicenseBinding{
 			ID:        mb.ID,
 			LicenseID: mb.LicenseID,
 			IsBound:   mb.IsBound,
@@ -233,10 +162,10 @@ func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, lic
 }
 
 // 转换为领域对象
-func toEntityNode(m *model.Node, bindings []model.NodeBinding) *entity.Node {
-	var bindingList []entity.NodeBinding
+func toEntityNode(m *model.Node, bindings []model.NodeLicenseBinding) *entity.Node {
+	var bindingList []entity.NodeLicenseBinding
 	for _, b := range bindings {
-		bindingList = append(bindingList, entity.NodeBinding{
+		bindingList = append(bindingList, entity.NodeLicenseBinding{
 			ID:        b.ID,
 			LicenseID: b.LicenseID,
 			IsBound:   b.IsBound,
