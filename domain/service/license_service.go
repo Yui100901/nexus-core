@@ -2,15 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"maps"
 	"time"
 
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
-
-	"github.com/google/uuid"
 )
 
 //
@@ -21,8 +17,9 @@ import (
 // LicenseService 提供许可证相关的业务逻辑服务
 // 包括许可证的创建、更新、查询、激活和验证等功能
 type LicenseService struct {
-	lr *repository.LicenseRepository // 许可证仓库，用于数据持久化操作
-	pr *repository.ProductRepository
+	lr  *repository.LicenseRepository // 许可证仓库，用于数据持久化操作
+	pr  *repository.ProductRepository
+	nlr *repository.NodeLicenseBindingRepository
 }
 
 // NewLicenseService 创建新的许可证服务实例
@@ -101,6 +98,12 @@ func (s *LicenseService) ActivateLicenseIfNeeded(ctx context.Context, license *e
 	return s.lr.UpdateLicenseStatus(ctx, license.ID, entity.StatusActive)
 }
 
+// GetLicenseBindList 获取许可证绑定列表
+// 返回指定许可证的所有绑定信息
+func (s *LicenseService) GetLicenseBindList(ctx context.Context, licenseID uint) ([]entity.NodeLicenseBinding, error) {
+	return s.nlr.GetBindingsByLicenseID(ctx, licenseID)
+}
+
 // UpdateLicenseStatus 更新许可证状态
 // 如激活、过期、吊销等状态变更
 func (s *LicenseService) UpdateLicenseStatus(ctx context.Context, licenseID uint, status int) error {
@@ -135,31 +138,4 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx context.Context) error {
 		return err
 	}
 	return s.lr.BatchDeleteByIdList(ctx, ids)
-}
-
-// GenerateLicenseKey 生成唯一的许可证密钥
-// 使用UUID生成器创建全局唯一的许可证密钥
-func (s *LicenseService) GenerateLicenseKey() string {
-	return uuid.New().String()
-}
-
-// ValidateLicenseForUsage 验证许可证对特定产品的使用权限
-// 检查许可证是否存在、是否有效、是否包含指定产品的授权以及是否超过限制
-func (s *LicenseService) ValidateLicenseForUsage(ctx context.Context, license *entity.License, productID uint, currentNodes int, currentConcurrent int) (bool, error) {
-	// Refresh expiration status
-	license.CheckAndUpdateExpiration(time.Now())
-	if license.Status != entity.StatusActive {
-		return false, errors.New("license not active")
-	}
-	// Check scope for product
-	for _, scope := range license.ScopeList {
-		if scope.ProductID == productID {
-			// check node limit and concurrent
-			if (scope.MaxNodes == 0 || currentNodes <= scope.MaxNodes) && (scope.ConcurrentLimit == 0 || currentConcurrent <= scope.ConcurrentLimit) {
-				return true, nil
-			}
-			return false, errors.New("license scope limits exceeded")
-		}
-	}
-	return false, errors.New("license does not cover product")
 }
