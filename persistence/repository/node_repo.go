@@ -73,12 +73,7 @@ func (r *NodeRepository) GetByID(ctx context.Context, id uint) (*entity.Node, er
 		return nil, err
 	}
 
-	bindings, err := r.GetBindingsByNodeID(ctx, m.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return toEntityNode(m, bindings), nil
+	return toEntityNode(m), nil
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
@@ -90,12 +85,7 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string)
 		return nil, err
 	}
 
-	bindings, err := r.GetBindingsByNodeID(ctx, m.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return toEntityNode(m, bindings), nil
+	return toEntityNode(m), nil
 }
 
 // DeleteNode 删除节点及其绑定关系
@@ -162,19 +152,10 @@ func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, lic
 }
 
 // 转换为领域对象
-func toEntityNode(m *model.Node, bindings []model.NodeLicenseBinding) *entity.Node {
-	var bindingList []entity.NodeLicenseBinding
-	for _, b := range bindings {
-		bindingList = append(bindingList, entity.NodeLicenseBinding{
-			ID:        b.ID,
-			LicenseID: b.LicenseID,
-			IsBound:   b.IsBound,
-		})
-	}
+func toEntityNode(m *model.Node) *entity.Node {
 	return &entity.Node{
 		ID:         m.ID,
 		DeviceCode: m.DeviceCode,
 		MetaInfo:   m.MetaInfo,
-		Bindings:   bindingList,
 	}
 }
