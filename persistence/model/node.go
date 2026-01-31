@@ -5,11 +5,6 @@ package model
 // @Date 2026/1/16 10 16
 //
 
-const (
-	BoundStatusActive  = iota // 0 已绑定
-	BoundStatusUnbound        // 1 已解绑
-)
-
 // Node 节点信息
 type Node struct {
 	BaseModel
