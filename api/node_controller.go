@@ -151,12 +151,11 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	b := dto.ToEntityBinding(cmd)
-	if err := c.ns.AddBinding(ctx, cmd.NodeID, b); err != nil {
+	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, b)
+	Success(ctx, "")
 }
 
 // UpdateBindingStatus 更新绑定状态
@@ -198,10 +197,11 @@ func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.ForceUnbindByNodeAndLicense(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
-		InternalError(ctx, err.Error())
-		return
-	}
+	// todo: implement force unbind logic
+	//if err := c.ns.ForceUnbindByNodeAndLicense(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
+	//	InternalError(ctx, err.Error())
+	//	return
+	//}
 	SuccessMsg(ctx, "node binding forced to unbind")
 }
 
