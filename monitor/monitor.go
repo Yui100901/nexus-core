@@ -14,18 +14,15 @@ import (
 //
 
 // Node 表示一个被监控的节点。
-// 每个节点维护心跳时间、过期时间和在线状态。
-// 同时实现了堆元素所需的字段 index，用于在 NodeHeap 中定位。
 type Node struct {
-	ID            string        // 节点唯一标识
-	Timeout       time.Duration // 心跳超时时间
-	lastHeartbeat time.Time     // 最近一次心跳时间
-	expiresAt     time.Time     // 节点过期时间（lastHeartbeat + Timeout）
-	isOnline      bool          // 节点是否在线
-	index         int           // 堆中的索引位置（由 NodeHeap 管理）
+	ID            string
+	Timeout       time.Duration
+	lastHeartbeat time.Time
+	expiresAt     time.Time
+	isOnline      bool
+	index         int
 }
 
-// NewNode 创建一个新的节点，并初始化心跳和过期时间。
 func NewNode(id string, timeout time.Duration) *Node {
 	now := time.Now()
 	return &Node{
@@ -37,32 +34,25 @@ func NewNode(id string, timeout time.Duration) *Node {
 	}
 }
 
-// Heartbeat 更新节点的心跳时间，刷新过期时间，并标记为在线。
 func (n *Node) Heartbeat() {
 	n.lastHeartbeat = time.Now()
 	n.expiresAt = n.lastHeartbeat.Add(n.Timeout)
 	n.isOnline = true
 }
 
-// ExpireTime 返回节点的过期时间。
 func (n *Node) ExpireTime() time.Time {
 	return n.expiresAt
 }
 
-// IsOnline 判断节点是否在线：
-// 1. isOnline 标志为 true
-// 2. 当前时间未超过过期时间
 func (n *Node) IsOnline() bool {
 	return n.isOnline && time.Now().Before(n.expiresAt)
 }
 
-// Remaining 返回节点距离过期的剩余时间。
 func (n *Node) Remaining() time.Duration {
 	return time.Until(n.expiresAt)
 }
 
-// NodeHeap 实现一个最小堆，按照节点过期时间排序。
-// 堆顶元素是最早过期的节点。
+// NodeHeap 实现最小堆
 type NodeHeap []*Node
 
 func (h *NodeHeap) Len() int           { return len(*h) }
@@ -86,35 +76,45 @@ func (h *NodeHeap) Pop() interface{} {
 	return node
 }
 
-// Monitor 管理节点的注册、心跳更新和过期检查。
-// 内部使用 NodeHeap 来快速找到最早过期的节点。
-// 通过 context 控制监控协程的启动和停止。
+// Monitor 管理节点
 type Monitor struct {
-	mu      sync.Mutex         // 保护共享数据的互斥锁
-	nodeMap map[string]*Node   // 节点映射表，便于快速查找
-	heap    *NodeHeap          // 最小堆，按过期时间排序
-	once    sync.Once          // 确保 Stop 只执行一次
-	ctx     context.Context    // 控制监控协程退出的上下文
-	cancel  context.CancelFunc // 用于取消 ctx 的函数
+	mu      sync.Mutex
+	nodeMap map[string]*Node
+	heap    *NodeHeap
+
+	// 生命周期管理
+	once   sync.Once
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	// 清理参数
+	cleanupInterval time.Duration
+	maxOffline      time.Duration
 }
 
-// NewMonitor 创建一个新的监控器实例。
 func NewMonitor() *Monitor {
 	h := &NodeHeap{}
 	heap.Init(h)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Monitor{
-		nodeMap: make(map[string]*Node),
-		heap:    h,
-		once:    sync.Once{},
-		ctx:     ctx,
-		cancel:  cancel,
+		nodeMap:         make(map[string]*Node),
+		heap:            h,
+		once:            sync.Once{},
+		ctx:             ctx,
+		cancel:          cancel,
+		cleanupInterval: 10 * time.Minute, // 默认每 10 分钟清理一次
+		maxOffline:      1 * time.Hour,    // 默认离线超过 1 小时销毁
 	}
 }
 
-// Register 注册一个节点。
-// 如果节点已存在，则更新其超时时间并刷新心跳。
-// 如果是新节点，则加入堆和映射表。
+// SetCleanupPolicy 设置清理策略
+func (m *Monitor) SetCleanupPolicy(interval, maxOffline time.Duration) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cleanupInterval = interval
+	m.maxOffline = maxOffline
+}
+
 func (m *Monitor) Register(id string, timeout time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -131,8 +131,6 @@ func (m *Monitor) Register(id string, timeout time.Duration) {
 	heap.Push(m.heap, n)
 }
 
-// UpdateHeartbeat 更新指定节点的心跳。
-// 如果节点存在，则刷新其过期时间并调整堆位置。
 func (m *Monitor) UpdateHeartbeat(nodeID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -142,10 +140,9 @@ func (m *Monitor) UpdateHeartbeat(nodeID string) {
 	}
 }
 
-// Start 启动监控器。
-// 在后台协程中循环检查堆顶节点是否过期。
-// 如果节点过期，则标记为离线并移出堆。
+// Start 启动监控器，包含过期检测和僵尸清理
 func (m *Monitor) Start() {
+	// 过期检测协程
 	go func() {
 		for {
 			select {
@@ -162,7 +159,6 @@ func (m *Monitor) Start() {
 				wait := node.Remaining()
 				m.mu.Unlock()
 
-				// 等待节点过期或上下文取消
 				if wait > 0 {
 					select {
 					case <-m.ctx.Done():
@@ -177,8 +173,30 @@ func (m *Monitor) Start() {
 					node.isOnline = false
 					fmt.Printf("Node %s went offline at %v\n", node.ID, time.Now())
 				} else {
-					// 节点仍在线，重新调整堆位置
 					heap.Fix(m.heap, node.index)
+				}
+				m.mu.Unlock()
+			}
+		}
+	}()
+
+	// 清理协程，清理太久不活跃的节点
+	go func() {
+		ticker := time.NewTicker(m.cleanupInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-m.ctx.Done():
+				return
+			case <-ticker.C:
+				m.mu.Lock()
+				now := time.Now()
+				for id, node := range m.nodeMap {
+					if !node.IsOnline() && now.Sub(node.expiresAt) > m.maxOffline {
+						delete(m.nodeMap, id)
+						fmt.Printf("Node %s removed after being offline for %v\n", id, m.maxOffline)
+					}
 				}
 				m.mu.Unlock()
 			}
@@ -186,8 +204,6 @@ func (m *Monitor) Start() {
 	}()
 }
 
-// Stop 优雅退出监控器。
-// 使用 sync.Once 确保只调用一次。
 func (m *Monitor) Stop() {
 	m.once.Do(func() {
 		m.cancel()
@@ -195,7 +211,6 @@ func (m *Monitor) Stop() {
 	})
 }
 
-// GetOnlineNodes 返回当前在线的所有节点。
 func (m *Monitor) GetOnlineNodes() []*Node {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -208,7 +223,6 @@ func (m *Monitor) GetOnlineNodes() []*Node {
 	return nodes
 }
 
-// GetOfflineNodes 返回当前离线的所有节点。
 func (m *Monitor) GetOfflineNodes() []*Node {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -221,6 +235,4 @@ func (m *Monitor) GetOfflineNodes() []*Node {
 	return nodes
 }
 
-// GlobalMonitor 提供一个全局默认的监控器实例。
-// 可直接使用 GlobalMonitor.Register / UpdateHeartbeat / Start 等方法。
 var GlobalMonitor = NewMonitor()
