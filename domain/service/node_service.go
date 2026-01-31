@@ -4,7 +4,6 @@ import (
 	"context"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
-	"nexus-core/runtimecache"
 )
 
 // NodeService 提供节点相关的业务逻辑服务
@@ -66,21 +65,15 @@ func (s *NodeService) UpdateBindingStatus(ctx context.Context, id uint, status i
 // 将指定的绑定状态更新为解绑状态，并记录解绑时间
 // 同时更新运行时缓存，减少对应许可证和产品的节点计数
 func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
-	// 先获取完整的绑定信息以获取节点ID
-	binding, err := s.nr.GetBindingByID(ctx, bindingID)
-	if err != nil {
-		return err
-	}
 
 	// 执行强制解绑操作
-	err = s.nr.ForceUnbind(ctx, bindingID)
+	err := s.nr.ForceUnbind(ctx, bindingID)
 	if err != nil {
 		return err
 	}
 
 	// 从运行时缓存中移除该节点的并发计数
 	// 由于没有ProductID，我们暂时使用默认值0
-	runtimecache.RemoveNodeConcurrent(binding.LicenseID, 0, binding.NodeID)
 
 	return nil
 }

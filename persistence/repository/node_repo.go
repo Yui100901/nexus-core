@@ -111,7 +111,7 @@ func (r *NodeRepository) ForceUnbind(ctx context.Context, bindingID uint) error 
 	_, err := gorm.G[model.NodeLicenseBinding](r.db).
 		Where("id = ?", bindingID).
 		Updates(ctx, model.NodeLicenseBinding{
-			IsBound: model.BoundStatusUnbound,
+			IsBound: 0,
 		})
 	return err
 }
