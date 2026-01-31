@@ -36,7 +36,7 @@ func Connect() *gorm.DB {
 			&model.Product{},
 			&model.ProductVersion{},
 			&model.Node{},
-			&model.NodeBinding{},
+			&model.NodeLicenseBinding{},
 		); err != nil {
 			panic(fmt.Sprintf("failed to automigrate database: %v", err))
 		}
