@@ -47,13 +47,13 @@ func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*entity
 
 // AddBinding 为节点添加许可证绑定关系
 // 将指定的许可证与节点进行绑定
-func (s *NodeService) AddBinding(ctx context.Context, nodeId uint, binding *entity.NodeLicenseBinding) error {
-	node, err := s.nr.GetByID(ctx, nodeId)
+func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID uint) error {
+	binding, err := entity.NewNodeLicenseBinding(nodeID, licenseID)
 	if err != nil {
 		return err
 	}
-	node.Bind(binding)
-	return s.nlr.AddBinding(ctx, nodeId, binding)
+	binding.IsBound = 1
+	return s.nlr.AddBinding(ctx, binding)
 }
 
 // UpdateBindingStatus 更新绑定状态
@@ -74,28 +74,6 @@ func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
 
 	// 执行强制解绑操作
 	err = s.nr.ForceUnbind(ctx, bindingID)
-	if err != nil {
-		return err
-	}
-
-	// 从运行时缓存中移除该节点的并发计数
-	// 由于没有ProductID，我们暂时使用默认值0
-	runtimecache.RemoveNodeConcurrent(binding.LicenseID, 0, binding.NodeID)
-
-	return nil
-}
-
-// ForceUnbindByNodeAndLicense 根据节点ID和许可证ID强制解绑节点
-// 查找对应的绑定关系并将其状态更新为解绑状态
-func (s *NodeService) ForceUnbindByNodeAndLicense(ctx context.Context, nodeID, licenseID uint) error {
-	// 查找节点和许可证之间的绑定关系
-	binding, err := s.nlr.GetBindingByNodeAndLicense(ctx, nodeID, licenseID)
-	if err != nil {
-		return err
-	}
-
-	// 执行强制解绑操作
-	err = s.nr.ForceUnbind(ctx, binding.ID)
 	if err != nil {
 		return err
 	}
