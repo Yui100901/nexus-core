@@ -24,16 +24,14 @@ const (
 // License 表示许可证领域的核心实体
 // 包含许可证的基本信息、激活状态、有效期和授权范围
 type License struct {
-	ID              uint
-	LicenseKey      string     // 许可证密钥，用于客户端验证
-	ValidityHours   int        // 有效时长（小时），从激活时刻开始计算
-	ActivatedAt     *time.Time // 激活时间，首次激活时设置
-	ExpiredAt       *time.Time // 过期时间，基于激活时间和有效时长计算
-	Status          int        // 当前状态，使用LicenseStatus枚举值
-	MaxNodes        int        // 最大节点数限制，0表示无限制
-	ConcurrentLimit int        // 并发数限制，0表示无限制
-	Remark          *string    // 备注信息
-	ScopeList       []Scope    // 授权范围列表，定义了许可证对产品的使用权限
+	ID            uint
+	LicenseKey    string     // 许可证密钥，用于客户端验证
+	ValidityHours int        // 有效时长（小时），从激活时刻开始计算
+	ActivatedAt   *time.Time // 激活时间，首次激活时设置
+	ExpiredAt     *time.Time // 过期时间，基于激活时间和有效时长计算
+	Status        int        // 当前状态，使用LicenseStatus枚举值
+	Remark        *string    // 备注信息
+	ScopeList     []Scope    // 授权范围列表，定义了许可证对产品的使用权限
 }
 
 // NewLicense 工厂方法
@@ -44,13 +42,11 @@ func NewLicense(validityHours int, maxNodes int, concurrentLimit int, remark *st
 	}
 
 	license := &License{
-		LicenseKey:      strings.ReplaceAll(uuid.New().String(), "-", ""),
-		ValidityHours:   validityHours,
-		Status:          StatusInactive, // 初始状态必须是未激活
-		MaxNodes:        maxNodes,
-		ConcurrentLimit: concurrentLimit,
-		Remark:          remark,
-		ScopeList:       scopes,
+		LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
+		ValidityHours: validityHours,
+		Status:        StatusInactive, // 初始状态必须是未激活
+		Remark:        remark,
+		ScopeList:     scopes,
 	}
 
 	return license, nil
@@ -59,15 +55,19 @@ func NewLicense(validityHours int, maxNodes int, concurrentLimit int, remark *st
 // Scope 定义许可证对特定产品的授权范围
 // 包括功能模块掩码、节点数限制和并发限制
 type Scope struct {
-	ID          uint
-	ProductID   uint   // 关联的产品ID，指向Product实体
-	FeatureMask string // 功能模块掩码，用于控制功能模块访问权限
+	ID              uint
+	ProductID       uint   // 关联的产品ID，指向Product实体
+	MaxNodes        int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
+	ConcurrentLimit int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
+	FeatureMask     string // 功能模块掩码，用于控制功能模块访问权限
 }
 
-func NewScope(productID uint, featureMask string) *Scope {
+func NewScope(productID uint, maxNodes, concurrentLimit int, featureMask string) *Scope {
 	return &Scope{
-		ProductID:   productID,
-		FeatureMask: featureMask,
+		ProductID:       productID,
+		MaxNodes:        maxNodes,
+		ConcurrentLimit: concurrentLimit,
+		FeatureMask:     featureMask,
 	}
 }
 

@@ -239,9 +239,11 @@ func toEntityLicense(m *model.License, scopes []model.LicenseScope) *entity.Lice
 	var scopeList []entity.Scope
 	for _, s := range scopes {
 		scopeList = append(scopeList, entity.Scope{
-			ID:          s.ID,
-			ProductID:   s.ProductID,
-			FeatureMask: s.FeatureMask,
+			ID:              s.ID,
+			ProductID:       s.ProductID,
+			FeatureMask:     s.FeatureMask,
+			MaxNodes:        s.MaxNodes,
+			ConcurrentLimit: s.ConcurrentLimit,
 		})
 	}
 
