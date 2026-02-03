@@ -46,8 +46,8 @@ func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*entity
 
 // AddBinding 为节点添加许可证绑定关系
 // 将指定的许可证与节点进行绑定
-func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID uint) error {
-	binding, err := entity.NewNodeLicenseBinding(nodeID, licenseID)
+func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, productID uint) error {
+	binding, err := entity.NewNodeLicenseBinding(nodeID, licenseID, productID)
 	if err != nil {
 		return err
 	}
