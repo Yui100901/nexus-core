@@ -19,6 +19,10 @@ import (
 
 type NodeState int
 
+func (s NodeState) StateCode() int {
+	return int(s)
+}
+
 const (
 	StateInit NodeState = iota
 	StateOnline
@@ -149,9 +153,9 @@ type Monitor struct {
 	cleanupInterval time.Duration
 	maxOffline      time.Duration
 
-	collector StatCollector
+	Stat StatCollector
 
-	eventCh chan event // collector 异步事件队列
+	eventCh chan event // Stat 异步事件队列
 }
 
 func NewMonitor() *Monitor {
@@ -173,7 +177,7 @@ func NewMonitor() *Monitor {
 func (m *Monitor) SetCollector(c StatCollector) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.collector = c
+	m.Stat = c
 }
 
 // -----------------------------
@@ -351,12 +355,12 @@ func (m *Monitor) eventLoop() {
 		case <-m.ctx.Done():
 			return
 		case ev := <-m.eventCh:
-			if m.collector == nil {
+			if m.Stat == nil {
 				continue
 			}
 
 			if ev.t == eventStateChange {
-				m.collector.OnNodeStateChange(ev.node, ev.from, ev.to)
+				m.Stat.OnNodeStateChange(ev.node, ev.from, ev.to)
 			}
 		}
 	}
