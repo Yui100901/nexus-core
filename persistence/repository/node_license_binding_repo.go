@@ -110,6 +110,19 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.
 	return cnt, nil
 }
 
+// CountActiveBindingsByLicenseForProduct 统计某许可下某个产品已绑定的节点数量（IsBound = 1）
+func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(ctx context.Context,
+	licenseID, productID uint) (int64, error) {
+	var cnt int64
+	if err := r.db.WithContext(ctx).
+		Model(&model.NodeLicenseBinding{}).
+		Where("license_id = ? AND product_id = ? AND is_bound = ?", licenseID, productID, 1).
+		Count(&cnt).Error; err != nil {
+		return 0, err
+	}
+	return cnt, nil
+}
+
 func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicenseBinding {
 	return &entity.NodeLicenseBinding{
 		ID:        b.ID,
