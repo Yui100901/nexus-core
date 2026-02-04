@@ -55,19 +55,19 @@ func NewLicense(validityHours int, maxNodes int, concurrentLimit int, remark *st
 // Scope 定义许可证对特定产品的授权范围
 // 包括功能模块掩码、节点数限制和并发限制
 type Scope struct {
-	ID              uint
-	ProductID       uint   // 关联的产品ID，指向Product实体
-	MaxNodes        int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
-	ConcurrentLimit int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
-	FeatureMask     string // 功能模块掩码，用于控制功能模块访问权限
+	ID            uint
+	ProductID     uint   // 关联的产品ID，指向Product实体
+	MaxNodes      int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
+	MaxConcurrent int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
+	FeatureMask   string // 功能模块掩码，用于控制功能模块访问权限
 }
 
 func NewScope(productID uint, maxNodes, concurrentLimit int, featureMask string) *Scope {
 	return &Scope{
-		ProductID:       productID,
-		MaxNodes:        maxNodes,
-		ConcurrentLimit: concurrentLimit,
-		FeatureMask:     featureMask,
+		ProductID:     productID,
+		MaxNodes:      maxNodes,
+		MaxConcurrent: concurrentLimit,
+		FeatureMask:   featureMask,
 	}
 }
 

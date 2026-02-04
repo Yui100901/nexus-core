@@ -33,11 +33,11 @@ func (License) TableName() string {
 // LicenseScope 许可范围：支持的产品及限制
 type LicenseScope struct {
 	BaseModel
-	LicenseID       uint   `gorm:"index;not null"`              // 对应 License.ID
-	ProductID       uint   `gorm:"index;not null"`              // 对应 Product.ID
-	MaxNodes        int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
-	ConcurrentLimit int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
-	FeatureMask     string `gorm:"type:varchar(255)"`           // 功能模块掩码
+	LicenseID     uint   `gorm:"index;not null"`              // 对应 License.ID
+	ProductID     uint   `gorm:"index;not null"`              // 对应 Product.ID
+	MaxNodes      int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
+	MaxConcurrent int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
+	FeatureMask   string `gorm:"type:varchar(255)"`           // 功能模块掩码
 }
 
 func (LicenseScope) TableName() string {
