@@ -206,15 +206,15 @@ func (l *License) RemoveScope(productID uint) bool {
 }
 
 // ValidateMaxNodesForProduct 验证许可证特定产品授权中的最大节点数
-func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int) error {
+func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int) bool {
 	scope := l.GetScope(productID)
 	if scope == nil {
-		return fmt.Errorf("product %d not supported", productID)
+		return false
 	}
 	if scope.MaxNodes > 0 && currentBindings >= scope.MaxNodes {
-		return fmt.Errorf("maximum number of nodes exceeded for product %d", productID)
+		return false
 	}
-	return nil
+	return true
 }
 
 // ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数

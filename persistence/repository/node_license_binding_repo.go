@@ -82,20 +82,20 @@ func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
 	ctx context.Context,
 	nodeID,
 	licenseID uint,
-) (*entity.NodeLicenseBinding, bool, error) {
+) (*entity.NodeLicenseBinding, error) {
 	m, err := gorm.G[*model.NodeLicenseBinding](r.db).
 		Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 		First(ctx)
 	if err != nil {
 		// 如果是未找到记录的错误，返回 false
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, false, nil
+			return nil, nil
 		}
 		// 其他错误直接返回
-		return nil, false, err
+		return nil, err
 	}
 	// 找到记录，返回 true
-	return toEntityNodeLicenseBinding(m), true, nil
+	return toEntityNodeLicenseBinding(m), nil
 }
 
 // CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = 1）
