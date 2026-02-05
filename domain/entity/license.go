@@ -205,13 +205,36 @@ func (l *License) RemoveScope(productID uint) bool {
 	return false
 }
 
-// ValidateScope 验证对特定产品的访问权限
-// 检查许可证的授权范围中是否包含指定的产品ID
-func (l *License) ValidateScope(productID uint) bool {
+// ValidateMaxNodesForProduct 验证许可证特定产品授权中的最大节点数
+func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int) error {
+	scope := l.GetScope(productID)
+	if scope == nil {
+		return fmt.Errorf("product %d not supported", productID)
+	}
+	if scope.MaxNodes > 0 && currentBindings >= scope.MaxNodes {
+		return fmt.Errorf("maximum number of nodes exceeded for product %d", productID)
+	}
+	return nil
+}
+
+// ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数
+func (l *License) ValidateMaxConcurrentForProduct(productID uint, currentConcurrent int) error {
+	scope := l.GetScope(productID)
+	if scope == nil {
+		return fmt.Errorf("product %d not supported", productID)
+	}
+	if scope.MaxConcurrent > 0 && currentConcurrent >= scope.MaxConcurrent {
+		return fmt.Errorf("maximum number of concurrent connections exceeded for product %d", productID)
+	}
+	return nil
+}
+
+// GetScope 获取授权范围
+func (l *License) GetScope(productID uint) *Scope {
 	for _, s := range l.ScopeList {
 		if s.ProductID == productID {
-			return true
+			return &s
 		}
 	}
-	return false
+	return nil
 }
