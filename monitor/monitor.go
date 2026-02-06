@@ -158,7 +158,7 @@ type Monitor struct {
 	eventCh chan event // Stat 异步事件队列
 }
 
-func NewMonitor() *Monitor {
+func NewMonitor(c StatCollector) *Monitor {
 	h := &NodeHeap{}
 	heap.Init(h)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -170,6 +170,7 @@ func NewMonitor() *Monitor {
 		cancel:          cancel,
 		cleanupInterval: 10 * time.Minute,
 		maxOffline:      1 * time.Hour,
+		Stat:            c,
 		eventCh:         make(chan event, 1024),
 	}
 }
@@ -406,4 +407,5 @@ func (m *Monitor) GetOfflineNodes() []Node {
 	return nodes
 }
 
-var GlobalMonitor = NewMonitor()
+var GlobalStat = NewOnlineStat()
+var GlobalMonitor = NewMonitor(GlobalStat)

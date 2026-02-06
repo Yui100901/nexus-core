@@ -54,6 +54,13 @@ type OnlineStat struct {
 	OnlineMap map[string]*OnlineNodeKey
 }
 
+func NewOnlineStat() *OnlineStat {
+	return &OnlineStat{
+		mu:        sync.Mutex{},
+		OnlineMap: make(map[string]*OnlineNodeKey),
+	}
+}
+
 func (s *OnlineStat) AddOnlineNode(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
