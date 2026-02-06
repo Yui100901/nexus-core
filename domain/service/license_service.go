@@ -139,12 +139,3 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx context.Context) error {
 	}
 	return s.lr.BatchDeleteByIdList(ctx, ids)
 }
-
-// CheckLicenseBindLimit 检查许可证是否达到绑定上限
-func (s *LicenseService) CheckLicenseBindLimit(ctx context.Context, license *entity.License) (bool, error) {
-	count, err := s.nlr.CountActiveBindingsByLicense(ctx, license.ID)
-	if err != nil {
-		return false, err
-	}
-	return count < int64(license.MaxNodes), nil
-}
