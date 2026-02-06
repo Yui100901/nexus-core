@@ -1,6 +1,9 @@
 package dto
 
-import "nexus-core/domain/entity"
+import (
+	"nexus-core/domain/entity"
+	"time"
+)
 
 // CreateProductCommand 创建产品的命令对象
 // @Description Command to create a product
@@ -10,13 +13,18 @@ type CreateProductCommand struct {
 	Description *string `json:"description"`             // 产品描述
 }
 
-// ProductVDTO 产品版本的DTO对象
+// CreateProductVersionCommand 产品版本的DTO对象
 // @Description Product version DTO
-type ProductVDTO struct {
-	VersionCode string `json:"version_code"` // 版本号
-	Description string `json:"description"`  // 版本描述
-	// ReleaseDate omitted for simplicity in DTO
-	Status int `json:"status"` // 版本状态
+type CreateProductVersionCommand struct {
+	ProductID   uint       `json:"product_id" binding:"required"`   // 所属产品ID
+	VersionCode string     `json:"version_code" binding:"required"` // 版本号
+	ReleaseDate *time.Time `json:"release_date"`                    // 发布时间
+	Description *string    `json:"description"`                     // 版本描述
+}
+
+// ToEntityVersion 将创建产品版本命令转换为实体对象
+func ToEntityVersion(cmd CreateProductVersionCommand) (*entity.Version, error) {
+	return entity.NewVersion(cmd.VersionCode, cmd.ReleaseDate, cmd.Description)
 }
 
 // ToEntityProduct 将创建产品命令转换为实体对象

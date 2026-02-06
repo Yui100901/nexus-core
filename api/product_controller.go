@@ -64,6 +64,34 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	Success(ctx, p)
 }
 
+// CreateProductVersion 创建产品版本
+// @Summary Create a product version
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param body body dto.CreateProductVersionCommand true "Create Product Version"
+// @Success 200 {object} entity.Version
+// @Failure 400 {object} api.APIResponse
+// @Failure 500 {object} api.APIResponse
+// @Router /product/createVersion [post]
+func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
+	var cmd dto.CreateProductVersionCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	v, err := dto.ToEntityVersion(cmd)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := c.ps.CreateNewVersion(ctx, cmd.ProductID, v); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	Success(ctx, v)
+}
+
 // BatchCreate 批量创建产品
 // @Summary Batch create products
 // @Tags products
