@@ -151,7 +151,7 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
+	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
