@@ -218,15 +218,15 @@ func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int
 }
 
 // ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数
-func (l *License) ValidateMaxConcurrentForProduct(productID uint, currentConcurrent int) error {
+func (l *License) ValidateMaxConcurrentForProduct(productID uint, currentConcurrent int) bool {
 	scope := l.GetScope(productID)
 	if scope == nil {
-		return fmt.Errorf("product %d not supported", productID)
+		return false
 	}
 	if scope.MaxConcurrent > 0 && currentConcurrent >= scope.MaxConcurrent {
-		return fmt.Errorf("maximum number of concurrent connections exceeded for product %d", productID)
+		return false
 	}
-	return nil
+	return true
 }
 
 // GetScope 获取授权范围
