@@ -212,7 +212,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param body object true "{\"id\": <product id>}"
+// @Param body body object true "{\"id\": <product id>}"
 // @Success 200 {object} api.APIResponse
 // @Failure 400 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse

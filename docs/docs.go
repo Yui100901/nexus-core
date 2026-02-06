@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/device/heartbeat": {
+        "/access/heartbeat": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -24,7 +24,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "device"
+                    "access"
                 ],
                 "summary": "Client heartbeat",
                 "parameters": [
@@ -386,7 +386,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.NodeBinding"
+                            "$ref": "#/definitions/entity.NodeLicenseBinding"
                         }
                     },
                     "400": {
@@ -817,6 +817,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/product/createVersion": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Create a product version",
+                "parameters": [
+                    {
+                        "description": "Create Product Version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateProductVersionCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entity.Version"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/product/delete": {
             "post": {
                 "consumes": [
@@ -1016,7 +1061,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "license_id",
-                "node_id"
+                "node_id",
+                "product_id"
             ],
             "properties": {
                 "license_id": {
@@ -1026,6 +1072,10 @@ const docTemplate = `{
                 "node_id": {
                     "description": "节点ID",
                     "type": "integer"
+                },
+                "product_id": {
+                    "description": "产品ID",
+                    "type": "integer"
                 }
             }
         },
@@ -1033,13 +1083,22 @@ const docTemplate = `{
             "description": "Command to create a license",
             "type": "object",
             "required": [
-                "license_key",
+                "concurrent_limit",
+                "max_nodes",
                 "scope_list",
                 "validity_hours"
             ],
             "properties": {
-                "license_key": {
-                    "description": "许可证密钥",
+                "concurrent_limit": {
+                    "description": "并发限制",
+                    "type": "integer"
+                },
+                "max_nodes": {
+                    "description": "最大节点数",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
                     "type": "string"
                 },
                 "scope_list": {
@@ -1086,13 +1145,32 @@ const docTemplate = `{
                 "name": {
                     "description": "产品名称",
                     "type": "string"
+                }
+            }
+        },
+        "dto.CreateProductVersionCommand": {
+            "description": "Product version DTO",
+            "type": "object",
+            "required": [
+                "product_id",
+                "version_code"
+            ],
+            "properties": {
+                "description": {
+                    "description": "版本描述",
+                    "type": "string"
                 },
-                "version_list": {
-                    "description": "版本列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.ProductVDTO"
-                    }
+                "product_id": {
+                    "description": "所属产品ID",
+                    "type": "integer"
+                },
+                "release_date": {
+                    "description": "发布时间",
+                    "type": "string"
+                },
+                "version_code": {
+                    "description": "版本号",
+                    "type": "string"
                 }
             }
         },
@@ -1124,16 +1202,12 @@ const docTemplate = `{
                 "version_code"
             ],
             "properties": {
-                "concurrent": {
-                    "description": "Optional: concurrent sessions or other telemetry from client",
-                    "type": "integer"
-                },
                 "device_code": {
                     "description": "设备唯一识别码",
                     "type": "string"
                 },
                 "license_key": {
-                    "description": "许可证密钥",
+                    "description": "许可证",
                     "type": "string"
                 },
                 "product_id": {
@@ -1146,24 +1220,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ProductVDTO": {
-            "description": "Product version DTO",
-            "type": "object",
-            "properties": {
-                "description": {
-                    "description": "版本描述",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "ReleaseDate omitted for simplicity in DTO",
-                    "type": "integer"
-                },
-                "version_code": {
-                    "description": "版本号",
-                    "type": "string"
-                }
-            }
-        },
         "dto.ScopeDTO": {
             "description": "Scope transfer object",
             "type": "object",
@@ -1171,17 +1227,9 @@ const docTemplate = `{
                 "product_id"
             ],
             "properties": {
-                "concurrent_limit": {
-                    "description": "并发限制",
-                    "type": "integer"
-                },
                 "feature_mask": {
                     "description": "功能模块掩码",
                     "type": "string"
-                },
-                "max_nodes": {
-                    "description": "最大节点数",
-                    "type": "integer"
                 },
                 "product_id": {
                     "description": "产品ID",
@@ -1275,13 +1323,6 @@ const docTemplate = `{
         "entity.Node": {
             "type": "object",
             "properties": {
-                "bindings": {
-                    "description": "与此节点关联的许可证绑定关系",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/entity.NodeBinding"
-                    }
-                },
                 "deviceCode": {
                     "description": "设备唯一识别码，用于区分不同设备",
                     "type": "string"
@@ -1296,28 +1337,28 @@ const docTemplate = `{
                 }
             }
         },
-        "entity.NodeBinding": {
+        "entity.NodeLicenseBinding": {
             "type": "object",
             "properties": {
-                "boundAt": {
-                    "description": "绑定时间，记录绑定发生的时间",
-                    "type": "string"
-                },
-                "boundStatus": {
-                    "description": "绑定状态，表示当前绑定的状态",
-                    "type": "integer"
-                },
                 "id": {
                     "description": "绑定关系唯一标识符",
+                    "type": "integer"
+                },
+                "isBound": {
+                    "description": "绑定状态，表示当前绑定的状态",
                     "type": "integer"
                 },
                 "licenseID": {
                     "description": "关联的许可证ID，指向License实体",
                     "type": "integer"
                 },
-                "unboundAt": {
-                    "description": "解绑时间，记录解绑发生的时间，nil表示未解绑",
-                    "type": "string"
+                "nodeID": {
+                    "description": "绑定的节点ID，指向Node实体",
+                    "type": "integer"
+                },
+                "productID": {
+                    "description": "关联的产品ID，指向Product实体",
+                    "type": "integer"
                 }
             }
         },
@@ -1356,13 +1397,16 @@ const docTemplate = `{
                     "description": "版本详细说明",
                     "type": "string"
                 },
+                "id": {
+                    "type": "integer"
+                },
+                "isEnabled": {
+                    "description": "版本状态，用于标识版本是否可用",
+                    "type": "integer"
+                },
                 "releaseDate": {
                     "description": "版本发布时间",
                     "type": "string"
-                },
-                "status": {
-                    "description": "版本状态，用于标识版本是否可用",
-                    "type": "integer"
                 },
                 "versionCode": {
                     "description": "版本号，遵循语义化版本规范",
