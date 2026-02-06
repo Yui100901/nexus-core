@@ -90,7 +90,7 @@ func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v
 
 	// 如果设置了发布时间，则注册定时任务
 	if v.ReleaseDate != nil {
-		s.scheduleReleaseTask(product.ID, v.ID, *v.ReleaseDate)
+		s.ScheduleReleaseTask(ctx, product.ID, v.ID, *v.ReleaseDate)
 	}
 
 	return nil
@@ -108,16 +108,16 @@ func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionI
 	return s.pr.ReleaseVersion(ctx, versionID, releaseDate)
 }
 
-// 简易定时发布
-func (s *ProductService) scheduleReleaseTask(productID, versionID uint, releaseDate time.Time) {
+// ScheduleReleaseTask 简易定时发布
+func (s *ProductService) ScheduleReleaseTask(ctx context.Context, productID, versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
-		_ = s.ReleaseVersion(context.Background(), productID, versionID, releaseDate)
+		_ = s.ReleaseVersion(ctx, productID, versionID, releaseDate)
 		return
 	}
 	go func() {
 		<-time.After(delay)
-		_ = s.ReleaseVersion(context.Background(), productID, versionID, releaseDate)
+		_ = s.ReleaseVersion(ctx, productID, versionID, releaseDate)
 	}()
 }

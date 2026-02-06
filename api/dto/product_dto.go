@@ -22,6 +22,12 @@ type CreateProductVersionCommand struct {
 	Description *string    `json:"description"`                     // 版本描述
 }
 
+type ReleaseNewVersionCommand struct {
+	ProductID   uint       `json:"product_id" binding:"required"` // 所属产品ID
+	VersionID   uint       `json:"version_id" binding:"required"` // 版本ID
+	ReleaseDate *time.Time `json:"release_date"`                  // 发布时间
+}
+
 // ToEntityVersion 将创建产品版本命令转换为实体对象
 func ToEntityVersion(cmd CreateProductVersionCommand) (*entity.Version, error) {
 	return entity.NewVersion(cmd.VersionCode, cmd.ReleaseDate, cmd.Description)

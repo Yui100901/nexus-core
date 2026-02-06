@@ -5,6 +5,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -91,6 +92,36 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		return
 	}
 	Success(ctx, v)
+}
+
+// ReleaseNewVersion 发布新版本
+// @Summary Release a new version
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param body body dto.ReleaseNewVersionCommand true "Release New Version"
+// @Success 200 {object} entity.Version
+func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
+	var cmd dto.ReleaseNewVersionCommand
+
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	//如果未设置时间则直接发布，否则注册定时任务
+	if cmd.ReleaseDate == nil {
+		now := time.Now()
+		cmd.ReleaseDate = &now
+		err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, *cmd.ReleaseDate)
+		if err != nil {
+			InternalError(ctx, err.Error())
+			return
+		}
+	} else {
+		c.ps.ScheduleReleaseTask(ctx, cmd.ProductID, cmd.VersionID, *cmd.ReleaseDate)
+	}
+	Success(ctx, cmd.VersionID)
+
 }
 
 // BatchCreate 批量创建产品
@@ -231,5 +262,3 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 	}
 	SuccessMsg(ctx, "product deleted")
 }
-
-// ReleaseNewVersion 发布新版本
