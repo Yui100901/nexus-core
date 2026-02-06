@@ -38,7 +38,7 @@ func NewAccessController() *AccessController {
 
 // RegisterRoutes 注册设备相关的路由
 func (c *AccessController) RegisterRoutes(r *gin.Engine) {
-	g := r.Group("/device")
+	g := r.Group("/access")
 	{
 		g.POST("/heartbeat", c.Heartbeat)
 	}
@@ -47,14 +47,14 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // Heartbeat 心跳接口处理
 // 客户端定期发送心跳以验证许可证有效性并更新节点状态
 // @Summary Client heartbeat
-// @Tags device
+// @Tags access
 // @Accept json
 // @Produce json
 // @Param body body dto.HeartbeatCommand true "Heartbeat"
 // @Success 200 {object} api.APIResponse
 // @Failure 400 {object} api.APIResponse
 // @Failure 500 {object} api.APIResponse
-// @Router /device/heartbeat [post]
+// @Router /access/heartbeat [post]
 func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	var cmd dto.HeartbeatCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
