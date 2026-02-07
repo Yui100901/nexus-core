@@ -129,22 +129,9 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 	if binding == nil {
-		//不存在绑定
-		//检查许可证的 MaxNodes 限制
-		bindingsCount, err := c.nlr.CountActiveBindingsByLicenseForProduct(context.Background(), license.ID, product.ID)
+		err := c.ns.AutoBind(context.Background(), node.ID, product.ID, license)
 		if err != nil {
-			InternalError(ctx, "check binding failed")
-			return
-		}
-		if ok := license.ValidateMaxNodesForProduct(product.ID, int(bindingsCount)); !ok {
-			BadRequest(ctx, "maximum nodes exceeded")
-			return
-		}
-		//添加绑定
-		binding, _ = entity.NewNodeLicenseBinding(node.ID, license.ID, product.ID)
-		binding.IsBound = 1
-		if err := c.nlr.AddBinding(context.Background(), binding); err != nil {
-			InternalError(ctx, "add binding failed")
+			InternalError(ctx, "auto bind failed")
 			return
 		}
 	} else {

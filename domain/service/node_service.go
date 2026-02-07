@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
 )
@@ -53,6 +54,26 @@ func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, product
 	}
 	binding.IsBound = 1
 	return s.nlr.AddBinding(ctx, binding)
+}
+
+// AutoBind 节点自动绑定
+func (s *NodeService) AutoBind(ctx context.Context, nodeID, productID uint, license *entity.License) error {
+	//不存在绑定
+	//检查许可证的 MaxNodes 限制
+	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, license.ID, productID)
+	if err != nil {
+		return fmt.Errorf("check binding failed")
+	}
+	if ok := license.ValidateMaxNodesForProduct(productID, int(bindingsCount)); !ok {
+		return fmt.Errorf("maximum nodes exceeded")
+	}
+	//添加绑定
+	binding, _ := entity.NewNodeLicenseBinding(nodeID, license.ID, productID)
+	binding.IsBound = 1
+	if err := s.nlr.AddBinding(ctx, binding); err != nil {
+		return fmt.Errorf("add binding failed")
+	}
+	return nil
 }
 
 // UpdateBindingStatus 更新绑定状态
