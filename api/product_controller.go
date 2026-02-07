@@ -232,6 +232,29 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 	SuccessMsg(ctx, "min supported version updated")
 }
 
+// DeprecateVersion 废弃版本
+// @Summary Deprecate a version
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param body body dto.DeprecateVersionCommand true "Deprecate Version"
+// @Success 200 {object} api.APIResponse
+// @Failure 400 {object} api.APIResponse
+// @Failure 500 {object} api.APIResponse
+// @Router /product/deprecateVersion [post]
+func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
+	var cmd dto.DeprecateVersionCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := c.ps.DeprecateVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	SuccessMsg(ctx, "version deprecated")
+}
+
 // DeleteProduct 删除产品
 // @Summary Delete product
 // @Tags products

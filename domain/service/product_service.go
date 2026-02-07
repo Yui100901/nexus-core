@@ -136,3 +136,7 @@ func (s *ProductService) ScheduleReleaseTask(ctx context.Context, productID, ver
 		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
 	}()
 }
+
+func (s *ProductService) DeprecateVersion(ctx context.Context, productID uint, versionID uint) error {
+	return s.pr.DeprecateVersion(ctx, productID, versionID)
+}

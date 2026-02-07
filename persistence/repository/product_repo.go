@@ -149,6 +149,14 @@ func (r *ProductRepository) ReleaseVersion(ctx context.Context, versionID uint, 
 	return err
 }
 
+// DeprecateVersion 废弃版本
+func (r *ProductRepository) DeprecateVersion(ctx context.Context, productID, versionID uint) error {
+	_, err := gorm.G[model.ProductVersion](r.db).
+		Where("product_id = ? AND id = ?", productID, versionID).
+		Update(ctx, "is_enabled", 0)
+	return err
+}
+
 // GetVersionsByProductID 获取产品的版本列表
 func (r *ProductRepository) GetVersionsByProductID(ctx context.Context, productID uint) ([]model.ProductVersion, error) {
 	return gorm.G[model.ProductVersion](r.db).
