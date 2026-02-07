@@ -121,7 +121,7 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoBind(context.Background(), node.ID, product.ID, license)
+		err := c.ns.AutoCreateBind(context.Background(), node.ID, product.ID, license)
 		if err != nil {
 			InternalError(ctx, "auto bind failed")
 			return

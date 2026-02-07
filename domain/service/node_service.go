@@ -79,9 +79,8 @@ func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, product
 	return s.nlr.AddBinding(ctx, binding)
 }
 
-// AutoBind 节点自动绑定
-func (s *NodeService) AutoBind(ctx context.Context, nodeID, productID uint, license *entity.License) error {
-	//不存在绑定
+// AutoCreateBind 节点自动绑定
+func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint, license *entity.License) error {
 	//检查许可证的 MaxNodes 限制
 	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, license.ID, productID)
 	if err != nil {
