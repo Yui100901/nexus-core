@@ -117,6 +117,10 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		}
 		node = n
 	}
+	if !node.IsValid() {
+		BadRequest(ctx, "invalid node")
+		return
+	}
 
 	// 检查绑定
 	binding, err := c.nlr.GetBindingByNodeAndLicense(context.Background(), node.ID, license.ID)

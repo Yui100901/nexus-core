@@ -156,6 +156,7 @@ func toEntityNode(m *model.Node) *entity.Node {
 	return &entity.Node{
 		ID:         m.ID,
 		DeviceCode: m.DeviceCode,
+		Banned:     m.Banned,
 		MetaInfo:   m.MetaInfo,
 	}
 }
