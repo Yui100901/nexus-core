@@ -102,21 +102,13 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		BadRequest(ctx, "invalid license")
 		return
 	}
-	// 查找或创建 node
-	node, err := c.ns.GetByDeviceCode(context.Background(), cmd.DeviceCode)
+
+	node, err := c.ns.AutoCreateNode(ctx, cmd.DeviceCode, nil)
 	if err != nil {
-		// create new node
-		n, err := entity.NewNode(cmd.DeviceCode, nil)
-		if err != nil {
-			InternalError(ctx, "create node failed")
-			return
-		}
-		if err := c.ns.CreateNode(context.Background(), n); err != nil {
-			InternalError(ctx, "create node failed")
-			return
-		}
-		node = n
+		InternalError(ctx, err.Error())
+		return
 	}
+
 	if !node.IsValid() {
 		BadRequest(ctx, "invalid node")
 		return

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
@@ -82,6 +83,9 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string)
 		Where("device_code = ?", deviceCode).
 		First(ctx)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

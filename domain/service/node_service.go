@@ -27,6 +27,29 @@ func (s *NodeService) CreateNode(ctx context.Context, n *entity.Node) error {
 	return s.nr.CreateNode(ctx, n)
 }
 
+// AutoCreateNode 自动创建节点
+// 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
+func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, metaInfo *string) (*entity.Node, error) {
+	// 查找或创建 node
+	node, err := s.nr.GetByDeviceCode(ctx, deviceCode)
+	if err != nil {
+		// create new node
+		return nil, fmt.Errorf("get node failed")
+	}
+	//node不存在
+	if node == nil {
+		n, err := entity.NewNode(deviceCode, metaInfo)
+		if err != nil {
+			return nil, fmt.Errorf("create node failed")
+		}
+		if err := s.nr.CreateNode(ctx, n); err != nil {
+			return nil, fmt.Errorf("create node failed")
+		}
+		node = n
+	}
+	return node, nil
+}
+
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx context.Context, nodes []*entity.Node) error {
