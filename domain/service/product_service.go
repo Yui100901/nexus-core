@@ -76,6 +76,7 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 }
 
 // CreateNewVersion 创建新产品版本
+// 创建新产品版本，若指定了发布时间，则注册定时发布任务
 func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v *entity.Version) error {
 	product, err := s.pr.GetByID(ctx, productID)
 	if err != nil {
@@ -96,7 +97,20 @@ func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v
 	return nil
 }
 
-func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate time.Time) error {
+// ReleaseVersion 发布指定产品的指定版本
+// 若指定了发布时间则定时发布，否则立即发布
+func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate *time.Time) error {
+	if releaseDate == nil {
+		return s.doReleaseVersion(ctx, productID, versionID, time.Now())
+	} else {
+		//创建定时任务
+		s.ScheduleReleaseTask(ctx, productID, versionID, *releaseDate)
+		return nil
+	}
+}
+
+// 内部方法执行版本发布
+func (s *ProductService) doReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate time.Time) error {
 	product, err := s.pr.GetByID(ctx, productID)
 	if err != nil {
 		return err
@@ -109,15 +123,16 @@ func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionI
 }
 
 // ScheduleReleaseTask 简易定时发布
+// todo 后续考虑如何管理定时任务
 func (s *ProductService) ScheduleReleaseTask(ctx context.Context, productID, versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
-		_ = s.ReleaseVersion(ctx, productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
 		return
 	}
 	go func() {
 		<-time.After(delay)
-		_ = s.ReleaseVersion(ctx, productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
 	}()
 }

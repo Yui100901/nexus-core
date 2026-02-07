@@ -5,7 +5,6 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -108,18 +107,13 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	//如果未设置时间则直接发布，否则注册定时任务
-	if cmd.ReleaseDate == nil {
-		now := time.Now()
-		cmd.ReleaseDate = &now
-		err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, *cmd.ReleaseDate)
-		if err != nil {
-			InternalError(ctx, err.Error())
-			return
-		}
-	} else {
-		c.ps.ScheduleReleaseTask(ctx, cmd.ProductID, cmd.VersionID, *cmd.ReleaseDate)
+
+	err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
+	if err != nil {
+		InternalError(ctx, err.Error())
+		return
 	}
+
 	Success(ctx, cmd.VersionID)
 
 }
