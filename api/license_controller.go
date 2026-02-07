@@ -56,7 +56,7 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 		return
 	}
 
-	license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.ConcurrentLimit, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
+	license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
 
 	if err != nil {
 		BadRequest(ctx, err.Error())
@@ -89,7 +89,7 @@ func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 
 	var licenses []*entity.License
 	for _, cmd := range cmds {
-		license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.ConcurrentLimit, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
+		license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
 		if err != nil {
 			BadRequest(ctx, err.Error())
 			return

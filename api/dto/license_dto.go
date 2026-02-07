@@ -13,11 +13,11 @@ import (
 // @Description Command to create a license
 // @Tags License
 type CreateLicenseCommand struct {
-	ValidityHours   int        `json:"validity_hours" binding:"required"`   // 有效时长（小时）
-	MaxNodes        int        `json:"max_nodes" binding:"required"`        // 最大节点数
-	ConcurrentLimit int        `json:"concurrent_limit" binding:"required"` // 并发限制
-	ScopeList       []ScopeDTO `json:"scope_list" binding:"required"`       // 授权范围列表
-	Remark          *string    `json:"remark"`                              // 备注
+	ValidityHours int        `json:"validity_hours" binding:"required"` // 有效时长（小时）
+	MaxNodes      int        `json:"max_nodes" binding:"required"`      // 最大节点数
+	MaxConcurrent int        `json:"max_concurrent" binding:"required"` // 并发限制
+	ScopeList     []ScopeDTO `json:"scope_list" binding:"required"`     // 授权范围列表
+	Remark        *string    `json:"remark"`                            // 备注
 }
 
 // Validate 对 CreateLicenseCommand 做轻量校验，供 controller / service 使用
