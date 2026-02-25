@@ -24,7 +24,7 @@ type AccessController struct {
 	nlr *repository.NodeLicenseBindingRepository
 }
 
-// NewAccessController 创建新的设备控制器实例
+// NewAccessController 创建新的访问控制器实例
 func NewAccessController() *AccessController {
 	return &AccessController{
 		ls:  service.NewLicenseService(),
@@ -36,7 +36,7 @@ func NewAccessController() *AccessController {
 	}
 }
 
-// RegisterRoutes 注册设备相关的路由
+// RegisterRoutes 注册访问相关的路由
 func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/access")
 	{
