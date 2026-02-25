@@ -62,15 +62,14 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	// 先找产品
-	product, err := c.ps.GetByID(context.Background(), cmd.ProductID)
-	if err != nil || product == nil {
-		BadRequest(ctx, "product not found")
+	//验证产品和版本是否支持
+	ok, err := c.ps.CheckProductVersionSupported(ctx, cmd.ProductID, nil, &cmd.VersionCode)
+	if err != nil {
+		InternalError(ctx, err.Error())
 		return
 	}
-	// 验证产品版本
-	if !product.CheckVersionSupportedByCode(cmd.VersionCode) {
-		BadRequest(ctx, "product version not supported")
+	if !ok {
+		InternalError(ctx, "product version not supported")
 		return
 	}
 	// 找到 license
@@ -119,7 +118,7 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoCreateBind(context.Background(), node.ID, product.ID, license)
+		err := c.ns.AutoCreateBind(context.Background(), node.ID, cmd.ProductID, license)
 		if err != nil {
 			InternalError(ctx, "auto bind failed")
 			return
@@ -163,15 +162,14 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	// 先找产品
-	product, err := c.ps.GetByID(context.Background(), cmd.ProductID)
-	if err != nil || product == nil {
-		BadRequest(ctx, "product not found")
+	//验证产品和版本是否支持
+	ok, err := c.ps.CheckProductVersionSupported(ctx, cmd.ProductID, nil, &cmd.VersionCode)
+	if err != nil {
+		InternalError(ctx, err.Error())
 		return
 	}
-	// 验证产品版本
-	if !product.CheckVersionSupportedByCode(cmd.VersionCode) {
-		BadRequest(ctx, "product version not supported")
+	if !ok {
+		InternalError(ctx, "product version not supported")
 		return
 	}
 	// 找到 license
@@ -234,14 +232,14 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	}
 
 	// 检查并发限制
-	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, product.ID)
-	if !license.ValidateMaxConcurrentForProduct(product.ID, totalConcurrent) {
+	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, cmd.ProductID)
+	if !license.ValidateMaxConcurrentForProduct(cmd.ProductID, totalConcurrent) {
 		BadRequest(ctx, "maximum concurrent exceeded")
 		return
 	}
 
 	monitor.GlobalMonitor.HeartBeat(fmt.Sprintf("%d|%s|%s",
-		product.ID, node.DeviceCode, license.LicenseKey), time.Second*60)
+		cmd.ProductID, node.DeviceCode, license.LicenseKey), time.Second*60)
 
 	Success(ctx, map[string]interface{}{})
 }

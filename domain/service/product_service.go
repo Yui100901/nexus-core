@@ -69,7 +69,7 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, 
 	return s.pr.UpdateMinSupportedVersion(ctx, product.ID, *product.MinSupportedVersionID)
 }
 
-// CheckProductVersionSupported 检查某个版本是否支持
+// CheckProductVersionSupported 检查产品和版本是否支持
 func (s *ProductService) CheckProductVersionSupported(ctx context.Context, productID uint,
 	targetVersionId *uint, targetVersionCode *string) (bool, error) {
 	product, err := s.pr.GetByID(ctx, productID)
