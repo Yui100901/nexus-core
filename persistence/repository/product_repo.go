@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
@@ -74,7 +75,13 @@ func (r *ProductRepository) GetByID(ctx context.Context, id uint) (*entity.Produ
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 没找到，返回 nil
+			return nil, nil
+		} else {
+			// 数据库错误
+			return nil, err
+		}
 	}
 
 	versions, err := r.GetVersionsByProductID(ctx, m.ID)

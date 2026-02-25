@@ -40,12 +40,114 @@ func NewAccessController() *AccessController {
 func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/access")
 	{
+		g.POST("/auto-bind", c.AutoBind)
 		g.POST("/heartbeat", c.Heartbeat)
 	}
 }
 
+// AutoBind 自动绑定接口处理
+// 客户端启动时，会自动绑定节点和许可证
+// @Summary Client auto bind
+// @Tags access
+// @Accept json
+// @Produce json
+// @Param body body dto.AutoBindCommand true "Auto Bind"
+// @Success 200 {object} api.APIResponse
+// @Failure 400 {object} api.APIResponse
+// @Failure 500 {object} api.APIResponse
+// @Router /access/auto-bind [post]
+func (c *AccessController) AutoBind(ctx *gin.Context) {
+	var cmd dto.AutoBindCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	// 先找产品
+	product, err := c.ps.GetByID(context.Background(), cmd.ProductID)
+	if err != nil || product == nil {
+		BadRequest(ctx, "product not found")
+		return
+	}
+	// 验证产品版本
+	if !product.CheckVersionSupportedByCode(cmd.VersionCode) {
+		BadRequest(ctx, "product version not supported")
+		return
+	}
+	// 找到 license
+	license, err := c.ls.GetLicenseByKey(context.Background(), cmd.LicenseKey)
+	if err != nil {
+		BadRequest(ctx, "invalid license")
+		return
+	}
+	// 验证许可证是否对产品有效
+	scope := license.GetScope(cmd.ProductID)
+	if scope == nil {
+		BadRequest(ctx, "product not supported")
+		return
+	}
+	// 检查许可证是否过期
+	currentStatus := license.CheckStatus(time.Now())
+	toActivate := false
+	// 验证许可证状态
+	switch currentStatus {
+	case entity.StatusInactive:
+		toActivate = true
+	case entity.StatusActive:
+	case entity.StatusExpired:
+		BadRequest(ctx, "license expired")
+		return
+	case entity.StatusRevoked:
+		BadRequest(ctx, "invalid license")
+		return
+	}
+
+	node, err := c.ns.AutoCreateNode(ctx, cmd.DeviceCode, nil)
+	if err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+
+	if !node.IsValid() {
+		BadRequest(ctx, "invalid node")
+		return
+	}
+
+	// 检查绑定
+	binding, err := c.nlr.GetBindingByNodeAndLicense(context.Background(), node.ID, license.ID)
+	if err != nil {
+		InternalError(ctx, "check binding failed")
+		return
+	}
+	if binding == nil {
+		err := c.ns.AutoCreateBind(context.Background(), node.ID, product.ID, license)
+		if err != nil {
+			InternalError(ctx, "auto bind failed")
+			return
+		}
+	} else {
+		//存在绑定，更新绑定状态为已绑定
+		if binding.IsBound == 0 {
+			binding.IsBound = 1
+			if err := c.nlr.UpdateBindingStatus(context.Background(), binding.ID, 1); err != nil {
+				InternalError(ctx, "update binding status failed")
+				return
+			}
+		}
+	}
+	if toActivate {
+		// 激活 license
+		if err := c.ls.ActivateLicenseIfNeeded(context.Background(), license); err != nil {
+			InternalError(ctx, err.Error())
+			return
+		}
+	}
+
+	Success(ctx, map[string]interface{}{})
+}
+
 // Heartbeat 心跳接口处理
 // 客户端定期发送心跳以验证许可证有效性并更新节点状态
+// 若期间在线的节点解绑，或过期等操作会导致强制下线
 // @Summary Client heartbeat
 // @Tags access
 // @Accept json
@@ -89,11 +191,8 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	// 验证许可证状态
 	switch currentStatus {
 	case entity.StatusInactive:
-		// 激活 license
-		if err := c.ls.ActivateLicenseIfNeeded(context.Background(), license); err != nil {
-			InternalError(ctx, err.Error())
-			return
-		}
+		BadRequest(ctx, "license not active")
+		return
 	case entity.StatusActive:
 	case entity.StatusExpired:
 		BadRequest(ctx, "license expired")
@@ -103,15 +202,19 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 
-	node, err := c.ns.AutoCreateNode(ctx, cmd.DeviceCode, nil)
+	node, err := c.ns.GetByDeviceCode(ctx, cmd.DeviceCode)
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-
-	if !node.IsValid() {
-		BadRequest(ctx, "invalid node")
+	if node == nil {
+		InternalError(ctx, "node not found")
 		return
+	} else {
+		if !node.IsValid() {
+			BadRequest(ctx, "invalid node")
+			return
+		}
 	}
 
 	// 检查绑定
@@ -121,19 +224,12 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoCreateBind(context.Background(), node.ID, product.ID, license)
-		if err != nil {
-			InternalError(ctx, "auto bind failed")
-			return
-		}
+		InternalError(ctx, "binding not found")
+		return
 	} else {
-		//存在绑定，更新绑定状态为已绑定
 		if binding.IsBound == 0 {
-			binding.IsBound = 1
-			if err := c.nlr.UpdateBindingStatus(context.Background(), binding.ID, 1); err != nil {
-				InternalError(ctx, "update binding status failed")
-				return
-			}
+			InternalError(ctx, "binding not bound")
+			return
 		}
 	}
 

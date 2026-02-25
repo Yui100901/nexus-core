@@ -69,6 +69,22 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, 
 	return s.pr.UpdateMinSupportedVersion(ctx, product.ID, *product.MinSupportedVersionID)
 }
 
+// CheckProductVersionSupported 检查某个版本是否支持
+func (s *ProductService) CheckProductVersionSupported(ctx context.Context, productID uint,
+	targetVersionId *uint, targetVersionCode *string) (bool, error) {
+	product, err := s.pr.GetByID(ctx, productID)
+	if err != nil {
+		return false, err
+	}
+	if targetVersionId != nil {
+		return product.CheckVersionSupportedById(*targetVersionId), nil
+	}
+	if targetVersionCode != nil {
+		return product.CheckVersionSupportedByCode(*targetVersionCode), nil
+	}
+	return false, fmt.Errorf("invalid version target")
+}
+
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
