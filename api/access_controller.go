@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
@@ -73,7 +72,7 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(context.Background(), cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(ctx, cmd.LicenseKey)
 	if err != nil {
 		BadRequest(ctx, "invalid license")
 		return
@@ -112,13 +111,13 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(context.Background(), node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(ctx, node.ID, license.ID)
 	if err != nil {
 		InternalError(ctx, "check binding failed")
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoCreateBind(context.Background(), node.ID, cmd.ProductID, license)
+		err := c.ns.AutoCreateBind(ctx, node.ID, cmd.ProductID, license)
 		if err != nil {
 			InternalError(ctx, "auto bind failed")
 			return
@@ -127,7 +126,7 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 		//存在绑定，更新绑定状态为已绑定
 		if binding.IsBound == 0 {
 			binding.IsBound = 1
-			if err := c.nlr.UpdateBindingStatus(context.Background(), binding.ID, 1); err != nil {
+			if err := c.nlr.UpdateBindingStatus(ctx, binding.ID, 1); err != nil {
 				InternalError(ctx, "update binding status failed")
 				return
 			}
@@ -135,7 +134,7 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 	}
 	if toActivate {
 		// 激活 license
-		if err := c.ls.ActivateLicenseIfNeeded(context.Background(), license); err != nil {
+		if err := c.ls.ActivateLicenseIfNeeded(ctx, license); err != nil {
 			InternalError(ctx, err.Error())
 			return
 		}
@@ -173,7 +172,7 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(context.Background(), cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(ctx, cmd.LicenseKey)
 	if err != nil {
 		BadRequest(ctx, "invalid license")
 		return
@@ -216,7 +215,7 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(context.Background(), node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(ctx, node.ID, license.ID)
 	if err != nil {
 		InternalError(ctx, "check binding failed")
 		return
