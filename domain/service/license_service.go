@@ -3,10 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"nexus-core/persistence/base"
 	"time"
 
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
+
+	"gorm.io/gorm"
 )
 
 //
@@ -17,6 +20,7 @@ import (
 // LicenseService 提供许可证相关的业务逻辑服务
 // 包括许可证的创建、更新、查询、激活和验证等功能
 type LicenseService struct {
+	db  *gorm.DB
 	lr  *repository.LicenseRepository // 许可证仓库，用于数据持久化操作
 	pr  *repository.ProductRepository
 	nlr *repository.NodeLicenseBindingRepository
@@ -25,6 +29,7 @@ type LicenseService struct {
 // NewLicenseService 创建新的许可证服务实例
 func NewLicenseService() *LicenseService {
 	return &LicenseService{
+		db: base.Connect(),
 		lr: repository.NewLicenseRepository(),
 	}
 }
@@ -47,7 +52,7 @@ func (s *LicenseService) CreateLicense(ctx context.Context, license *entity.Lice
 	}
 
 	// 插入 License
-	return s.lr.CreateLicense(ctx, license)
+	return s.lr.CreateLicense(ctx, s.db, license)
 }
 
 // BatchCreateLicense 批量创建许可证
@@ -80,7 +85,13 @@ func (s *LicenseService) BatchCreateLicense(ctx context.Context, licenses []*ent
 	}
 
 	// 批量插入
-	return s.lr.BatchCreateLicense(ctx, licenses)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		err := s.lr.BatchCreateLicense(ctx, tx, licenses)
+		if err != nil {
+			return err
+		}
+		return s.lr.BatchCreateLicenseScope(ctx, tx, licenses)
+	})
 }
 
 // ActivateLicenseIfNeeded 激活许可证
@@ -95,7 +106,7 @@ func (s *LicenseService) ActivateLicenseIfNeeded(ctx context.Context, license *e
 		return err
 	}
 
-	return s.lr.UpdateLicenseStatus(ctx, license.ID, entity.StatusActive)
+	return s.lr.UpdateLicenseStatus(ctx, s.db, license.ID, entity.StatusActive)
 }
 
 // GetLicenseBindList 获取许可证绑定列表
@@ -108,34 +119,34 @@ func (s *LicenseService) GetLicenseBindList(ctx context.Context, licenseID uint)
 // 如激活、过期、吊销等状态变更
 func (s *LicenseService) UpdateLicenseStatus(ctx context.Context, licenseID uint, status int) error {
 	// 可以加业务逻辑，比如只有过期的才能更新为失效
-	return s.lr.UpdateLicenseStatus(ctx, licenseID, status)
+	return s.lr.UpdateLicenseStatus(ctx, s.db, licenseID, status)
 }
 
 // UpdateLicense 更新许可证信息
 // 包括有效期、备注等信息的更新
 func (s *LicenseService) UpdateLicense(ctx context.Context, license *entity.License) error {
 	// 可以加业务逻辑，比如校验有效期、状态转换是否合法
-	return s.lr.UpdateLicense(ctx, license)
+	return s.lr.UpdateLicense(ctx, s.db, license)
 }
 
 // GetLicenseByID 根据ID获取许可证
 // 返回指定ID的完整许可证信息，包括授权范围
 func (s *LicenseService) GetLicenseByID(ctx context.Context, id uint) (*entity.License, error) {
-	return s.lr.GetByID(ctx, id)
+	return s.lr.GetByID(ctx, s.db, id)
 }
 
 // GetLicenseByKey 根据许可证密钥获取许可证
 // 主要用于客户端验证时根据输入的许可证密钥查找许可证信息
 func (s *LicenseService) GetLicenseByKey(ctx context.Context, key string) (*entity.License, error) {
-	return s.lr.GetByKey(ctx, key)
+	return s.lr.GetByKey(ctx, s.db, key)
 }
 
 // DeleteExpiredLicenses 删除所有过期的许可证
 // 清理数据库中已过期的许可证记录
 func (s *LicenseService) DeleteExpiredLicenses(ctx context.Context) error {
-	ids, err := s.lr.GetIdListByStatus(ctx, entity.StatusExpired)
+	ids, err := s.lr.GetIdListByStatus(ctx, s.db, entity.StatusExpired)
 	if err != nil {
 		return err
 	}
-	return s.lr.BatchDeleteByIdList(ctx, ids)
+	return s.lr.BatchDeleteByIdList(ctx, s.db, ids)
 }
