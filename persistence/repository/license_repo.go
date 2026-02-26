@@ -194,29 +194,36 @@ func (r *LicenseRepository) GetIdListByStatus(ctx context.Context, tx *gorm.DB, 
 	return ids, nil
 }
 
-// BatchDeleteByIdList 批量删除 License 及其 Scope
+// BatchDeleteByIdList 批量删除 License
 func (r *LicenseRepository) BatchDeleteByIdList(ctx context.Context, tx *gorm.DB, ids []uint) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Step 1: 删除 Scope（依赖 LicenseID）
-		if _, err := gorm.G[model.LicenseScope](tx).
-			Where("license_id IN ?", ids).
-			Delete(ctx); err != nil {
-			return err
-		}
+	//  删除 License
+	if _, err := gorm.G[model.License](tx).
+		Where("id IN ?", ids).
+		Delete(ctx); err != nil {
+		return err
+	}
 
-		// Step 2: 删除 License
-		if _, err := gorm.G[model.License](tx).
-			Where("id IN ?", ids).
-			Delete(ctx); err != nil {
-			return err
-		}
+	return nil
+}
 
+// BatchDeleteScopeByLicenseIdList 批量删除 License下的Scope
+func (r *LicenseRepository) BatchDeleteScopeByLicenseIdList(ctx context.Context, tx *gorm.DB, ids []uint) error {
+	if len(ids) == 0 {
 		return nil
-	})
+	}
+
+	// 删除 Scope（依赖 LicenseID）
+	if _, err := gorm.G[model.LicenseScope](tx).
+		Where("license_id IN ?", ids).
+		Delete(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetScopeListByLicenseId 获取许可范围列表

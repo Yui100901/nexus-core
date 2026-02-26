@@ -148,5 +148,12 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.lr.BatchDeleteByIdList(ctx, s.db, ids)
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		err := s.lr.BatchDeleteScopeByLicenseIdList(ctx, tx, ids)
+		if err != nil {
+			return err
+		}
+		return s.lr.BatchDeleteByIdList(ctx, tx, ids)
+	})
 }
