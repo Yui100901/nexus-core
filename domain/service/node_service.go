@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"nexus-core/domain/entity"
+	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
+
+	"gorm.io/gorm"
 )
 
 // NodeService 提供节点相关的业务逻辑服务
 // 管理节点的创建、查询、绑定等操作
 type NodeService struct {
+	db  *gorm.DB
 	nr  *repository.NodeRepository // 节点仓库，用于数据持久化操作
 	nlr *repository.NodeLicenseBindingRepository
 }
@@ -17,6 +21,7 @@ type NodeService struct {
 // NewNodeService 创建新的节点服务实例
 func NewNodeService() *NodeService {
 	return &NodeService{
+		db: base.Connect(),
 		nr: repository.NewNodeRepository(),
 	}
 }
@@ -76,13 +81,13 @@ func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, product
 		return err
 	}
 	binding.IsBound = 1
-	return s.nlr.AddBinding(ctx, binding)
+	return s.nlr.AddBinding(ctx, s.db, binding)
 }
 
 // AutoCreateBind 节点自动绑定
 func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint, license *entity.License) error {
 	//检查许可证的 MaxNodes 限制
-	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, license.ID, productID)
+	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, s.db, license.ID, productID)
 	if err != nil {
 		return fmt.Errorf("check binding failed")
 	}
@@ -92,7 +97,7 @@ func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint
 	//添加绑定
 	binding, _ := entity.NewNodeLicenseBinding(nodeID, license.ID, productID)
 	binding.IsBound = 1
-	if err := s.nlr.AddBinding(ctx, binding); err != nil {
+	if err := s.nlr.AddBinding(ctx, s.db, binding); err != nil {
 		return fmt.Errorf("add binding failed")
 	}
 	return nil
@@ -101,7 +106,7 @@ func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint
 // UpdateBindingStatus 更新绑定状态
 // 修改节点与许可证之间的绑定状态
 func (s *NodeService) UpdateBindingStatus(ctx context.Context, id uint, status int) error {
-	return s.nlr.UpdateBindingStatus(ctx, id, status)
+	return s.nlr.UpdateBindingStatus(ctx, s.db, id, status)
 }
 
 // ForceUnbind 强制解绑节点绑定（根据绑定ID）
