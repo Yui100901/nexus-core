@@ -122,6 +122,27 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(
 	return cnt, nil
 }
 
+// DeleteBindingByNodeID 删除指定节点的绑定关系
+func (r *NodeLicenseBindingRepository) DeleteBindingByNodeID(ctx context.Context, tx *gorm.DB, nodeID uint) error {
+	return tx.WithContext(ctx).
+		Where("node_id = ?", nodeID).
+		Delete(&model.NodeLicenseBinding{}).Error
+}
+
+// DeleteBindingByLicenseID 删除指定许可证的绑定关系
+func (r *NodeLicenseBindingRepository) DeleteBindingByLicenseID(ctx context.Context, tx *gorm.DB, licenseID uint) error {
+	return tx.WithContext(ctx).
+		Where("license_id = ?", licenseID).
+		Delete(&model.NodeLicenseBinding{}).Error
+}
+
+// DeleteBindingByProductID 删除指定产品的绑定关系
+func (r *NodeLicenseBindingRepository) DeleteBindingByProductID(ctx context.Context, tx *gorm.DB, productID uint) error {
+	return tx.WithContext(ctx).
+		Where("product_id = ?", productID).
+		Delete(&model.NodeLicenseBinding{}).Error
+}
+
 func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicenseBinding {
 	return &entity.NodeLicenseBinding{
 		ID:        b.ID,
