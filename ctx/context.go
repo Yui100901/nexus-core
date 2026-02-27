@@ -1,9 +1,7 @@
 package ctx
 
 import (
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -27,19 +25,14 @@ type ServiceContext struct {
 	logger  *log.Logger
 }
 
-func NewServiceContext(c *gin.Context, traceID string, db *gorm.DB) *ServiceContext {
+func NewServiceContext(c *gin.Context, traceID string, db *gorm.DB, logger *log.Logger) *ServiceContext {
 	// 从 gin.Context 获取方法和路径
-	method := c.Request.Method
-	path := c.Request.URL.Path
-
-	// 日志前缀包含 TraceID、方法、路径
-	prefix := fmt.Sprintf("[TraceID:%s] [%s %s] ", traceID, method, path)
 
 	return &ServiceContext{
 		Context: c,
 		traceID: traceID,
 		db:      db,
-		logger:  log.New(os.Stdout, prefix, log.LstdFlags),
+		logger:  logger,
 	}
 }
 
