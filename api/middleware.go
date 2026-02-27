@@ -1,9 +1,15 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"nexus-core/ctx"
+	"nexus-core/persistence/base"
+	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 //
@@ -25,5 +31,27 @@ func CorsMiddleware() gin.HandlerFunc {
 			context.AbortWithStatus(http.StatusNoContent)
 		}
 		context.Next()
+	}
+}
+
+func ServiceContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		traceID := c.GetHeader("X-Trace-ID")
+		if traceID == "" {
+			traceID = uuid.New().String()
+		}
+
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		prefix := fmt.Sprintf("[TraceID:%s] [%s %s] ", traceID, method, path)
+		logger := log.New(os.Stdout, prefix, log.LstdFlags)
+
+		// 根据请求选择数据库
+		db := base.Connect()
+
+		sc := ctx.NewServiceContext(c, traceID, db, logger)
+		c.Set("ServiceContext", sc)
+
+		c.Next()
 	}
 }
