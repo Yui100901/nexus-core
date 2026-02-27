@@ -40,16 +40,19 @@ func ServiceContextMiddleware() gin.HandlerFunc {
 		if traceID == "" {
 			traceID = uuid.New().String()
 		}
-
+		requestID := c.Request.Header.Get("X-Request-ID")
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
 		method := c.Request.Method
 		path := c.Request.URL.Path
-		prefix := fmt.Sprintf("[TraceID:%s] [%s %s] ", traceID, method, path)
+		prefix := fmt.Sprintf("[TraceID:%s] [RequestID:%s] [%s %s] ", traceID, requestID, method, path)
 		logger := log.New(os.Stdout, prefix, log.LstdFlags)
 
 		// 根据请求选择数据库
 		db := base.Connect()
 
-		sc := ctx.NewServiceContext(c, traceID, db, logger)
+		sc := ctx.NewServiceContext(c, traceID, requestID, db, logger)
 		c.Set("ServiceContext", sc)
 
 		c.Next()
