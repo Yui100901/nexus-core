@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"nexus-core/domain/entity"
-	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
 	"time"
 
@@ -18,23 +17,20 @@ import (
 //
 
 type ProductRepository struct {
-	db *gorm.DB
 }
 
 func NewProductRepository() *ProductRepository {
-	return &ProductRepository{
-		db: base.Connect(),
-	}
+	return &ProductRepository{}
 }
 
 // CreateProduct 创建产品（回填 ID）
-func (r *ProductRepository) CreateProduct(ctx context.Context, product *entity.Product) error {
+func (r *ProductRepository) CreateProduct(ctx context.Context, tx *gorm.DB, product *entity.Product) error {
 	pProduct := &model.Product{
 		Name:                  product.Name,
 		Description:           product.Description,
 		MinSupportedVersionID: product.MinSupportedVersionID,
 	}
-	if err := gorm.G[model.Product](r.db).Create(ctx, pProduct); err != nil {
+	if err := gorm.G[model.Product](tx).Create(ctx, pProduct); err != nil {
 		return err
 	}
 
@@ -45,8 +41,8 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, product *entity.P
 }
 
 // BatchCreateProduct 批量创建产品及其版本
-func (r *ProductRepository) BatchCreateProduct(ctx context.Context, products []*entity.Product) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (r *ProductRepository) BatchCreateProduct(ctx context.Context, tx *gorm.DB, products []*entity.Product) error {
+	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var pProducts []model.Product
 		for _, product := range products {
 			pProducts = append(pProducts, model.Product{
@@ -70,8 +66,8 @@ func (r *ProductRepository) BatchCreateProduct(ctx context.Context, products []*
 }
 
 // GetByID 根据 ID 获取产品及其版本
-func (r *ProductRepository) GetByID(ctx context.Context, id uint) (*entity.Product, error) {
-	m, err := gorm.G[*model.Product](r.db).
+func (r *ProductRepository) GetByID(ctx context.Context, tx *gorm.DB, id uint) (*entity.Product, error) {
+	m, err := gorm.G[*model.Product](tx).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
@@ -84,7 +80,7 @@ func (r *ProductRepository) GetByID(ctx context.Context, id uint) (*entity.Produ
 		}
 	}
 
-	versions, err := r.GetVersionsByProductID(ctx, m.ID)
+	versions, err := r.GetVersionsByProductID(ctx, tx, m.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +89,15 @@ func (r *ProductRepository) GetByID(ctx context.Context, id uint) (*entity.Produ
 }
 
 // GetByName 根据名称获取产品
-func (r *ProductRepository) GetByName(ctx context.Context, name string) (*entity.Product, error) {
-	m, err := gorm.G[*model.Product](r.db).
+func (r *ProductRepository) GetByName(ctx context.Context, tx *gorm.DB, name string) (*entity.Product, error) {
+	m, err := gorm.G[*model.Product](tx).
 		Where("name = ?", name).
 		First(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	versions, err := r.GetVersionsByProductID(ctx, m.ID)
+	versions, err := r.GetVersionsByProductID(ctx, tx, m.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +105,13 @@ func (r *ProductRepository) GetByName(ctx context.Context, name string) (*entity
 	return toEntityProduct(m, versions), nil
 }
 
-func (r *ProductRepository) ExistIds(ctx context.Context, ids []uint) (bool, error) {
+func (r *ProductRepository) ExistIds(ctx context.Context, tx *gorm.DB, ids []uint) (bool, error) {
 	if len(ids) == 0 {
 		return false, fmt.Errorf("id list cannot be empty")
 	}
 
 	var count int64
-	err := r.db.WithContext(ctx).
+	err := tx.WithContext(ctx).
 		Model(&model.Product{}).
 		Where("id IN ?", ids).
 		Count(&count).Error
@@ -128,7 +124,7 @@ func (r *ProductRepository) ExistIds(ctx context.Context, ids []uint) (bool, err
 }
 
 // CreateNewVersion 创建新产品版本
-func (r *ProductRepository) CreateNewVersion(ctx context.Context, productID uint, v *entity.Version) error {
+func (r *ProductRepository) CreateNewVersion(ctx context.Context, tx *gorm.DB, productID uint, v *entity.Version) error {
 	m := &model.ProductVersion{
 		ProductID:   productID,
 		VersionCode: v.VersionCode,
@@ -136,7 +132,7 @@ func (r *ProductRepository) CreateNewVersion(ctx context.Context, productID uint
 		Description: v.Description,
 		IsEnabled:   v.IsEnabled,
 	}
-	err := gorm.G[model.ProductVersion](r.db).
+	err := gorm.G[model.ProductVersion](tx).
 		Create(ctx, m)
 	if err != nil {
 		return err
@@ -146,8 +142,8 @@ func (r *ProductRepository) CreateNewVersion(ctx context.Context, productID uint
 }
 
 // ReleaseVersion 发布新版本
-func (r *ProductRepository) ReleaseVersion(ctx context.Context, versionID uint, releaseDate time.Time) error {
-	_, err := gorm.G[model.ProductVersion](r.db).
+func (r *ProductRepository) ReleaseVersion(ctx context.Context, tx *gorm.DB, versionID uint, releaseDate time.Time) error {
+	_, err := gorm.G[model.ProductVersion](tx).
 		Where("id = ?", versionID).
 		Updates(ctx, model.ProductVersion{
 			IsEnabled:   1,
@@ -157,31 +153,31 @@ func (r *ProductRepository) ReleaseVersion(ctx context.Context, versionID uint, 
 }
 
 // DeprecateVersion 废弃版本
-func (r *ProductRepository) DeprecateVersion(ctx context.Context, productID, versionID uint) error {
-	_, err := gorm.G[model.ProductVersion](r.db).
+func (r *ProductRepository) DeprecateVersion(ctx context.Context, tx *gorm.DB, productID, versionID uint) error {
+	_, err := gorm.G[model.ProductVersion](tx).
 		Where("product_id = ? AND id = ?", productID, versionID).
 		Update(ctx, "is_enabled", 0)
 	return err
 }
 
 // GetVersionsByProductID 获取产品的版本列表
-func (r *ProductRepository) GetVersionsByProductID(ctx context.Context, productID uint) ([]model.ProductVersion, error) {
-	return gorm.G[model.ProductVersion](r.db).
+func (r *ProductRepository) GetVersionsByProductID(ctx context.Context, tx *gorm.DB, productID uint) ([]model.ProductVersion, error) {
+	return gorm.G[model.ProductVersion](tx).
 		Where("product_id = ?", productID).
 		Find(ctx)
 }
 
 // UpdateMinSupportedVersion 设置产品的最低支持版本
-func (r *ProductRepository) UpdateMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
-	_, err := gorm.G[model.Product](r.db).
+func (r *ProductRepository) UpdateMinSupportedVersion(ctx context.Context, tx *gorm.DB, productID, versionID uint) error {
+	_, err := gorm.G[model.Product](tx).
 		Where("id = ?", productID).
 		Update(ctx, "min_supported_version_id", versionID)
 	return err
 }
 
 // DeleteProduct 删除产品及其版本
-func (r *ProductRepository) DeleteProduct(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (r *ProductRepository) DeleteProduct(ctx context.Context, tx *gorm.DB, id uint) error {
+	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := gorm.G[model.ProductVersion](tx).
 			Where("product_id = ?", id).
 			Delete(ctx); err != nil {
@@ -197,8 +193,8 @@ func (r *ProductRepository) DeleteProduct(ctx context.Context, id uint) error {
 }
 
 // GetVersionByProductAndCode 查找指定产品的版本信息
-func (r *ProductRepository) GetVersionByProductAndCode(ctx context.Context, productID uint, versionCode string) (*model.ProductVersion, error) {
-	m, err := gorm.G[*model.ProductVersion](r.db).
+func (r *ProductRepository) GetVersionByProductAndCode(ctx context.Context, tx *gorm.DB, productID uint, versionCode string) (*model.ProductVersion, error) {
+	m, err := gorm.G[*model.ProductVersion](tx).
 		Where("product_id = ? AND version_code = ?", productID, versionCode).
 		First(ctx)
 	if err != nil {
@@ -208,8 +204,8 @@ func (r *ProductRepository) GetVersionByProductAndCode(ctx context.Context, prod
 }
 
 // GetVersionByID 根据版本 ID 获取版本信息
-func (r *ProductRepository) GetVersionByID(ctx context.Context, id uint) (*model.ProductVersion, error) {
-	m, err := gorm.G[*model.ProductVersion](r.db).
+func (r *ProductRepository) GetVersionByID(ctx context.Context, tx *gorm.DB, id uint) (*model.ProductVersion, error) {
+	m, err := gorm.G[*model.ProductVersion](tx).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
