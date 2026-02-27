@@ -29,14 +29,14 @@ func NewNodeService() *NodeService {
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
 func (s *NodeService) CreateNode(ctx context.Context, n *entity.Node) error {
-	return s.nr.CreateNode(ctx, n)
+	return s.nr.CreateNode(ctx, s.db, n)
 }
 
 // AutoCreateNode 自动创建节点
 // 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
 func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, metaInfo *string) (*entity.Node, error) {
 	// 查找或创建 node
-	node, err := s.nr.GetByDeviceCode(ctx, deviceCode)
+	node, err := s.nr.GetByDeviceCode(ctx, s.db, deviceCode)
 	if err != nil {
 		// create new node
 		return nil, fmt.Errorf("get node failed")
@@ -47,7 +47,7 @@ func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, met
 		if err != nil {
 			return nil, fmt.Errorf("create node failed")
 		}
-		if err := s.nr.CreateNode(ctx, n); err != nil {
+		if err := s.nr.CreateNode(ctx, s.db, n); err != nil {
 			return nil, fmt.Errorf("create node failed")
 		}
 		node = n
@@ -58,19 +58,19 @@ func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, met
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx context.Context, nodes []*entity.Node) error {
-	return s.nr.BatchCreateNode(ctx, nodes)
+	return s.nr.BatchCreateNode(ctx, s.db, nodes)
 }
 
 // GetByID 根据ID获取节点信息
 // 返回指定ID的完整节点信息，包括所有绑定关系
 func (s *NodeService) GetByID(ctx context.Context, id uint) (*entity.Node, error) {
-	return s.nr.GetByID(ctx, id)
+	return s.nr.GetByID(ctx, s.db, id)
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
 func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*entity.Node, error) {
-	return s.nr.GetByDeviceCode(ctx, code)
+	return s.nr.GetByDeviceCode(ctx, s.db, code)
 }
 
 // AddBinding 为节点添加许可证绑定关系
@@ -115,7 +115,7 @@ func (s *NodeService) UpdateBindingStatus(ctx context.Context, id uint, status i
 func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
 
 	// 执行强制解绑操作
-	err := s.nr.ForceUnbind(ctx, bindingID)
+	err := s.nr.ForceUnbind(ctx, s.db, bindingID)
 	if err != nil {
 		return err
 	}
@@ -129,5 +129,5 @@ func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
 // DeleteNode 删除节点
 // 同时删除节点的所有绑定关系
 func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
-	return s.nr.DeleteNode(ctx, id)
+	return s.nr.DeleteNode(ctx, s.db, id)
 }

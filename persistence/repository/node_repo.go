@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"nexus-core/domain/entity"
-	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
 
 	"gorm.io/gorm"
@@ -16,22 +15,19 @@ import (
 //
 
 type NodeRepository struct {
-	db *gorm.DB
 }
 
 func NewNodeRepository() *NodeRepository {
-	return &NodeRepository{
-		db: base.Connect(),
-	}
+	return &NodeRepository{}
 }
 
 // CreateNode 创建节点（回填 ID）
-func (r *NodeRepository) CreateNode(ctx context.Context, node *entity.Node) error {
+func (r *NodeRepository) CreateNode(ctx context.Context, tx *gorm.DB, node *entity.Node) error {
 	pNode := &model.Node{
 		DeviceCode: node.DeviceCode,
 		MetaInfo:   node.MetaInfo,
 	}
-	if err := gorm.G[model.Node](r.db).Create(ctx, pNode); err != nil {
+	if err := gorm.G[model.Node](tx).Create(ctx, pNode); err != nil {
 		return err
 	}
 	// 回填信息
@@ -40,8 +36,8 @@ func (r *NodeRepository) CreateNode(ctx context.Context, node *entity.Node) erro
 }
 
 // BatchCreateNode 批量创建节点（回填 ID）
-func (r *NodeRepository) BatchCreateNode(ctx context.Context, nodes []*entity.Node) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (r *NodeRepository) BatchCreateNode(ctx context.Context, tx *gorm.DB, nodes []*entity.Node) error {
+	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Step 1: 转换成持久化模型
 		var pNodes []model.Node
 		for _, node := range nodes {
@@ -66,8 +62,8 @@ func (r *NodeRepository) BatchCreateNode(ctx context.Context, nodes []*entity.No
 }
 
 // GetByID 根据 ID 获取节点信息
-func (r *NodeRepository) GetByID(ctx context.Context, id uint) (*entity.Node, error) {
-	m, err := gorm.G[*model.Node](r.db).
+func (r *NodeRepository) GetByID(ctx context.Context, tx *gorm.DB, id uint) (*entity.Node, error) {
+	m, err := gorm.G[*model.Node](tx).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
@@ -78,8 +74,8 @@ func (r *NodeRepository) GetByID(ctx context.Context, id uint) (*entity.Node, er
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
-func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string) (*entity.Node, error) {
-	m, err := gorm.G[*model.Node](r.db).
+func (r *NodeRepository) GetByDeviceCode(ctx context.Context, tx *gorm.DB, deviceCode string) (*entity.Node, error) {
+	m, err := gorm.G[*model.Node](tx).
 		Where("device_code = ?", deviceCode).
 		First(ctx)
 	if err != nil {
@@ -93,8 +89,8 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, deviceCode string)
 }
 
 // DeleteNode 删除节点及其绑定关系
-func (r *NodeRepository) DeleteNode(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (r *NodeRepository) DeleteNode(ctx context.Context, tx *gorm.DB, id uint) error {
+	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := gorm.G[model.NodeLicenseBinding](tx).
 			Where("node_id = ?", id).
 			Delete(ctx); err != nil {
@@ -111,8 +107,8 @@ func (r *NodeRepository) DeleteNode(ctx context.Context, id uint) error {
 
 // ForceUnbind 强制解绑节点绑定
 // 将指定绑定的解绑时间设置为当前时间并将状态更新为解绑状态
-func (r *NodeRepository) ForceUnbind(ctx context.Context, bindingID uint) error {
-	_, err := gorm.G[model.NodeLicenseBinding](r.db).
+func (r *NodeRepository) ForceUnbind(ctx context.Context, tx *gorm.DB, bindingID uint) error {
+	_, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("id = ?", bindingID).
 		Updates(ctx, model.NodeLicenseBinding{
 			IsBound: 0,
@@ -121,8 +117,8 @@ func (r *NodeRepository) ForceUnbind(ctx context.Context, bindingID uint) error 
 }
 
 // GetBindingByID 根据ID获取绑定信息
-func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.NodeLicenseBinding, error) {
-	m, err := gorm.G[*model.NodeLicenseBinding](r.db).
+func (r *NodeRepository) GetBindingByID(ctx context.Context, tx *gorm.DB, id uint) (*entity.NodeLicenseBinding, error) {
+	m, err := gorm.G[*model.NodeLicenseBinding](tx).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
@@ -136,8 +132,8 @@ func (r *NodeRepository) GetBindingByID(ctx context.Context, id uint) (*entity.N
 }
 
 // GetBindingsByLicenseAndProduct 根据许可证获取绑定列表
-func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, licenseID, productID uint) ([]entity.NodeLicenseBinding, error) {
-	modelBindings, err := gorm.G[model.NodeLicenseBinding](r.db).
+func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, tx *gorm.DB, licenseID, productID uint) ([]entity.NodeLicenseBinding, error) {
+	modelBindings, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("license_id = ?", licenseID).
 		Find(ctx)
 	if err != nil {
