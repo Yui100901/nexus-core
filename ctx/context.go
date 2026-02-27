@@ -1,6 +1,7 @@
 package ctx
 
 import (
+	"context"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 //
 
 type CommonContext interface {
+	context.Context
 	TraceID() string
 	RequestID() string
 	DB() *gorm.DB
