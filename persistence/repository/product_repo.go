@@ -42,27 +42,25 @@ func (r *ProductRepository) CreateProduct(ctx context.Context, tx *gorm.DB, prod
 
 // BatchCreateProduct 批量创建产品及其版本
 func (r *ProductRepository) BatchCreateProduct(ctx context.Context, tx *gorm.DB, products []*entity.Product) error {
-	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var pProducts []model.Product
-		for _, product := range products {
-			pProducts = append(pProducts, model.Product{
-				Name:                  product.Name,
-				Description:           product.Description,
-				MinSupportedVersionID: product.MinSupportedVersionID,
-			})
-		}
+	var pProducts []model.Product
+	for _, product := range products {
+		pProducts = append(pProducts, model.Product{
+			Name:                  product.Name,
+			Description:           product.Description,
+			MinSupportedVersionID: product.MinSupportedVersionID,
+		})
+	}
 
-		if err := gorm.G[model.Product](tx).CreateInBatches(ctx, &pProducts, 100); err != nil {
-			return err
-		}
+	if err := gorm.G[model.Product](tx).CreateInBatches(ctx, &pProducts, 100); err != nil {
+		return err
+	}
 
-		// 回填 ID
-		for i := range products {
-			products[i].ID = pProducts[i].ID
-		}
+	// 回填 ID
+	for i := range products {
+		products[i].ID = pProducts[i].ID
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // GetByID 根据 ID 获取产品及其版本
@@ -175,21 +173,25 @@ func (r *ProductRepository) UpdateMinSupportedVersion(ctx context.Context, tx *g
 	return err
 }
 
-// DeleteProduct 删除产品及其版本
+// DeleteProduct 删除产品
 func (r *ProductRepository) DeleteProduct(ctx context.Context, tx *gorm.DB, id uint) error {
-	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := gorm.G[model.ProductVersion](tx).
-			Where("product_id = ?", id).
-			Delete(ctx); err != nil {
-			return err
-		}
-		if _, err := gorm.G[model.Product](tx).
-			Where("id = ?", id).
-			Delete(ctx); err != nil {
-			return err
-		}
-		return nil
-	})
+
+	if _, err := gorm.G[model.Product](tx).
+		Where("id = ?", id).
+		Delete(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteVersion 删除版本
+func (r *ProductRepository) DeleteVersion(ctx context.Context, tx *gorm.DB, id uint) error {
+	if _, err := gorm.G[model.ProductVersion](tx).
+		Where("id = ?", id).
+		Delete(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetVersionByProductAndCode 查找指定产品的版本信息

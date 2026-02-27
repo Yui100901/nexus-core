@@ -45,7 +45,9 @@ func (s *ProductService) BatchCreateProduct(ctx context.Context, products []*ent
 	}
 
 	// 2. 调用仓储层批量创建
-	return s.pr.BatchCreateProduct(ctx, s.db, products)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		return s.pr.BatchCreateProduct(ctx, tx, products)
+	})
 }
 
 // GetByID 根据ID获取产品信息
@@ -93,7 +95,13 @@ func (s *ProductService) CheckProductVersionSupported(ctx context.Context, produ
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
-	return s.pr.DeleteProduct(ctx, s.db, id)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		err := s.pr.DeleteProduct(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		return s.pr.DeleteVersion(ctx, tx, id)
+	})
 }
 
 // CreateNewVersion 创建新产品版本
