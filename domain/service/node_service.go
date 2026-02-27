@@ -131,5 +131,11 @@ func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
 // DeleteNode 删除节点
 // 同时删除节点的所有绑定关系
 func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
-	return s.nr.DeleteNode(ctx, s.db, id)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		err := s.nr.DeleteNode(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		return s.nlr.DeleteBindingByNodeID(ctx, tx, id)
+	})
 }

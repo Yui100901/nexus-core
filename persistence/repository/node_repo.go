@@ -86,21 +86,14 @@ func (r *NodeRepository) GetByDeviceCode(ctx context.Context, tx *gorm.DB, devic
 	return toEntityNode(m), nil
 }
 
-// DeleteNode 删除节点及其绑定关系
+// DeleteNode 删除节点
 func (r *NodeRepository) DeleteNode(ctx context.Context, tx *gorm.DB, id uint) error {
-	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := gorm.G[model.NodeLicenseBinding](tx).
-			Where("node_id = ?", id).
-			Delete(ctx); err != nil {
-			return err
-		}
-		if _, err := gorm.G[model.Node](tx).
-			Where("id = ?", id).
-			Delete(ctx); err != nil {
-			return err
-		}
-		return nil
-	})
+	if _, err := gorm.G[model.Node](tx).
+		Where("id = ?", id).
+		Delete(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ForceUnbind 强制解绑节点绑定
