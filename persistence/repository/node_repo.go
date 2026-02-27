@@ -37,28 +37,26 @@ func (r *NodeRepository) CreateNode(ctx context.Context, tx *gorm.DB, node *enti
 
 // BatchCreateNode 批量创建节点（回填 ID）
 func (r *NodeRepository) BatchCreateNode(ctx context.Context, tx *gorm.DB, nodes []*entity.Node) error {
-	return tx.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Step 1: 转换成持久化模型
-		var pNodes []model.Node
-		for _, node := range nodes {
-			pNodes = append(pNodes, model.Node{
-				DeviceCode: node.DeviceCode,
-				MetaInfo:   node.MetaInfo,
-			})
-		}
+	// Step 1: 转换成持久化模型
+	var pNodes []model.Node
+	for _, node := range nodes {
+		pNodes = append(pNodes, model.Node{
+			DeviceCode: node.DeviceCode,
+			MetaInfo:   node.MetaInfo,
+		})
+	}
 
-		// Step 2: 批量插入 Node
-		if err := gorm.G[model.Node](tx).CreateInBatches(ctx, &pNodes, 100); err != nil {
-			return err
-		}
+	// Step 2: 批量插入 Node
+	if err := gorm.G[model.Node](tx).CreateInBatches(ctx, &pNodes, 100); err != nil {
+		return err
+	}
 
-		// Step 3: 回填 ID
-		for i := range nodes {
-			nodes[i].ID = pNodes[i].ID
-		}
+	// Step 3: 回填 ID
+	for i := range nodes {
+		nodes[i].ID = pNodes[i].ID
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // GetByID 根据 ID 获取节点信息

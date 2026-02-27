@@ -58,7 +58,9 @@ func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, met
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx context.Context, nodes []*entity.Node) error {
-	return s.nr.BatchCreateNode(ctx, s.db, nodes)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		return s.nr.BatchCreateNode(ctx, s.db, nodes)
+	})
 }
 
 // GetByID 根据ID获取节点信息
