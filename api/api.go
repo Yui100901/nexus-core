@@ -26,13 +26,12 @@ const (
 )
 
 type Api struct {
-	ctx ctx.ServiceContext
 }
 
 // JSON 发送自定义响应
 // 根据指定的HTTP状态码、业务码、消息和数据构造响应
-func (a *Api) JSON(httpStatus int, code int, message string, data interface{}) {
-	a.ctx.JSON(httpStatus, CommonResponse{
+func (a *Api) JSON(ctx *ctx.ServiceContext, httpStatus int, code int, message string, data interface{}) {
+	ctx.JSON(httpStatus, CommonResponse{
 		Code:    code,
 		Message: message,
 		Data:    data,
@@ -40,26 +39,26 @@ func (a *Api) JSON(httpStatus int, code int, message string, data interface{}) {
 }
 
 // Success 返回成功响应并包含数据
-func (a *Api) Success(data interface{}) {
-	a.JSON(http.StatusOK, CodeOK, "ok", data)
+func (a *Api) Success(ctx *ctx.ServiceContext, data interface{}) {
+	a.JSON(ctx, http.StatusOK, CodeOK, "ok", data)
 }
 
 // SuccessMsg 返回成功响应但仅包含消息
-func (a *Api) SuccessMsg(message string) {
-	a.JSON(http.StatusOK, CodeOK, message, nil)
+func (a *Api) SuccessMsg(ctx *ctx.ServiceContext, message string) {
+	a.JSON(ctx, http.StatusOK, CodeOK, message, nil)
 }
 
 // BadRequest 返回400错误响应
-func (a *Api) BadRequest(message string) {
-	a.JSON(http.StatusBadRequest, CodeBadRequest, message, nil)
+func (a *Api) BadRequest(ctx *ctx.ServiceContext, message string) {
+	a.JSON(ctx, http.StatusBadRequest, CodeBadRequest, message, nil)
 }
 
 // NotFound 返回404错误响应
-func (a *Api) NotFound(message string) {
-	a.JSON(http.StatusNotFound, CodeNotFound, message, nil)
+func (a *Api) NotFound(ctx *ctx.ServiceContext, message string) {
+	a.JSON(ctx, http.StatusNotFound, CodeNotFound, message, nil)
 }
 
 // InternalError 返回500错误响应
-func (a *Api) InternalError(message string) {
-	a.JSON(http.StatusInternalServerError, CodeInternal, message, nil)
+func (a *Api) InternalError(ctx *ctx.ServiceContext, message string) {
+	a.JSON(ctx, http.StatusInternalServerError, CodeInternal, message, nil)
 }
