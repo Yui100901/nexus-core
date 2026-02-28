@@ -13,6 +13,7 @@ import (
 // @Author yfy2001
 // @Date 2026/1/20 09 11
 type LicenseController struct {
+	Api
 	ls *service.LicenseService // 许可证服务，处理业务逻辑
 }
 
@@ -52,21 +53,21 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 	var cmd dto.CreateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
 
 	if err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 	}
 
 	if err := c.ls.CreateLicense(ctx, license); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, license)
+	c.Success(ctx, license)
 }
 
 // BatchCreate 批量创建 License
@@ -83,7 +84,7 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -91,17 +92,17 @@ func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 	for _, cmd := range cmds {
 		license, err := entity.NewLicense(cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark, dto.ToEntityScopes(cmd.ScopeList))
 		if err != nil {
-			BadRequest(ctx, err.Error())
+			c.BadRequest(ctx, err.Error())
 			return
 		}
 		licenses = append(licenses, license)
 	}
 
 	if err := c.ls.BatchCreateLicense(ctx, licenses); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, licenses)
+	c.Success(ctx, licenses)
 }
 
 // GetByID 根据 ID 获取 License（Query 参数传递）
@@ -117,16 +118,16 @@ func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 func (c *LicenseController) GetByID(ctx *gin.Context) {
 	var query dto.GetLicenseByIDQuery
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	license, err := c.ls.GetLicenseByID(ctx, query.ID)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, license)
+	c.Success(ctx, license)
 }
 
 // GetByKey 根据 Key 获取 License（Query 参数传递）
@@ -142,16 +143,16 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	var query dto.GetLicenseByKeyQuery
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	license, err := c.ls.GetLicenseByKey(ctx, query.Key)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, license)
+	c.Success(ctx, license)
 }
 
 // UpdateStatus 更新 License 状态（POST Body）
@@ -167,15 +168,15 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseStatusCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	if err := c.ls.UpdateLicenseStatus(ctx, cmd.ID, cmd.Status); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "status updated")
+	c.SuccessMsg(ctx, "status updated")
 }
 
 // UpdateLicense 更新 License（POST Body）
@@ -191,7 +192,7 @@ func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -204,10 +205,10 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 	}
 
 	if err := c.ls.UpdateLicense(ctx, license); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, license)
+	c.Success(ctx, license)
 }
 
 // DeleteExpired 删除过期 License（POST）
@@ -220,8 +221,8 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) DeleteExpired(ctx *gin.Context) {
 	if err := c.ls.DeleteExpiredLicenses(ctx); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "expired licenses deleted")
+	c.SuccessMsg(ctx, "expired licenses deleted")
 }

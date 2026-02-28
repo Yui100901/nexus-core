@@ -11,6 +11,7 @@ import (
 // NodeController 处理节点相关的API请求
 // 管理节点的创建、查询、绑定等操作
 type NodeController struct {
+	Api
 	ns *service.NodeService // 节点服务，处理节点相关的业务逻辑
 }
 
@@ -48,16 +49,16 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 func (c *NodeController) CreateNode(ctx *gin.Context) {
 	var cmd dto.CreateNodeCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	n := dto.ToEntityNode(cmd)
 	if err := c.ns.CreateNode(ctx, n); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, n)
+	c.Success(ctx, n)
 }
 
 // BatchCreate 批量创建节点
@@ -73,7 +74,7 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 func (c *NodeController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateNodeCommand
 	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	var nodes []*entity.Node
@@ -81,10 +82,10 @@ func (c *NodeController) BatchCreate(ctx *gin.Context) {
 		nodes = append(nodes, dto.ToEntityNode(cmd))
 	}
 	if err := c.ns.BatchCreateNode(ctx, nodes); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, nodes)
+	c.Success(ctx, nodes)
 }
 
 // GetByID 根据 ID 获取节点信息
@@ -100,15 +101,15 @@ func (c *NodeController) BatchCreate(ctx *gin.Context) {
 func (c *NodeController) GetByID(ctx *gin.Context) {
 	var q dto.GetNodeByIDQuery
 	if err := ctx.ShouldBindQuery(&q); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	n, err := c.ns.GetByID(ctx, q.ID)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, n)
+	c.Success(ctx, n)
 }
 
 // GetByDeviceCode 根据设备码查询节点
@@ -124,15 +125,15 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	var q dto.GetNodeByDeviceCodeQuery
 	if err := ctx.ShouldBindQuery(&q); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	n, err := c.ns.GetByDeviceCode(ctx, q.DeviceCode)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, n)
+	c.Success(ctx, n)
 }
 
 // AddBinding 添加节点绑定
@@ -148,14 +149,14 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 func (c *NodeController) AddBinding(ctx *gin.Context) {
 	var cmd dto.AddBindingCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, "")
+	c.Success(ctx, "")
 }
 
 // UpdateBindingStatus 更新绑定状态
@@ -171,14 +172,14 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
 	var cmd dto.UpdateBindingStatusCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ns.UpdateBindingStatus(ctx, cmd.ID, cmd.Status); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "binding status updated")
+	c.SuccessMsg(ctx, "binding status updated")
 }
 
 // ForceUnbind 强制解绑节点
@@ -194,7 +195,7 @@ func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
 func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 	var cmd dto.ForceUnbindCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	// todo: implement force unbind logic
@@ -202,7 +203,7 @@ func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 	//	InternalError(ctx, err.Error())
 	//	return
 	//}
-	SuccessMsg(ctx, "node binding forced to unbind")
+	c.SuccessMsg(ctx, "node binding forced to unbind")
 }
 
 // DeleteNode 删除节点
@@ -220,12 +221,12 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		ID uint `json:"id" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&q); err != nil {
-		BadRequest(ctx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ns.DeleteNode(ctx, q.ID); err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "node deleted")
+	c.SuccessMsg(ctx, "node deleted")
 }
