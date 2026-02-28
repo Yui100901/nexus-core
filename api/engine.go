@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -24,13 +23,6 @@ var WebEngine *gin.Engine
 func NewServer() *gin.Engine {
 	r := gin.Default()
 	r.Use(CorsMiddleware())
-	// request id middleware
-	r.Use(func(c *gin.Context) {
-		id := uuid.New().String()
-		c.Writer.Header().Set("X-Request-ID", id)
-		c.Set("request_id", id)
-		c.Next()
-	})
 	// simple logger
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
