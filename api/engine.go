@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,7 @@ func RegisterDefaultRoutes() {
 	// health
 	WebEngine.GET("/health", func(c *gin.Context) {
 		// use unified success response
-		Success(c, map[string]string{"status": "ok"})
+		c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
 	// controllers

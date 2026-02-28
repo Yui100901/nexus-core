@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"nexus-core/api/dto"
+	"nexus-core/ctx"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"nexus-core/monitor"
@@ -15,6 +16,7 @@ import (
 // AccessController 处理客户端心跳请求
 // 负责验证许可证、管理节点绑定和控制并发访问
 type AccessController struct {
+	Api
 	ls  *service.LicenseService       // 许可证服务，处理许可证验证和激活
 	ns  *service.NodeService          // 节点服务，管理节点创建和绑定
 	ps  *service.ProductService       // 产品服务，处理产品版本验证
@@ -55,32 +57,33 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
-func (c *AccessController) AutoBind(ctx *gin.Context) {
+func (c *AccessController) AutoBind(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.AutoBindCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 	//验证产品和版本是否支持
-	ok, err := c.ps.CheckProductVersionSupported(ctx, cmd.ProductID, nil, &cmd.VersionCode)
+	ok, err := c.ps.CheckProductVersionSupported(gCtx, cmd.ProductID, nil, &cmd.VersionCode)
 	if err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(sCtx, err.Error())
 		return
 	}
 	if !ok {
-		InternalError(ctx, "product version not supported")
+		c.InternalError(sCtx, "product version not supported")
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(ctx, cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(gCtx, cmd.LicenseKey)
 	if err != nil {
-		BadRequest(ctx, "invalid license")
+		c.BadRequest(sCtx, "invalid license")
 		return
 	}
 	// 验证许可证是否对产品有效
 	scope := license.GetScope(cmd.ProductID)
 	if scope == nil {
-		BadRequest(ctx, "product not supported")
+		c.BadRequest(sCtx, "product not supported")
 		return
 	}
 	// 检查许可证是否过期
@@ -92,55 +95,55 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 		toActivate = true
 	case entity.StatusActive:
 	case entity.StatusExpired:
-		BadRequest(ctx, "license expired")
+		c.BadRequest(sCtx, "license expired")
 		return
 	case entity.StatusRevoked:
-		BadRequest(ctx, "invalid license")
+		c.BadRequest(sCtx, "invalid license")
 		return
 	}
 
-	node, err := c.ns.AutoCreateNode(ctx, cmd.DeviceCode, nil)
+	node, err := c.ns.AutoCreateNode(gCtx, cmd.DeviceCode, nil)
 	if err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(sCtx, err.Error())
 		return
 	}
 
 	if !node.IsValid() {
-		BadRequest(ctx, "invalid node")
+		c.BadRequest(sCtx, "invalid node")
 		return
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(ctx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(gCtx, node.ID, license.ID)
 	if err != nil {
-		InternalError(ctx, "check binding failed")
+		c.InternalError(sCtx, "check binding failed")
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoCreateBind(ctx, node.ID, cmd.ProductID, license)
+		err := c.ns.AutoCreateBind(gCtx, node.ID, cmd.ProductID, license)
 		if err != nil {
-			InternalError(ctx, "auto bind failed")
+			c.InternalError(sCtx, "auto bind failed")
 			return
 		}
 	} else {
 		//存在绑定，更新绑定状态为已绑定
 		if binding.IsBound == 0 {
 			binding.IsBound = 1
-			if err := c.nlr.UpdateBindingStatus(ctx, binding.ID, 1); err != nil {
-				InternalError(ctx, "update binding status failed")
+			if err := c.nlr.UpdateBindingStatus(sCtx, binding.ID, 1); err != nil {
+				c.InternalError(sCtx, "update binding status failed")
 				return
 			}
 		}
 	}
 	if toActivate {
 		// 激活 license
-		if err := c.ls.ActivateLicenseIfNeeded(ctx, license); err != nil {
-			InternalError(ctx, err.Error())
+		if err := c.ls.ActivateLicenseIfNeeded(gCtx, license); err != nil {
+			c.InternalError(sCtx, err.Error())
 			return
 		}
 	}
 
-	Success(ctx, map[string]interface{}{})
+	c.Success(sCtx, map[string]interface{}{})
 }
 
 // Heartbeat 心跳接口处理
@@ -155,32 +158,33 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/heartbeat [post]
-func (c *AccessController) Heartbeat(ctx *gin.Context) {
+func (c *AccessController) Heartbeat(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.HeartbeatCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 	//验证产品和版本是否支持
-	ok, err := c.ps.CheckProductVersionSupported(ctx, cmd.ProductID, nil, &cmd.VersionCode)
+	ok, err := c.ps.CheckProductVersionSupported(gCtx, cmd.ProductID, nil, &cmd.VersionCode)
 	if err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(sCtx, err.Error())
 		return
 	}
 	if !ok {
-		InternalError(ctx, "product version not supported")
+		c.InternalError(sCtx, "product version not supported")
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(ctx, cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(gCtx, cmd.LicenseKey)
 	if err != nil {
-		BadRequest(ctx, "invalid license")
+		c.BadRequest(sCtx, "invalid license")
 		return
 	}
 	// 验证许可证是否对产品有效
 	scope := license.GetScope(cmd.ProductID)
 	if scope == nil {
-		BadRequest(ctx, "product not supported")
+		c.BadRequest(sCtx, "product not supported")
 		return
 	}
 	// 检查许可证是否过期
@@ -188,44 +192,44 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	// 验证许可证状态
 	switch currentStatus {
 	case entity.StatusInactive:
-		BadRequest(ctx, "license not active")
+		c.BadRequest(sCtx, "license not active")
 		return
 	case entity.StatusActive:
 	case entity.StatusExpired:
-		BadRequest(ctx, "license expired")
+		c.BadRequest(sCtx, "license expired")
 		return
 	case entity.StatusRevoked:
-		BadRequest(ctx, "invalid license")
+		c.BadRequest(sCtx, "invalid license")
 		return
 	}
 
-	node, err := c.ns.GetByDeviceCode(ctx, cmd.DeviceCode)
+	node, err := c.ns.GetByDeviceCode(gCtx, cmd.DeviceCode)
 	if err != nil {
-		InternalError(ctx, err.Error())
+		c.InternalError(sCtx, err.Error())
 		return
 	}
 	if node == nil {
-		InternalError(ctx, "node not found")
+		c.InternalError(sCtx, "node not found")
 		return
 	} else {
 		if !node.IsValid() {
-			BadRequest(ctx, "invalid node")
+			c.BadRequest(sCtx, "invalid node")
 			return
 		}
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(ctx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(gCtx, node.ID, license.ID)
 	if err != nil {
-		InternalError(ctx, "check binding failed")
+		c.InternalError(sCtx, "check binding failed")
 		return
 	}
 	if binding == nil {
-		InternalError(ctx, "binding not found")
+		c.InternalError(sCtx, "binding not found")
 		return
 	} else {
 		if binding.IsBound == 0 {
-			InternalError(ctx, "binding not bound")
+			c.InternalError(sCtx, "binding not bound")
 			return
 		}
 	}
@@ -233,12 +237,12 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	// 检查并发限制
 	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, cmd.ProductID)
 	if !license.ValidateMaxConcurrentForProduct(cmd.ProductID, totalConcurrent) {
-		BadRequest(ctx, "maximum concurrent exceeded")
+		c.BadRequest(sCtx, "maximum concurrent exceeded")
 		return
 	}
 
 	monitor.GlobalMonitor.HeartBeat(fmt.Sprintf("%d|%s|%s",
 		cmd.ProductID, node.DeviceCode, license.LicenseKey), time.Second*60)
 
-	Success(ctx, map[string]interface{}{})
+	c.Success(sCtx, map[string]interface{}{})
 }
