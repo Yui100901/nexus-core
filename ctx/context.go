@@ -1,10 +1,13 @@
 package ctx
 
 import (
-	"context"
+	"fmt"
 	"log"
+	"nexus-core/persistence/base"
+	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -13,14 +16,14 @@ import (
 // @Date 2026/2/27 14 22
 //
 
-type CommonContext interface {
-	context.Context
-	TraceID() string
-	RequestID() string
-	DB() *gorm.DB
-	Logger() *log.Logger
-	Error(err error)
-}
+//type CommonContext interface {
+//	context.Context
+//	TraceID() string
+//	RequestID() string
+//	DB() *gorm.DB
+//	Logger() *log.Logger
+//	Error(err error)
+//}
 
 type ServiceContext struct {
 	*gin.Context
@@ -40,6 +43,26 @@ func NewServiceContext(c *gin.Context, traceID, requestID string, db *gorm.DB, l
 		db:        db,
 		logger:    logger,
 	}
+}
+
+// InitContext 从 gin.Context 初始化 ServiceContext
+func InitContext(c *gin.Context) *ServiceContext {
+	traceID := c.GetHeader("X-Trace-ID")
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+	requestID := c.Request.Header.Get("X-Request-ID")
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+	method := c.Request.Method
+	path := c.Request.URL.Path
+	prefix := fmt.Sprintf("[TraceID:%s] [RequestID:%s] [%s %s] ", traceID, requestID, method, path)
+	logger := log.New(os.Stdout, prefix, log.LstdFlags)
+
+	// 根据请求选择数据库
+	db := base.Connect()
+	return NewServiceContext(c, traceID, requestID, db, logger)
 }
 
 func (s *ServiceContext) TraceID() string {
