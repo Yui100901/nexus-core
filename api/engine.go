@@ -23,6 +23,7 @@ var WebEngine *gin.Engine
 func NewServer() *gin.Engine {
 	r := gin.Default()
 	r.Use(CorsMiddleware())
+	r.Use(ServiceContextMiddleware())
 	// simple logger
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
