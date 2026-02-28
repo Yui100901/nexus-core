@@ -42,8 +42,8 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 // @Produce json
 // @Param body body dto.CreateNodeCommand true "Create Node"
 // @Success 200 {object} entity.Node
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/create [post]
 func (c *NodeController) CreateNode(ctx *gin.Context) {
 	var cmd dto.CreateNodeCommand
@@ -67,8 +67,8 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 // @Produce json
 // @Param body body []dto.CreateNodeCommand true "Create Nodes"
 // @Success 200 {array} entity.Node
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/batchCreate [post]
 func (c *NodeController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateNodeCommand
@@ -94,8 +94,8 @@ func (c *NodeController) BatchCreate(ctx *gin.Context) {
 // @Produce json
 // @Param id query uint true "Node ID"
 // @Success 200 {object} entity.Node
-// @Failure 400 {object} api.APIResponse
-// @Failure 504 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 504 {object} api.CommonResponse
 // @Router /node/getByID [get]
 func (c *NodeController) GetByID(ctx *gin.Context) {
 	var q dto.GetNodeByIDQuery
@@ -118,8 +118,8 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 // @Produce json
 // @Param device_code query string true "Device Code"
 // @Success 200 {object} entity.Node
-// @Failure 400 {object} api.APIResponse
-// @Failure 404 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
 // @Router /node/getByDevice [get]
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	var q dto.GetNodeByDeviceCodeQuery
@@ -142,8 +142,8 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 // @Produce json
 // @Param body body dto.AddBindingCommand true "Add Binding"
 // @Success 200 {object} entity.NodeLicenseBinding
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/addBinding [post]
 func (c *NodeController) AddBinding(ctx *gin.Context) {
 	var cmd dto.AddBindingCommand
@@ -164,9 +164,9 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.UpdateBindingStatusCommand true "Update binding status"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/updateBindingStatus [post]
 func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
 	var cmd dto.UpdateBindingStatusCommand
@@ -187,9 +187,9 @@ func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.ForceUnbindCommand true "Force unbind command"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/unbind [post]
 func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 	var cmd dto.ForceUnbindCommand
@@ -211,9 +211,9 @@ func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body object true "{\"id\": <node id>}"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /node/delete [post]
 func (c *NodeController) DeleteNode(ctx *gin.Context) {
 	var q struct {

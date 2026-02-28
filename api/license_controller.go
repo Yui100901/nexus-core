@@ -45,9 +45,9 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 // @Accept json
 // @Produce json
 // @Param body body dto.CreateLicenseCommand true "Create License"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /license/create [post]
 func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 	var cmd dto.CreateLicenseCommand
@@ -76,9 +76,9 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body []dto.CreateLicenseCommand true "Create Licenses"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /license/batchCreate [post]
 func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateLicenseCommand
@@ -110,9 +110,9 @@ func (c *LicenseController) BatchCreate(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id query uint true "License ID"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 404 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
 // @Router /license/getByID [get]
 func (c *LicenseController) GetByID(ctx *gin.Context) {
 	var query dto.GetLicenseByIDQuery
@@ -135,9 +135,9 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param key query string true "License Key"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 404 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
 // @Router /license/getByKey [get]
 func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	var query dto.GetLicenseByKeyQuery
@@ -160,9 +160,9 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.UpdateLicenseStatusCommand true "Update status"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /license/updateStatus [post]
 func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseStatusCommand
@@ -184,9 +184,9 @@ func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.UpdateLicenseCommand true "Update License"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /license/update [post]
 func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseCommand
@@ -215,8 +215,8 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 // @Tags licenses
 // @Accept json
 // @Produce json
-// @Success 200 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) DeleteExpired(ctx *gin.Context) {
 	if err := c.ls.DeleteExpiredLicenses(ctx); err != nil {

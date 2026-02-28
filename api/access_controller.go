@@ -51,9 +51,9 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Accept json
 // @Produce json
 // @Param body body dto.AutoBindCommand true "Auto Bind"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
 func (c *AccessController) AutoBind(ctx *gin.Context) {
 	var cmd dto.AutoBindCommand
@@ -151,9 +151,9 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.HeartbeatCommand true "Heartbeat"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /access/heartbeat [post]
 func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	var cmd dto.HeartbeatCommand

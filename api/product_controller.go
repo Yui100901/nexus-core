@@ -44,8 +44,8 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 // @Produce json
 // @Param body body dto.CreateProductCommand true "Create Product"
 // @Success 200 {object} entity.Product
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/create [post]
 func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var cmd dto.CreateProductCommand
@@ -72,8 +72,8 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 // @Produce json
 // @Param body body dto.CreateProductVersionCommand true "Create Product Version"
 // @Success 200 {object} entity.Version
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/createVersion [post]
 func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 	var cmd dto.CreateProductVersionCommand
@@ -125,8 +125,8 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 // @Produce json
 // @Param body body []dto.CreateProductCommand true "Create Products"
 // @Success 200 {array} entity.Product
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/batchCreate [post]
 func (c *ProductController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateProductCommand
@@ -157,8 +157,8 @@ func (c *ProductController) BatchCreate(ctx *gin.Context) {
 // @Produce json
 // @Param id query uint true "Product ID"
 // @Success 200 {object} entity.Product
-// @Failure 400 {object} api.APIResponse
-// @Failure 404 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
 // @Router /product/getByID [get]
 func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
@@ -192,8 +192,8 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 // @Produce json
 // @Param name query string true "Product Name"
 // @Success 200 {object} entity.Product
-// @Failure 400 {object} api.APIResponse
-// @Failure 404 {object} api.APIResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
 // @Router /product/getByName [get]
 func (c *ProductController) GetByName(ctx *gin.Context) {
 	var q dto.GetProductByNameQuery
@@ -215,9 +215,9 @@ func (c *ProductController) GetByName(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.UpdateMinVersionCommand true "Set Min Version"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/setMinVersion [post]
 func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 	var cmd dto.UpdateMinVersionCommand
@@ -238,9 +238,9 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body dto.DeprecateVersionCommand true "Deprecate Version"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/deprecateVersion [post]
 func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 	var cmd dto.DeprecateVersionCommand
@@ -261,9 +261,9 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body object true "{\"id\": <product id>}"
-// @Success 200 {object} api.APIResponse
-// @Failure 400 {object} api.APIResponse
-// @Failure 500 {object} api.APIResponse
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
 // @Router /product/delete [post]
 func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 	var q struct {

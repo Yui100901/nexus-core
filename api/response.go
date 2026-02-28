@@ -6,14 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// APIResponse 定义统一的API响应格式
-// 用于标准化接口返回的数据结构
-type APIResponse struct {
-	Code    int         `json:"code"`           // 业务状态码
-	Message string      `json:"message"`        // 响应消息
-	Data    interface{} `json:"data,omitempty"` // 响应数据，可选
-}
-
 const (
 	CodeOK         = 200 // 成功状态码
 	CodeBadRequest = 400 // 请求错误状态码
@@ -24,7 +16,7 @@ const (
 // JSON 发送自定义响应
 // 根据指定的HTTP状态码、业务码、消息和数据构造响应
 func JSON(ctx *gin.Context, httpStatus int, code int, message string, data interface{}) {
-	ctx.JSON(httpStatus, APIResponse{
+	ctx.JSON(httpStatus, CommonResponse{
 		Code:    code,
 		Message: message,
 		Data:    data,
