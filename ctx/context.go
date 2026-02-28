@@ -42,10 +42,6 @@ func NewServiceContext(c *gin.Context, traceID, requestID string, db *gorm.DB, l
 	}
 }
 
-func (s *ServiceContext) GinContext() *gin.Context {
-	return s.Context
-}
-
 func (s *ServiceContext) TraceID() string {
 	return s.traceID
 }

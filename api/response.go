@@ -6,13 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	CodeOK         = 200 // 成功状态码
-	CodeBadRequest = 400 // 请求错误状态码
-	CodeNotFound   = 404 // 未找到状态码
-	CodeInternal   = 500 // 内部错误状态码
-)
-
 // JSON 发送自定义响应
 // 根据指定的HTTP状态码、业务码、消息和数据构造响应
 func JSON(ctx *gin.Context, httpStatus int, code int, message string, data interface{}) {

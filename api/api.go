@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 	"nexus-core/ctx"
-
-	"github.com/gin-gonic/gin"
 )
 
 //
@@ -20,14 +18,21 @@ type CommonResponse struct {
 	Data    interface{} `json:"data,omitempty"` // 响应数据，可选
 }
 
+const (
+	CodeOK         = 200 // 成功状态码
+	CodeBadRequest = 400 // 请求错误状态码
+	CodeNotFound   = 404 // 未找到状态码
+	CodeInternal   = 500 // 内部错误状态码
+)
+
 type Api struct {
 	ctx ctx.ServiceContext
 }
 
 // JSON 发送自定义响应
 // 根据指定的HTTP状态码、业务码、消息和数据构造响应
-func (a *Api) JSON(ctx *gin.Context, httpStatus int, code int, message string, data interface{}) {
-	ctx.JSON(httpStatus, CommonResponse{
+func (a *Api) JSON(httpStatus int, code int, message string, data interface{}) {
+	a.ctx.JSON(httpStatus, CommonResponse{
 		Code:    code,
 		Message: message,
 		Data:    data,
@@ -35,26 +40,26 @@ func (a *Api) JSON(ctx *gin.Context, httpStatus int, code int, message string, d
 }
 
 // Success 返回成功响应并包含数据
-func (a *Api) Success(ctx *gin.Context, data interface{}) {
-	JSON(ctx, http.StatusOK, CodeOK, "ok", data)
+func (a *Api) Success(data interface{}) {
+	a.JSON(http.StatusOK, CodeOK, "ok", data)
 }
 
 // SuccessMsg 返回成功响应但仅包含消息
-func (a *Api) SuccessMsg(ctx *gin.Context, message string) {
-	JSON(ctx, http.StatusOK, CodeOK, message, nil)
+func (a *Api) SuccessMsg(message string) {
+	a.JSON(http.StatusOK, CodeOK, message, nil)
 }
 
 // BadRequest 返回400错误响应
-func (a *Api) BadRequest(ctx *gin.Context, message string) {
-	JSON(ctx, http.StatusBadRequest, CodeBadRequest, message, nil)
+func (a *Api) BadRequest(message string) {
+	a.JSON(http.StatusBadRequest, CodeBadRequest, message, nil)
 }
 
 // NotFound 返回404错误响应
-func (a *Api) NotFound(ctx *gin.Context, message string) {
-	JSON(ctx, http.StatusNotFound, CodeNotFound, message, nil)
+func (a *Api) NotFound(message string) {
+	a.JSON(http.StatusNotFound, CodeNotFound, message, nil)
 }
 
 // InternalError 返回500错误响应
-func (a *Api) InternalError(ctx *gin.Context, message string) {
-	JSON(ctx, http.StatusInternalServerError, CodeInternal, message, nil)
+func (a *Api) InternalError(message string) {
+	a.JSON(http.StatusInternalServerError, CodeInternal, message, nil)
 }
