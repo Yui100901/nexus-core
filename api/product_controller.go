@@ -2,6 +2,7 @@ package api
 
 import (
 	"nexus-core/api/dto"
+	"nexus-core/ctx"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
@@ -48,22 +49,23 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/create [post]
-func (c *ProductController) CreateProduct(ctx *gin.Context) {
+func (c *ProductController) CreateProduct(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.CreateProductCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 	p, err := dto.ToEntityProduct(cmd)
 	if err != nil {
-		c.BadRequest(ctx, err.Error())
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProduct(ctx, p); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.CreateProduct(gCtx, p); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.Success(ctx, p)
+	c.Success(sCtx, p)
 }
 
 // CreateProductVersion 创建产品版本
@@ -76,22 +78,23 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/createVersion [post]
-func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
+func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.CreateProductVersionCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 	v, err := dto.ToEntityVersion(cmd)
 	if err != nil {
-		c.BadRequest(ctx, err.Error())
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.CreateNewVersion(ctx, cmd.ProductID, v); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.CreateNewVersion(gCtx, cmd.ProductID, v); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.Success(ctx, v)
+	c.Success(sCtx, v)
 }
 
 // ReleaseNewVersion 发布新版本
@@ -101,21 +104,22 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 // @Produce json
 // @Param body body dto.ReleaseNewVersionCommand true "Release New Version"
 // @Success 200 {object} entity.Version
-func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
+func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.ReleaseNewVersionCommand
 
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 
-	err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
+	err := c.ps.ReleaseVersion(gCtx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
 	if err != nil {
-		c.InternalError(ctx, err.Error())
+		c.InternalError(sCtx, err.Error())
 		return
 	}
 
-	c.Success(ctx, cmd.VersionID)
+	c.Success(sCtx, cmd.VersionID)
 
 }
 
@@ -129,26 +133,27 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/batchCreate [post]
-func (c *ProductController) BatchCreate(ctx *gin.Context) {
+func (c *ProductController) BatchCreate(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmds []dto.CreateProductCommand
-	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
 	var products []*entity.Product
 	for _, cmd := range cmds {
 		p, err := dto.ToEntityProduct(cmd)
 		if err != nil {
-			c.BadRequest(ctx, err.Error())
+			c.BadRequest(sCtx, err.Error())
 			return
 		}
 		products = append(products, p)
 	}
-	if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.BatchCreateProduct(gCtx, products); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.Success(ctx, products)
+	c.Success(sCtx, products)
 }
 
 // GetByID 根据 ID 获取产品
@@ -161,29 +166,30 @@ func (c *ProductController) BatchCreate(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByID [get]
-func (c *ProductController) GetByID(ctx *gin.Context) {
+func (c *ProductController) GetByID(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	// 获取 query 参数
-	idStr := ctx.Query("id")
+	idStr := gCtx.Query("id")
 	if idStr == "" {
-		c.NotFound(ctx, "id is required")
+		c.NotFound(sCtx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.NotFound(ctx, "invalid id")
+		c.NotFound(sCtx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetByID(ctx, id)
+	p, err := c.ps.GetByID(gCtx, id)
 	if err != nil {
-		c.NotFound(ctx, err.Error())
+		c.NotFound(sCtx, err.Error())
 		return
 	}
-	c.Success(ctx, p)
+	c.Success(sCtx, p)
 }
 
 // GetByName 根据名称查询产品
@@ -196,18 +202,19 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByName [get]
-func (c *ProductController) GetByName(ctx *gin.Context) {
+func (c *ProductController) GetByName(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var q dto.GetProductByNameQuery
-	if err := ctx.ShouldBindQuery(&q); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindQuery(&q); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	p, err := c.ps.GetByName(ctx, q.Name)
+	p, err := c.ps.GetByName(gCtx, q.Name)
 	if err != nil {
-		c.NotFound(ctx, err.Error())
+		c.NotFound(sCtx, err.Error())
 		return
 	}
-	c.Success(ctx, p)
+	c.Success(sCtx, p)
 }
 
 // SetMinVersion 设置最小支持版本
@@ -220,17 +227,18 @@ func (c *ProductController) GetByName(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/setMinVersion [post]
-func (c *ProductController) SetMinVersion(ctx *gin.Context) {
+func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.UpdateMinVersionCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.SetMinSupportedVersion(gCtx, cmd.ProductID, cmd.VersionID); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "min supported version updated")
+	c.SuccessMsg(sCtx, "min supported version updated")
 }
 
 // DeprecateVersion 废弃版本
@@ -243,17 +251,18 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/deprecateVersion [post]
-func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
+func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var cmd dto.DeprecateVersionCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.DeprecateVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.DeprecateVersion(gCtx, cmd.ProductID, cmd.VersionID); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "version deprecated")
+	c.SuccessMsg(sCtx, "version deprecated")
 }
 
 // DeleteProduct 删除产品
@@ -266,17 +275,18 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/delete [post]
-func (c *ProductController) DeleteProduct(ctx *gin.Context) {
+func (c *ProductController) DeleteProduct(gCtx *gin.Context) {
+	sCtx := ctx.InitContext(gCtx)
 	var q struct {
 		ID uint `json:"id" binding:"required"`
 	}
-	if err := ctx.ShouldBindJSON(&q); err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := gCtx.ShouldBindJSON(&q); err != nil {
+		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.DeleteProduct(ctx, q.ID); err != nil {
-		c.InternalError(ctx, err.Error())
+	if err := c.ps.DeleteProduct(gCtx, q.ID); err != nil {
+		c.InternalError(sCtx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "product deleted")
+	c.SuccessMsg(sCtx, "product deleted")
 }
