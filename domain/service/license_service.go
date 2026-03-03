@@ -36,7 +36,7 @@ func NewLicenseService() *LicenseService {
 
 // CreateLicense 创建单个许可证
 // 包括许可证及其授权范围的持久化存储
-func (s *LicenseService) CreateLicense(ctx sc.ServiceContext, license *entity.License) error {
+func (s *LicenseService) CreateLicense(ctx *sc.ServiceContext, license *entity.License) error {
 	productIDs := license.GetScopeProductIdList()
 	if len(productIDs) == 0 {
 		return fmt.Errorf("license scope cannot be empty")
@@ -57,7 +57,7 @@ func (s *LicenseService) CreateLicense(ctx sc.ServiceContext, license *entity.Li
 
 // BatchCreateLicense 批量创建许可证
 // 支持一次性创建多个许可证及其授权范围
-func (s *LicenseService) BatchCreateLicense(ctx sc.ServiceContext, licenses []*entity.License) error {
+func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*entity.License) error {
 	if len(licenses) == 0 {
 		return fmt.Errorf("licenses list cannot be empty")
 	}
@@ -95,7 +95,7 @@ func (s *LicenseService) BatchCreateLicense(ctx sc.ServiceContext, licenses []*e
 }
 
 // ActivateLicenseIfNeeded 激活许可证
-func (s *LicenseService) ActivateLicenseIfNeeded(ctx sc.ServiceContext, license *entity.License) error {
+func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
 
 	if license.IsActive() {
 		return nil
@@ -111,39 +111,39 @@ func (s *LicenseService) ActivateLicenseIfNeeded(ctx sc.ServiceContext, license 
 
 // GetLicenseBindList 获取许可证绑定列表
 // 返回指定许可证的所有绑定信息
-func (s *LicenseService) GetLicenseBindList(ctx sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
+func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
 	return s.nlr.GetBindingsByLicenseID(ctx, s.db, licenseID)
 }
 
 // UpdateLicenseStatus 更新许可证状态
 // 如激活、过期、吊销等状态变更
-func (s *LicenseService) UpdateLicenseStatus(ctx sc.ServiceContext, licenseID uint, status int) error {
+func (s *LicenseService) UpdateLicenseStatus(ctx *sc.ServiceContext, licenseID uint, status int) error {
 	// 可以加业务逻辑，比如只有过期的才能更新为失效
 	return s.lr.UpdateLicenseStatus(ctx, s.db, licenseID, status)
 }
 
 // UpdateLicense 更新许可证信息
 // 包括有效期、备注等信息的更新
-func (s *LicenseService) UpdateLicense(ctx sc.ServiceContext, license *entity.License) error {
+func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.License) error {
 	// 可以加业务逻辑，比如校验有效期、状态转换是否合法
 	return s.lr.UpdateLicense(ctx, s.db, license)
 }
 
 // GetLicenseByID 根据ID获取许可证
 // 返回指定ID的完整许可证信息，包括授权范围
-func (s *LicenseService) GetLicenseByID(ctx sc.ServiceContext, id uint) (*entity.License, error) {
+func (s *LicenseService) GetLicenseByID(ctx *sc.ServiceContext, id uint) (*entity.License, error) {
 	return s.lr.GetByID(ctx, s.db, id)
 }
 
 // GetLicenseByKey 根据许可证密钥获取许可证
 // 主要用于客户端验证时根据输入的许可证密钥查找许可证信息
-func (s *LicenseService) GetLicenseByKey(ctx sc.ServiceContext, key string) (*entity.License, error) {
+func (s *LicenseService) GetLicenseByKey(ctx *sc.ServiceContext, key string) (*entity.License, error) {
 	return s.lr.GetByKey(ctx, s.db, key)
 }
 
 // DeleteExpiredLicenses 删除所有过期的许可证
 // 清理数据库中已过期的许可证记录
-func (s *LicenseService) DeleteExpiredLicenses(ctx sc.ServiceContext) error {
+func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
 	ids, err := s.lr.GetIdListByStatus(ctx, s.db, entity.StatusExpired)
 	if err != nil {
 		return err
