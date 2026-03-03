@@ -65,7 +65,7 @@ func (c *LicenseController) CreateLicense(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 	}
 
-	if err := c.ls.CreateLicense(gCtx, license); err != nil {
+	if err := c.ls.CreateLicense(sCtx, license); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -101,7 +101,7 @@ func (c *LicenseController) BatchCreate(gCtx *gin.Context) {
 		licenses = append(licenses, license)
 	}
 
-	if err := c.ls.BatchCreateLicense(gCtx, licenses); err != nil {
+	if err := c.ls.BatchCreateLicense(sCtx, licenses); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -126,7 +126,7 @@ func (c *LicenseController) GetByID(gCtx *gin.Context) {
 		return
 	}
 
-	license, err := c.ls.GetLicenseByID(gCtx, query.ID)
+	license, err := c.ls.GetLicenseByID(sCtx, query.ID)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -152,7 +152,7 @@ func (c *LicenseController) GetByKey(gCtx *gin.Context) {
 		return
 	}
 
-	license, err := c.ls.GetLicenseByKey(gCtx, query.Key)
+	license, err := c.ls.GetLicenseByKey(sCtx, query.Key)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -178,7 +178,7 @@ func (c *LicenseController) UpdateStatus(gCtx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.UpdateLicenseStatus(gCtx, cmd.ID, cmd.Status); err != nil {
+	if err := c.ls.UpdateLicenseStatus(sCtx, cmd.ID, cmd.Status); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -211,7 +211,7 @@ func (c *LicenseController) UpdateLicense(gCtx *gin.Context) {
 		Remark:        cmd.Remark,
 	}
 
-	if err := c.ls.UpdateLicense(gCtx, license); err != nil {
+	if err := c.ls.UpdateLicense(sCtx, license); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -228,7 +228,7 @@ func (c *LicenseController) UpdateLicense(gCtx *gin.Context) {
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) DeleteExpired(gCtx *gin.Context) {
 	sCtx := sc.InitContext(gCtx)
-	if err := c.ls.DeleteExpiredLicenses(gCtx); err != nil {
+	if err := c.ls.DeleteExpiredLicenses(sCtx); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}

@@ -56,7 +56,7 @@ func (c *NodeController) CreateNode(gCtx *gin.Context) {
 	}
 
 	n := dto.ToEntityNode(cmd)
-	if err := c.ns.CreateNode(gCtx, n); err != nil {
+	if err := c.ns.CreateNode(sCtx, n); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -84,7 +84,7 @@ func (c *NodeController) BatchCreate(gCtx *gin.Context) {
 	for _, cmd := range cmds {
 		nodes = append(nodes, dto.ToEntityNode(cmd))
 	}
-	if err := c.ns.BatchCreateNode(gCtx, nodes); err != nil {
+	if err := c.ns.BatchCreateNode(sCtx, nodes); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -108,7 +108,7 @@ func (c *NodeController) GetByID(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByID(gCtx, q.ID)
+	n, err := c.ns.GetByID(sCtx, q.ID)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -133,7 +133,7 @@ func (c *NodeController) GetByDeviceCode(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByDeviceCode(gCtx, q.DeviceCode)
+	n, err := c.ns.GetByDeviceCode(sCtx, q.DeviceCode)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -158,7 +158,7 @@ func (c *NodeController) AddBinding(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(gCtx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
+	if err := c.ns.AddBinding(sCtx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -182,7 +182,7 @@ func (c *NodeController) UpdateBindingStatus(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ns.UpdateBindingStatus(gCtx, cmd.ID, cmd.Status); err != nil {
+	if err := c.ns.UpdateBindingStatus(sCtx, cmd.ID, cmd.Status); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -233,7 +233,7 @@ func (c *NodeController) DeleteNode(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ns.DeleteNode(gCtx, q.ID); err != nil {
+	if err := c.ns.DeleteNode(sCtx, q.ID); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}

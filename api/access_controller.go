@@ -65,7 +65,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 		return
 	}
 	//验证产品和版本是否支持
-	ok, err := c.ps.CheckProductVersionSupported(gCtx, cmd.ProductID, nil, &cmd.VersionCode)
+	ok, err := c.ps.CheckProductVersionSupported(sCtx, cmd.ProductID, nil, &cmd.VersionCode)
 	if err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
@@ -75,7 +75,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(gCtx, cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(sCtx, cmd.LicenseKey)
 	if err != nil {
 		c.BadRequest(sCtx, "invalid license")
 		return
@@ -102,7 +102,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 		return
 	}
 
-	node, err := c.ns.AutoCreateNode(gCtx, cmd.DeviceCode, nil)
+	node, err := c.ns.AutoCreateNode(sCtx, cmd.DeviceCode, nil)
 	if err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
@@ -114,13 +114,13 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(gCtx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return
 	}
 	if binding == nil {
-		err := c.ns.AutoCreateBind(gCtx, node.ID, cmd.ProductID, license)
+		err := c.ns.AutoCreateBind(sCtx, node.ID, cmd.ProductID, license)
 		if err != nil {
 			c.InternalError(sCtx, "auto bind failed")
 			return
@@ -137,7 +137,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 	}
 	if toActivate {
 		// 激活 license
-		if err := c.ls.ActivateLicenseIfNeeded(gCtx, license); err != nil {
+		if err := c.ls.ActivateLicenseIfNeeded(sCtx, license); err != nil {
 			c.InternalError(sCtx, err.Error())
 			return
 		}
@@ -166,7 +166,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 		return
 	}
 	//验证产品和版本是否支持
-	ok, err := c.ps.CheckProductVersionSupported(gCtx, cmd.ProductID, nil, &cmd.VersionCode)
+	ok, err := c.ps.CheckProductVersionSupported(sCtx, cmd.ProductID, nil, &cmd.VersionCode)
 	if err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
@@ -176,7 +176,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 		return
 	}
 	// 找到 license
-	license, err := c.ls.GetLicenseByKey(gCtx, cmd.LicenseKey)
+	license, err := c.ls.GetLicenseByKey(sCtx, cmd.LicenseKey)
 	if err != nil {
 		c.BadRequest(sCtx, "invalid license")
 		return
@@ -203,7 +203,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 		return
 	}
 
-	node, err := c.ns.GetByDeviceCode(gCtx, cmd.DeviceCode)
+	node, err := c.ns.GetByDeviceCode(sCtx, cmd.DeviceCode)
 	if err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
@@ -219,7 +219,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(gCtx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return

@@ -61,7 +61,7 @@ func (c *ProductController) CreateProduct(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProduct(gCtx, p); err != nil {
+	if err := c.ps.CreateProduct(sCtx, p); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -90,7 +90,7 @@ func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.CreateNewVersion(gCtx, cmd.ProductID, v); err != nil {
+	if err := c.ps.CreateNewVersion(sCtx, cmd.ProductID, v); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -113,7 +113,7 @@ func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
 		return
 	}
 
-	err := c.ps.ReleaseVersion(gCtx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
+	err := c.ps.ReleaseVersion(sCtx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
 	if err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
@@ -149,7 +149,7 @@ func (c *ProductController) BatchCreate(gCtx *gin.Context) {
 		}
 		products = append(products, p)
 	}
-	if err := c.ps.BatchCreateProduct(gCtx, products); err != nil {
+	if err := c.ps.BatchCreateProduct(sCtx, products); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -184,7 +184,7 @@ func (c *ProductController) GetByID(gCtx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetByID(gCtx, id)
+	p, err := c.ps.GetByID(sCtx, id)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -209,7 +209,7 @@ func (c *ProductController) GetByName(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	p, err := c.ps.GetByName(gCtx, q.Name)
+	p, err := c.ps.GetByName(sCtx, q.Name)
 	if err != nil {
 		c.NotFound(sCtx, err.Error())
 		return
@@ -234,7 +234,7 @@ func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(gCtx, cmd.ProductID, cmd.VersionID); err != nil {
+	if err := c.ps.SetMinSupportedVersion(sCtx, cmd.ProductID, cmd.VersionID); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -258,7 +258,7 @@ func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.DeprecateVersion(gCtx, cmd.ProductID, cmd.VersionID); err != nil {
+	if err := c.ps.DeprecateVersion(sCtx, cmd.ProductID, cmd.VersionID); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
@@ -284,7 +284,7 @@ func (c *ProductController) DeleteProduct(gCtx *gin.Context) {
 		c.BadRequest(sCtx, err.Error())
 		return
 	}
-	if err := c.ps.DeleteProduct(gCtx, q.ID); err != nil {
+	if err := c.ps.DeleteProduct(sCtx, q.ID); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return
 	}
