@@ -1,11 +1,11 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
+	"nexus-core/sc"
 
 	"gorm.io/gorm"
 )
@@ -28,13 +28,13 @@ func NewNodeService() *NodeService {
 
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
-func (s *NodeService) CreateNode(ctx context.Context, n *entity.Node) error {
+func (s *NodeService) CreateNode(ctx sc.ServiceContext, n *entity.Node) error {
 	return s.nr.CreateNode(ctx, s.db, n)
 }
 
 // AutoCreateNode 自动创建节点
 // 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
-func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, metaInfo *string) (*entity.Node, error) {
+func (s *NodeService) AutoCreateNode(ctx sc.ServiceContext, deviceCode string, metaInfo *string) (*entity.Node, error) {
 	// 查找或创建 node
 	node, err := s.nr.GetByDeviceCode(ctx, s.db, deviceCode)
 	if err != nil {
@@ -57,7 +57,7 @@ func (s *NodeService) AutoCreateNode(ctx context.Context, deviceCode string, met
 
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
-func (s *NodeService) BatchCreateNode(ctx context.Context, nodes []*entity.Node) error {
+func (s *NodeService) BatchCreateNode(ctx sc.ServiceContext, nodes []*entity.Node) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		return s.nr.BatchCreateNode(ctx, s.db, nodes)
 	})
@@ -65,19 +65,19 @@ func (s *NodeService) BatchCreateNode(ctx context.Context, nodes []*entity.Node)
 
 // GetByID 根据ID获取节点信息
 // 返回指定ID的完整节点信息，包括所有绑定关系
-func (s *NodeService) GetByID(ctx context.Context, id uint) (*entity.Node, error) {
+func (s *NodeService) GetByID(ctx sc.ServiceContext, id uint) (*entity.Node, error) {
 	return s.nr.GetByID(ctx, s.db, id)
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
-func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*entity.Node, error) {
+func (s *NodeService) GetByDeviceCode(ctx sc.ServiceContext, code string) (*entity.Node, error) {
 	return s.nr.GetByDeviceCode(ctx, s.db, code)
 }
 
 // AddBinding 为节点添加许可证绑定关系
 // 将指定的许可证与节点进行绑定
-func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, productID uint) error {
+func (s *NodeService) AddBinding(ctx sc.ServiceContext, nodeID, licenseID, productID uint) error {
 	binding, err := entity.NewNodeLicenseBinding(nodeID, licenseID, productID)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (s *NodeService) AddBinding(ctx context.Context, nodeID, licenseID, product
 }
 
 // AutoCreateBind 节点自动绑定
-func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint, license *entity.License) error {
+func (s *NodeService) AutoCreateBind(ctx sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
 	//检查许可证的 MaxNodes 限制
 	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, s.db, license.ID, productID)
 	if err != nil {
@@ -107,14 +107,14 @@ func (s *NodeService) AutoCreateBind(ctx context.Context, nodeID, productID uint
 
 // UpdateBindingStatus 更新绑定状态
 // 修改节点与许可证之间的绑定状态
-func (s *NodeService) UpdateBindingStatus(ctx context.Context, id uint, status int) error {
+func (s *NodeService) UpdateBindingStatus(ctx sc.ServiceContext, id uint, status int) error {
 	return s.nlr.UpdateBindingStatus(ctx, s.db, id, status)
 }
 
 // ForceUnbind 强制解绑节点绑定（根据绑定ID）
 // 将指定的绑定状态更新为解绑状态，并记录解绑时间
 // 同时更新运行时缓存，减少对应许可证和产品的节点计数
-func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
+func (s *NodeService) ForceUnbind(ctx sc.ServiceContext, bindingID uint) error {
 
 	// 执行强制解绑操作
 	err := s.nr.ForceUnbind(ctx, s.db, bindingID)
@@ -130,7 +130,7 @@ func (s *NodeService) ForceUnbind(ctx context.Context, bindingID uint) error {
 
 // DeleteNode 删除节点
 // 同时删除节点的所有绑定关系
-func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
+func (s *NodeService) DeleteNode(ctx sc.ServiceContext, id uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		err := s.nr.DeleteNode(ctx, tx, id)
 		if err != nil {

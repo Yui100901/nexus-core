@@ -1,11 +1,11 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
+	"nexus-core/sc"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,13 +28,13 @@ func NewProductService() *ProductService {
 
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
-func (s *ProductService) CreateProduct(ctx context.Context, p *entity.Product) error {
+func (s *ProductService) CreateProduct(ctx sc.ServiceContext, p *entity.Product) error {
 	return s.pr.CreateProduct(ctx, s.db, p)
 }
 
 // BatchCreateProduct 批量创建产品
 // 支持一次性创建多个产品及其版本信息
-func (s *ProductService) BatchCreateProduct(ctx context.Context, products []*entity.Product) error {
+func (s *ProductService) BatchCreateProduct(ctx sc.ServiceContext, products []*entity.Product) error {
 	// 1. 校验重复名称
 	seen := make(map[string]bool)
 	for _, p := range products {
@@ -52,19 +52,19 @@ func (s *ProductService) BatchCreateProduct(ctx context.Context, products []*ent
 
 // GetByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
-func (s *ProductService) GetByID(ctx context.Context, id uint) (*entity.Product, error) {
+func (s *ProductService) GetByID(ctx sc.ServiceContext, id uint) (*entity.Product, error) {
 	return s.pr.GetByID(ctx, s.db, id)
 }
 
 // GetByName 根据名称获取产品信息
 // 返回指定名称的完整产品信息，包括所有版本
-func (s *ProductService) GetByName(ctx context.Context, name string) (*entity.Product, error) {
+func (s *ProductService) GetByName(ctx sc.ServiceContext, name string) (*entity.Product, error) {
 	return s.pr.GetByName(ctx, s.db, name)
 }
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
-func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, versionID uint) error {
+func (s *ProductService) SetMinSupportedVersion(ctx sc.ServiceContext, productID, versionID uint) error {
 	product, err := s.pr.GetByID(ctx, s.db, productID)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, productID, 
 }
 
 // CheckProductVersionSupported 检查产品和版本是否支持
-func (s *ProductService) CheckProductVersionSupported(ctx context.Context, productID uint,
+func (s *ProductService) CheckProductVersionSupported(ctx sc.ServiceContext, productID uint,
 	targetVersionId *uint, targetVersionCode *string) (bool, error) {
 	product, err := s.pr.GetByID(ctx, s.db, productID)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *ProductService) CheckProductVersionSupported(ctx context.Context, produ
 
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
-func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
+func (s *ProductService) DeleteProduct(ctx sc.ServiceContext, id uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		err := s.pr.DeleteProduct(ctx, tx, id)
 		if err != nil {
@@ -106,7 +106,7 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 
 // CreateNewVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
-func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v *entity.Version) error {
+func (s *ProductService) CreateNewVersion(ctx sc.ServiceContext, productID uint, v *entity.Version) error {
 	product, err := s.pr.GetByID(ctx, s.db, productID)
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (s *ProductService) CreateNewVersion(ctx context.Context, productID uint, v
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate *time.Time) error {
+func (s *ProductService) ReleaseVersion(ctx sc.ServiceContext, productID, versionID uint, releaseDate *time.Time) error {
 	if releaseDate == nil {
 		return s.doReleaseVersion(ctx, productID, versionID, time.Now())
 	} else {
@@ -139,7 +139,7 @@ func (s *ProductService) ReleaseVersion(ctx context.Context, productID, versionI
 }
 
 // 内部方法执行版本发布
-func (s *ProductService) doReleaseVersion(ctx context.Context, productID, versionID uint, releaseDate time.Time) error {
+func (s *ProductService) doReleaseVersion(ctx sc.ServiceContext, productID, versionID uint, releaseDate time.Time) error {
 	product, err := s.pr.GetByID(ctx, s.db, productID)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (s *ProductService) doReleaseVersion(ctx context.Context, productID, versio
 
 // ScheduleReleaseTask 简易定时发布
 // todo 后续考虑如何管理定时任务
-func (s *ProductService) ScheduleReleaseTask(ctx context.Context, productID, versionID uint, releaseDate time.Time) {
+func (s *ProductService) ScheduleReleaseTask(ctx sc.ServiceContext, productID, versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
@@ -166,6 +166,6 @@ func (s *ProductService) ScheduleReleaseTask(ctx context.Context, productID, ver
 	}()
 }
 
-func (s *ProductService) DeprecateVersion(ctx context.Context, productID uint, versionID uint) error {
+func (s *ProductService) DeprecateVersion(ctx sc.ServiceContext, productID uint, versionID uint) error {
 	return s.pr.DeprecateVersion(ctx, s.db, productID, versionID)
 }
