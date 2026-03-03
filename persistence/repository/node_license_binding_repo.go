@@ -1,10 +1,10 @@
 package repository
 
 import (
-	"context"
 	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
+	"nexus-core/sc"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +22,7 @@ func NewNodeLicenseBindingRepository() *NodeLicenseBindingRepository {
 }
 
 // AddBinding 添加节点绑定关系（回填 ID）
-func (r *NodeLicenseBindingRepository) AddBinding(ctx context.Context, tx *gorm.DB, binding *entity.NodeLicenseBinding) error {
+func (r *NodeLicenseBindingRepository) AddBinding(ctx *sc.ServiceContext, tx *gorm.DB, binding *entity.NodeLicenseBinding) error {
 	pBinding := &model.NodeLicenseBinding{
 		NodeID:    binding.NodeID,
 		LicenseID: binding.LicenseID,
@@ -36,7 +36,7 @@ func (r *NodeLicenseBindingRepository) AddBinding(ctx context.Context, tx *gorm.
 }
 
 // UpdateBindingStatus 更新绑定状态
-func (r *NodeLicenseBindingRepository) UpdateBindingStatus(ctx context.Context, tx *gorm.DB, id uint, status int) error {
+func (r *NodeLicenseBindingRepository) UpdateBindingStatus(ctx *sc.ServiceContext, tx *gorm.DB, id uint, status int) error {
 	_, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("id = ?", id).
 		Update(ctx, "bound_status", status)
@@ -44,7 +44,7 @@ func (r *NodeLicenseBindingRepository) UpdateBindingStatus(ctx context.Context, 
 }
 
 // GetBindingsByNodeID 获取节点的绑定关系列表
-func (r *NodeLicenseBindingRepository) GetBindingsByNodeID(ctx context.Context, tx *gorm.DB, nodeID uint) ([]entity.NodeLicenseBinding, error) {
+func (r *NodeLicenseBindingRepository) GetBindingsByNodeID(ctx *sc.ServiceContext, tx *gorm.DB, nodeID uint) ([]entity.NodeLicenseBinding, error) {
 	var res []entity.NodeLicenseBinding
 	ms, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("node_id = ?", nodeID).
@@ -59,7 +59,7 @@ func (r *NodeLicenseBindingRepository) GetBindingsByNodeID(ctx context.Context, 
 }
 
 // GetBindingsByLicenseID 获取许可证的绑定关系列表
-func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx context.Context, tx *gorm.DB, licenseID uint) ([]entity.NodeLicenseBinding, error) {
+func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx *sc.ServiceContext, tx *gorm.DB, licenseID uint) ([]entity.NodeLicenseBinding, error) {
 	var res []entity.NodeLicenseBinding
 	ms, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("license_id = ?", licenseID).
@@ -75,7 +75,7 @@ func (r *NodeLicenseBindingRepository) GetBindingsByLicenseID(ctx context.Contex
 
 // GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
 func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
-	ctx context.Context,
+	ctx *sc.ServiceContext,
 	tx *gorm.DB,
 	nodeID,
 	licenseID uint,
@@ -96,7 +96,7 @@ func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
 }
 
 // CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = 1）
-func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.Context, tx *gorm.DB, licenseID uint) (int64, error) {
+func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx *sc.ServiceContext, tx *gorm.DB, licenseID uint) (int64, error) {
 	var cnt int64
 	if err := tx.WithContext(ctx).
 		Model(&model.NodeLicenseBinding{}).
@@ -109,7 +109,7 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.
 
 // CountActiveBindingsByLicenseForProduct 统计某许可下某个产品已绑定的节点数量（IsBound = 1）
 func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(
-	ctx context.Context,
+	ctx *sc.ServiceContext,
 	tx *gorm.DB,
 	licenseID, productID uint) (int64, error) {
 	var cnt int64
@@ -123,21 +123,21 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(
 }
 
 // DeleteBindingByNodeID 删除指定节点的绑定关系
-func (r *NodeLicenseBindingRepository) DeleteBindingByNodeID(ctx context.Context, tx *gorm.DB, nodeID uint) error {
+func (r *NodeLicenseBindingRepository) DeleteBindingByNodeID(ctx *sc.ServiceContext, tx *gorm.DB, nodeID uint) error {
 	return tx.WithContext(ctx).
 		Where("node_id = ?", nodeID).
 		Delete(&model.NodeLicenseBinding{}).Error
 }
 
 // DeleteBindingByLicenseID 删除指定许可证的绑定关系
-func (r *NodeLicenseBindingRepository) DeleteBindingByLicenseID(ctx context.Context, tx *gorm.DB, licenseID uint) error {
+func (r *NodeLicenseBindingRepository) DeleteBindingByLicenseID(ctx *sc.ServiceContext, tx *gorm.DB, licenseID uint) error {
 	return tx.WithContext(ctx).
 		Where("license_id = ?", licenseID).
 		Delete(&model.NodeLicenseBinding{}).Error
 }
 
 // DeleteBindingByProductID 删除指定产品的绑定关系
-func (r *NodeLicenseBindingRepository) DeleteBindingByProductID(ctx context.Context, tx *gorm.DB, productID uint) error {
+func (r *NodeLicenseBindingRepository) DeleteBindingByProductID(ctx *sc.ServiceContext, tx *gorm.DB, productID uint) error {
 	return tx.WithContext(ctx).
 		Where("product_id = ?", productID).
 		Delete(&model.NodeLicenseBinding{}).Error
