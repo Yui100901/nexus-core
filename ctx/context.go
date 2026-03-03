@@ -3,12 +3,10 @@ package ctx
 import (
 	"fmt"
 	"log"
-	"nexus-core/persistence/base"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 //
@@ -29,18 +27,16 @@ type ServiceContext struct {
 	*gin.Context
 	traceID   string
 	requestID string
-	db        *gorm.DB
 	logger    *log.Logger
 }
 
-func NewServiceContext(c *gin.Context, traceID, requestID string, db *gorm.DB, logger *log.Logger) *ServiceContext {
+func NewServiceContext(c *gin.Context, traceID, requestID string, logger *log.Logger) *ServiceContext {
 	// 从 gin.Context 获取方法和路径
 
 	return &ServiceContext{
 		Context:   c,
 		traceID:   traceID,
 		requestID: requestID,
-		db:        db,
 		logger:    logger,
 	}
 }
@@ -60,9 +56,7 @@ func InitContext(c *gin.Context) *ServiceContext {
 	prefix := fmt.Sprintf("[TraceID:%s] [RequestID:%s] [%s %s] ", traceID, requestID, method, path)
 	logger := log.New(os.Stdout, prefix, log.LstdFlags)
 
-	// 根据请求选择数据库
-	db := base.Connect()
-	return NewServiceContext(c, traceID, requestID, db, logger)
+	return NewServiceContext(c, traceID, requestID, logger)
 }
 
 func (s *ServiceContext) TraceID() string {
@@ -71,10 +65,6 @@ func (s *ServiceContext) TraceID() string {
 
 func (s *ServiceContext) RequestID() string {
 	return s.requestID
-}
-
-func (s *ServiceContext) DB() *gorm.DB {
-	return s.db
 }
 
 func (s *ServiceContext) Logger() *log.Logger {
