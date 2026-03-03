@@ -2,9 +2,9 @@ package api
 
 import (
 	"nexus-core/api/dto"
-	"nexus-core/ctx"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
+	"nexus-core/sc"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,7 +48,7 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/create [post]
 func (c *NodeController) CreateNode(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.CreateNodeCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -74,7 +74,7 @@ func (c *NodeController) CreateNode(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/batchCreate [post]
 func (c *NodeController) BatchCreate(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmds []dto.CreateNodeCommand
 	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -102,7 +102,7 @@ func (c *NodeController) BatchCreate(gCtx *gin.Context) {
 // @Failure 504 {object} api.CommonResponse
 // @Router /node/getByID [get]
 func (c *NodeController) GetByID(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var q dto.GetNodeByIDQuery
 	if err := gCtx.ShouldBindQuery(&q); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -127,7 +127,7 @@ func (c *NodeController) GetByID(gCtx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /node/getByDevice [get]
 func (c *NodeController) GetByDeviceCode(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var q dto.GetNodeByDeviceCodeQuery
 	if err := gCtx.ShouldBindQuery(&q); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -152,7 +152,7 @@ func (c *NodeController) GetByDeviceCode(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/addBinding [post]
 func (c *NodeController) AddBinding(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.AddBindingCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -176,7 +176,7 @@ func (c *NodeController) AddBinding(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/updateBindingStatus [post]
 func (c *NodeController) UpdateBindingStatus(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.UpdateBindingStatusCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -200,7 +200,7 @@ func (c *NodeController) UpdateBindingStatus(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/unbind [post]
 func (c *NodeController) ForceUnbind(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.ForceUnbindCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -225,7 +225,7 @@ func (c *NodeController) ForceUnbind(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/delete [post]
 func (c *NodeController) DeleteNode(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var q struct {
 		ID uint `json:"id" binding:"required"`
 	}

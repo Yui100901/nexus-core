@@ -3,11 +3,11 @@ package api
 import (
 	"fmt"
 	"nexus-core/api/dto"
-	"nexus-core/ctx"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"nexus-core/monitor"
 	"nexus-core/persistence/repository"
+	"nexus-core/sc"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -58,7 +58,7 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
 func (c *AccessController) AutoBind(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.AutoBindCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -159,7 +159,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/heartbeat [post]
 func (c *AccessController) Heartbeat(gCtx *gin.Context) {
-	sCtx := ctx.InitContext(gCtx)
+	sCtx := sc.InitContext(gCtx)
 	var cmd dto.HeartbeatCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
