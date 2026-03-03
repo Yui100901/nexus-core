@@ -43,7 +43,7 @@ func (s *LicenseService) CreateLicense(ctx context.Context, license *entity.Lice
 	}
 
 	// 检查产品是否都存在
-	exist, err := s.pr.ExistIds(ctx, productIDs)
+	exist, err := s.pr.ExistIds(ctx, s.db, productIDs)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *LicenseService) BatchCreateLicense(ctx context.Context, licenses []*ent
 	for k, _ := range allIDs {
 		allIDList = append(allIDList, k)
 	}
-	exists, err := s.pr.ExistIds(ctx, allIDList) // 假设 repo
+	exists, err := s.pr.ExistIds(ctx, s.db, allIDList) // 假设 repo
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (s *LicenseService) ActivateLicenseIfNeeded(ctx context.Context, license *e
 // GetLicenseBindList 获取许可证绑定列表
 // 返回指定许可证的所有绑定信息
 func (s *LicenseService) GetLicenseBindList(ctx context.Context, licenseID uint) ([]entity.NodeLicenseBinding, error) {
-	return s.nlr.GetBindingsByLicenseID(ctx, licenseID)
+	return s.nlr.GetBindingsByLicenseID(ctx, s.db, licenseID)
 }
 
 // UpdateLicenseStatus 更新许可证状态
