@@ -21,13 +21,13 @@ func NewLicenseRepository() *LicenseRepository {
 }
 
 // CreateLicense 创建 License 及其 Scope 列表（回填 ID、时间戳、Scope ID）
-func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, tx *gorm.DB, license *entity.License) error {
+func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, db *gorm.DB, license *entity.License) error {
 	pLicense := &model.License{
 		LicenseKey:    license.LicenseKey,
 		ValidityHours: license.ValidityHours,
 		Status:        0,
 	}
-	if err := gorm.G[model.License](tx).Create(ctx, pLicense); err != nil {
+	if err := gorm.G[model.License](db).Create(ctx, pLicense); err != nil {
 		return err
 	}
 
@@ -47,7 +47,7 @@ func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, tx *gorm.DB, l
 		})
 	}
 	if len(pScopeList) > 0 {
-		if err := gorm.G[model.LicenseScope](tx).CreateInBatches(ctx, &pScopeList, 0); err != nil {
+		if err := gorm.G[model.LicenseScope](db).CreateInBatches(ctx, &pScopeList, 0); err != nil {
 			return err
 		}
 		// 回填 Scope ID
@@ -60,7 +60,7 @@ func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, tx *gorm.DB, l
 }
 
 // BatchCreateLicense 批量创建 License
-func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, tx *gorm.DB, licenses []*entity.License) error {
+func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, db *gorm.DB, licenses []*entity.License) error {
 	var pLicenses []model.License
 	for _, license := range licenses {
 		pLicenses = append(pLicenses, model.License{
@@ -70,7 +70,7 @@ func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, tx *gorm.
 		})
 	}
 
-	if err := gorm.G[model.License](tx).CreateInBatches(ctx, &pLicenses, 100); err != nil {
+	if err := gorm.G[model.License](db).CreateInBatches(ctx, &pLicenses, 100); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, tx *gorm.
 }
 
 // BatchCreateLicenseScope 批量创建 LicenseScope
-func (r *LicenseRepository) BatchCreateLicenseScope(ctx *sc.ServiceContext, tx *gorm.DB, licenses []*entity.License) error {
+func (r *LicenseRepository) BatchCreateLicenseScope(ctx *sc.ServiceContext, db *gorm.DB, licenses []*entity.License) error {
 	var pScopeList []model.LicenseScope
 	for _, license := range licenses {
 		for _, scope := range license.ScopeList {
@@ -99,7 +99,7 @@ func (r *LicenseRepository) BatchCreateLicenseScope(ctx *sc.ServiceContext, tx *
 	}
 
 	if len(pScopeList) > 0 {
-		if err := gorm.G[model.LicenseScope](tx).CreateInBatches(ctx, &pScopeList, 100); err != nil {
+		if err := gorm.G[model.LicenseScope](db).CreateInBatches(ctx, &pScopeList, 100); err != nil {
 			return err
 		}
 		// 回填 Scope ID
@@ -116,15 +116,15 @@ func (r *LicenseRepository) BatchCreateLicenseScope(ctx *sc.ServiceContext, tx *
 }
 
 // UpdateLicenseStatus 更新 License 状态
-func (r *LicenseRepository) UpdateLicenseStatus(ctx *sc.ServiceContext, tx *gorm.DB, id uint, status int) error {
-	_, err := gorm.G[model.License](tx).
+func (r *LicenseRepository) UpdateLicenseStatus(ctx *sc.ServiceContext, db *gorm.DB, id uint, status int) error {
+	_, err := gorm.G[model.License](db).
 		Where("id = ?", id).
 		Update(ctx, "status", status)
 	return err
 }
 
 // UpdateLicense 更新 License
-func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, tx *gorm.DB, license *entity.License) error {
+func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, db *gorm.DB, license *entity.License) error {
 	pLicense := model.License{
 		ValidityHours: license.ValidityHours,
 		ActivatedAt:   license.ActivatedAt,
@@ -133,7 +133,7 @@ func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, tx *gorm.DB, l
 		Remark:        license.Remark,
 	}
 
-	_, err := gorm.G[model.License](tx).
+	_, err := gorm.G[model.License](db).
 		Where("id = ?", license.ID).
 		Where("license_key = ?", license.LicenseKey).
 		Updates(ctx, pLicense)
@@ -145,15 +145,15 @@ func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, tx *gorm.DB, l
 }
 
 // GetByID 根据 id 获取领域对象 License
-func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, tx *gorm.DB, id uint) (*entity.License, error) {
-	m, err := gorm.G[*model.License](tx).
+func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.License, error) {
+	m, err := gorm.G[*model.License](db).
 		Where("id = ?", id).
 		First(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	scopes, err := r.GetScopeListByLicenseId(ctx, tx, m.ID)
+	scopes, err := r.GetScopeListByLicenseId(ctx, db, m.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,15 +162,15 @@ func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, tx *gorm.DB, id uint
 }
 
 // GetByKey 根据 LicenseKey 获取领域对象 License
-func (r *LicenseRepository) GetByKey(ctx *sc.ServiceContext, tx *gorm.DB, key string) (*entity.License, error) {
-	m, err := gorm.G[*model.License](tx).
+func (r *LicenseRepository) GetByKey(ctx *sc.ServiceContext, db *gorm.DB, key string) (*entity.License, error) {
+	m, err := gorm.G[*model.License](db).
 		Where("license_key = ?", key).
 		First(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	scopes, err := r.GetScopeListByLicenseId(ctx, tx, m.ID)
+	scopes, err := r.GetScopeListByLicenseId(ctx, db, m.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,8 +178,8 @@ func (r *LicenseRepository) GetByKey(ctx *sc.ServiceContext, tx *gorm.DB, key st
 	return toEntityLicense(m, scopes), nil
 }
 
-func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, tx *gorm.DB, status int) ([]uint, error) {
-	licenses, err := gorm.G[model.License](tx).
+func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, db *gorm.DB, status int) ([]uint, error) {
+	licenses, err := gorm.G[model.License](db).
 		Select("id").
 		Where("status = ?", status).
 		Find(ctx)
@@ -195,13 +195,13 @@ func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, tx *gorm.D
 }
 
 // BatchDeleteByIdList 批量删除 License
-func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, tx *gorm.DB, ids []uint) error {
+func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, db *gorm.DB, ids []uint) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
 	//  删除 License
-	if _, err := gorm.G[model.License](tx).
+	if _, err := gorm.G[model.License](db).
 		Where("id IN ?", ids).
 		Delete(ctx); err != nil {
 		return err
@@ -211,13 +211,13 @@ func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, tx *gorm
 }
 
 // BatchDeleteScopeByLicenseIdList 批量删除 License下的Scope
-func (r *LicenseRepository) BatchDeleteScopeByLicenseIdList(ctx *sc.ServiceContext, tx *gorm.DB, ids []uint) error {
+func (r *LicenseRepository) BatchDeleteScopeByLicenseIdList(ctx *sc.ServiceContext, db *gorm.DB, ids []uint) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
 	// 删除 Scope（依赖 LicenseID）
-	if _, err := gorm.G[model.LicenseScope](tx).
+	if _, err := gorm.G[model.LicenseScope](db).
 		Where("license_id IN ?", ids).
 		Delete(ctx); err != nil {
 		return err
@@ -227,18 +227,18 @@ func (r *LicenseRepository) BatchDeleteScopeByLicenseIdList(ctx *sc.ServiceConte
 }
 
 // GetScopeListByLicenseId 获取许可范围列表
-func (r *LicenseRepository) GetScopeListByLicenseId(ctx *sc.ServiceContext, tx *gorm.DB, id uint) ([]model.LicenseScope, error) {
-	return gorm.G[model.LicenseScope](tx).Where("license_id = ?", id).Find(ctx)
+func (r *LicenseRepository) GetScopeListByLicenseId(ctx *sc.ServiceContext, db *gorm.DB, id uint) ([]model.LicenseScope, error) {
+	return gorm.G[model.LicenseScope](db).Where("license_id = ?", id).Find(ctx)
 }
 
 // AddScope 添加 Scope
-func (r *LicenseRepository) AddScope(ctx *sc.ServiceContext, tx *gorm.DB, licenseID uint, scope entity.Scope) error {
+func (r *LicenseRepository) AddScope(ctx *sc.ServiceContext, db *gorm.DB, licenseID uint, scope entity.Scope) error {
 	pScope := &model.LicenseScope{
 		LicenseID:   licenseID,
 		ProductID:   scope.ProductID,
 		FeatureMask: scope.FeatureMask,
 	}
-	return gorm.G[model.LicenseScope](tx).Create(ctx, pScope)
+	return gorm.G[model.LicenseScope](db).Create(ctx, pScope)
 }
 
 func toEntityLicense(m *model.License, scopes []model.LicenseScope) *entity.License {
