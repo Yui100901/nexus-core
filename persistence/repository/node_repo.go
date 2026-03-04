@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
-	"nexus-core/sc"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +22,7 @@ func NewNodeRepository() *NodeRepository {
 }
 
 // CreateNode 创建节点（回填 ID）
-func (r *NodeRepository) CreateNode(ctx *sc.ServiceContext, tx *gorm.DB, node *entity.Node) error {
+func (r *NodeRepository) CreateNode(ctx context.Context, tx *gorm.DB, node *entity.Node) error {
 	pNode := &model.Node{
 		DeviceCode: node.DeviceCode,
 		MetaInfo:   node.MetaInfo,
@@ -36,7 +36,7 @@ func (r *NodeRepository) CreateNode(ctx *sc.ServiceContext, tx *gorm.DB, node *e
 }
 
 // BatchCreateNode 批量创建节点（回填 ID）
-func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, tx *gorm.DB, nodes []*entity.Node) error {
+func (r *NodeRepository) BatchCreateNode(ctx context.Context, tx *gorm.DB, nodes []*entity.Node) error {
 	// Step 1: 转换成持久化模型
 	var pNodes []model.Node
 	for _, node := range nodes {
@@ -60,7 +60,7 @@ func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, tx *gorm.DB, no
 }
 
 // GetByID 根据 ID 获取节点信息
-func (r *NodeRepository) GetByID(ctx *sc.ServiceContext, tx *gorm.DB, id uint) (*entity.Node, error) {
+func (r *NodeRepository) GetByID(ctx context.Context, tx *gorm.DB, id uint) (*entity.Node, error) {
 	m, err := gorm.G[*model.Node](tx).
 		Where("id = ?", id).
 		First(ctx)
@@ -72,7 +72,7 @@ func (r *NodeRepository) GetByID(ctx *sc.ServiceContext, tx *gorm.DB, id uint) (
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
-func (r *NodeRepository) GetByDeviceCode(ctx *sc.ServiceContext, tx *gorm.DB, deviceCode string) (*entity.Node, error) {
+func (r *NodeRepository) GetByDeviceCode(ctx context.Context, tx *gorm.DB, deviceCode string) (*entity.Node, error) {
 	m, err := gorm.G[*model.Node](tx).
 		Where("device_code = ?", deviceCode).
 		First(ctx)
@@ -87,7 +87,7 @@ func (r *NodeRepository) GetByDeviceCode(ctx *sc.ServiceContext, tx *gorm.DB, de
 }
 
 // DeleteNode 删除节点
-func (r *NodeRepository) DeleteNode(ctx *sc.ServiceContext, tx *gorm.DB, id uint) error {
+func (r *NodeRepository) DeleteNode(ctx context.Context, tx *gorm.DB, id uint) error {
 	if _, err := gorm.G[model.Node](tx).
 		Where("id = ?", id).
 		Delete(ctx); err != nil {
@@ -98,7 +98,7 @@ func (r *NodeRepository) DeleteNode(ctx *sc.ServiceContext, tx *gorm.DB, id uint
 
 // ForceUnbind 强制解绑节点绑定
 // 将指定绑定的解绑时间设置为当前时间并将状态更新为解绑状态
-func (r *NodeRepository) ForceUnbind(ctx *sc.ServiceContext, tx *gorm.DB, bindingID uint) error {
+func (r *NodeRepository) ForceUnbind(ctx context.Context, tx *gorm.DB, bindingID uint) error {
 	_, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("id = ?", bindingID).
 		Updates(ctx, model.NodeLicenseBinding{
@@ -108,7 +108,7 @@ func (r *NodeRepository) ForceUnbind(ctx *sc.ServiceContext, tx *gorm.DB, bindin
 }
 
 // GetBindingByID 根据ID获取绑定信息
-func (r *NodeRepository) GetBindingByID(ctx *sc.ServiceContext, tx *gorm.DB, id uint) (*entity.NodeLicenseBinding, error) {
+func (r *NodeRepository) GetBindingByID(ctx context.Context, tx *gorm.DB, id uint) (*entity.NodeLicenseBinding, error) {
 	m, err := gorm.G[*model.NodeLicenseBinding](tx).
 		Where("id = ?", id).
 		First(ctx)
@@ -123,7 +123,7 @@ func (r *NodeRepository) GetBindingByID(ctx *sc.ServiceContext, tx *gorm.DB, id 
 }
 
 // GetBindingsByLicenseAndProduct 根据许可证获取绑定列表
-func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx *sc.ServiceContext, tx *gorm.DB, licenseID, productID uint) ([]entity.NodeLicenseBinding, error) {
+func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, tx *gorm.DB, licenseID, productID uint) ([]entity.NodeLicenseBinding, error) {
 	modelBindings, err := gorm.G[model.NodeLicenseBinding](tx).
 		Where("license_id = ?", licenseID).
 		Find(ctx)

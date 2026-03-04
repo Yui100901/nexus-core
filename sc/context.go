@@ -1,6 +1,7 @@
 package sc
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -24,20 +25,19 @@ import (
 //}
 
 type ServiceContext struct {
-	*gin.Context
-	traceID   string
-	requestID string
-	logger    *log.Logger
+	context.Context // 标准库 context
+	GinContext      *gin.Context
+	Metadata        map[string]any
+	Logger          *log.Logger
 }
 
-func NewServiceContext(c *gin.Context, traceID, requestID string, logger *log.Logger) *ServiceContext {
-	// 从 gin.Context 获取方法和路径
-
+// NewServiceContext 构造函数
+func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger) *ServiceContext {
 	return &ServiceContext{
-		Context:   c,
-		traceID:   traceID,
-		requestID: requestID,
-		logger:    logger,
+		Context:    ctx,
+		GinContext: c,
+		Metadata:   metadata,
+		Logger:     logger,
 	}
 }
 
@@ -47,7 +47,7 @@ func InitContext(c *gin.Context) *ServiceContext {
 	if traceID == "" {
 		traceID = uuid.New().String()
 	}
-	requestID := c.Request.Header.Get("X-Request-ID")
+	requestID := c.GetHeader("X-Request-ID")
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
@@ -56,21 +56,30 @@ func InitContext(c *gin.Context) *ServiceContext {
 	prefix := fmt.Sprintf("[TraceID:%s] [RequestID:%s] [%s %s] ", traceID, requestID, method, path)
 	logger := log.New(os.Stdout, prefix, log.LstdFlags)
 
-	return NewServiceContext(c, traceID, requestID, logger)
+	metaData := map[string]any{
+		"TraceID":   traceID,
+		"RequestID": requestID,
+	}
+
+	// 使用标准库 context，优先取 request.Context()
+	stdCtx := c.Request.Context()
+
+	return NewServiceContext(stdCtx, c, metaData, logger)
 }
 
-func (s *ServiceContext) TraceID() string {
-	return s.traceID
+func (s *ServiceContext) SetMetadata(key string, value any) {
+	s.Metadata[key] = value
 }
 
-func (s *ServiceContext) RequestID() string {
-	return s.requestID
+func (s *ServiceContext) GetMetadata(key string) (any, bool) {
+	v, ok := s.Metadata[key]
+	return v, ok
 }
 
-func (s *ServiceContext) Logger() *log.Logger {
-	return s.logger
+func (s *ServiceContext) DeleteMetadata(key string) {
+	delete(s.Metadata, key)
 }
 
 func (s *ServiceContext) Error(err error) {
-	s.logger.Println(err)
+	s.Logger.Println(err)
 }
