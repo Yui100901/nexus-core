@@ -31,7 +31,7 @@ type Api struct {
 // JSON 发送自定义响应
 // 根据指定的HTTP状态码、业务码、消息和数据构造响应
 func (a *Api) JSON(ctx *sc.ServiceContext, httpStatus int, code int, message string, data interface{}) {
-	ctx.GinContext.JSON(httpStatus, CommonResponse{
+	ctx.JSON(httpStatus, CommonResponse{
 		Code:    code,
 		Message: message,
 		Data:    data,
