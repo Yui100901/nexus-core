@@ -146,11 +146,12 @@ func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, db *gorm.DB, l
 
 // GetByID 根据 id 获取领域对象 License
 func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.License, error) {
-	m, err := gorm.G[*model.License](db).
-		Where("id = ?", id).
-		First(ctx)
+	m, err := GetOneByUniqueColumn[model.License](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
+	}
+	if m == nil {
+		return nil, nil
 	}
 
 	scopes, err := r.GetScopeListByLicenseId(ctx, db, m.ID)
