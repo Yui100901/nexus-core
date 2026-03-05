@@ -29,8 +29,10 @@ type LicenseService struct {
 // NewLicenseService 创建新的许可证服务实例
 func NewLicenseService() *LicenseService {
 	return &LicenseService{
-		db: base.Connect(),
-		lr: repository.NewLicenseRepository(),
+		db:  base.Connect(),
+		lr:  repository.NewLicenseRepository(),
+		pr:  repository.NewProductRepository(),
+		nlr: repository.NewNodeLicenseBindingRepository(),
 	}
 }
 
