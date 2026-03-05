@@ -7,8 +7,6 @@ import (
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // ProductService 提供产品相关的业务逻辑服务
@@ -167,6 +165,21 @@ func (s *ProductService) ReleaseVersion(ctx *sc.ServiceContext, productID, versi
 		s.ScheduleReleaseTask(ctx, productID, versionID, *releaseDate)
 		return nil
 	}
+}
+
+// ScheduleReleaseTask 简易定时发布
+// todo 后续考虑如何管理定时任务
+func (s *ProductService) ScheduleReleaseTask(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) {
+	delay := time.Until(releaseDate)
+	if delay <= 0 {
+		// 已经过了发布时间，直接发布
+		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
+		return
+	}
+	go func() {
+		<-time.After(delay)
+		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
+	}()
 }
 
 // 内部方法执行版本发布
