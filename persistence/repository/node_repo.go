@@ -61,11 +61,12 @@ func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, db *gorm.DB, no
 
 // GetByID 根据 ID 获取节点信息
 func (r *NodeRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.Node, error) {
-	m, err := gorm.G[*model.Node](db).
-		Where("id = ?", id).
-		First(ctx)
+	m, err := GetOneByUniqueColumn[model.Node](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
+	}
+	if m == nil {
+		return nil, nil
 	}
 
 	return toEntityNode(m), nil
@@ -109,11 +110,12 @@ func (r *NodeRepository) ForceUnbind(ctx *sc.ServiceContext, db *gorm.DB, bindin
 
 // GetBindingByID 根据ID获取绑定信息
 func (r *NodeRepository) GetBindingByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.NodeLicenseBinding, error) {
-	m, err := gorm.G[*model.NodeLicenseBinding](db).
-		Where("id = ?", id).
-		First(ctx)
+	m, err := GetOneByUniqueColumn[model.NodeLicenseBinding](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
+	}
+	if m == nil {
+		return nil, nil
 	}
 	return &entity.NodeLicenseBinding{
 		ID:        m.ID,

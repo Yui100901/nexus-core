@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
@@ -65,17 +64,12 @@ func (r *ProductRepository) BatchCreateProduct(ctx *sc.ServiceContext, db *gorm.
 
 // GetByID 根据 ID 获取产品及其版本
 func (r *ProductRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.Product, error) {
-	m, err := gorm.G[*model.Product](db).
-		Where("id = ?", id).
-		First(ctx)
+	m, err := GetOneByUniqueColumn[model.Product](ctx, db, "id", id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 没找到，返回 nil
-			return nil, nil
-		} else {
-			// 数据库错误
-			return nil, err
-		}
+		return nil, err
+	}
+	if m == nil {
+		return nil, nil
 	}
 
 	versions, err := r.GetVersionsByProductID(ctx, db, m.ID)
