@@ -117,9 +117,7 @@ func (s *ServiceContext) ensureDB() {
 
 // MustDefaultDB returns tx if in transaction else base db (convenience for use in services)
 func (s *ServiceContext) MustDefaultDB() *gorm.DB {
-	if s.db == nil {
-		return nil
-	}
+	s.ensureDB()
 	if s.db.InTx && s.db.Tx != nil {
 		return s.db.Tx
 	}
@@ -128,10 +126,17 @@ func (s *ServiceContext) MustDefaultDB() *gorm.DB {
 
 // MustPlainDB returns the underlying base DB (not the tx). May be nil.
 func (s *ServiceContext) MustPlainDB() *gorm.DB {
-	if s.db == nil {
-		return nil
-	}
+	s.ensureDB()
 	return s.db.DB
+}
+
+// MustTxDB 返回当前事务的 DB，如果不在事务中则 panic（用于需要强制事务上下文的场景）
+func (s *ServiceContext) MustTxDB() *gorm.DB {
+	s.ensureDB()
+	if s.db.InTx && s.db.Tx != nil {
+		return s.db.Tx
+	}
+	panic("not in transaction")
 }
 
 func (s *ServiceContext) IsInTransaction() bool {
