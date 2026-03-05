@@ -62,9 +62,6 @@ func main() {
 		panic(fmt.Sprintf("database health check failed: %v", err))
 	}
 
-	// provide DB to api middleware so ServiceContext will be populated
-	api.SetDB(db)
-
 	r := api.WebEngine
 
 	// register default routes
