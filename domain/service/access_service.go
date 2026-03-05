@@ -118,11 +118,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 
 		if toActivate {
 			// call license activation with tx (txCtx.MustDefaultDB() will return tx)
-			txDB := txCtx.MustDefaultDB()
-			if txDB == nil {
-				return fmt.Errorf("transaction not available for activation")
-			}
-			if err := s.ls.ActivateLicenseIfNeededWithTx(txCtx, txDB, license); err != nil {
+			if err := s.ls.ActivateLicenseIfNeededWithTx(txCtx, txCtx.MustDefaultDB(), license); err != nil {
 				return fmt.Errorf("activate license failed")
 			}
 		}
