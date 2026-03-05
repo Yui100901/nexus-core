@@ -6,6 +6,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"nexus-core/monitor"
+	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
@@ -114,7 +115,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, base.Connect(), node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return
@@ -129,7 +130,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 		//存在绑定，更新绑定状态为已绑定
 		if binding.IsBound == 0 {
 			binding.IsBound = 1
-			if err := c.nlr.UpdateBindingStatus(sCtx, binding.ID, 1); err != nil {
+			if err := c.nlr.UpdateBindingStatus(sCtx, base.Connect(), binding.ID, 1); err != nil {
 				c.InternalError(sCtx, "update binding status failed")
 				return
 			}
@@ -219,7 +220,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
+	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, base.Connect(), node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return
