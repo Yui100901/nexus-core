@@ -28,6 +28,13 @@ const ServiceContextKey = "ServiceContext"
 //	Error(err error)
 //}
 
+// dbInfo wraps DB/Tx and transaction flag for ServiceContext
+type dbInfo struct {
+	DB   *gorm.DB
+	Tx   *gorm.DB
+	InTx bool
+}
+
 type ServiceContext struct {
 	context.Context // 标准库 context
 	GinContext      *gin.Context
@@ -35,9 +42,7 @@ type ServiceContext struct {
 	Logger          *log.Logger
 
 	// DB/Tx propagation fields (managed at service layer)
-	DB   *gorm.DB
-	Tx   *gorm.DB
-	InTx bool
+	db *dbInfo
 }
 
 // NewServiceContext 构造函数
@@ -47,6 +52,7 @@ func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]
 		GinContext: c,
 		Metadata:   metadata,
 		Logger:     logger,
+		db:         &dbInfo{},
 	}
 }
 
@@ -94,39 +100,66 @@ func (s *ServiceContext) Error(err error) {
 }
 
 // DB/Transaction helpers on ServiceContext
+func (s *ServiceContext) ensureDB() {
+	if s.db == nil {
+		s.db = &dbInfo{}
+	}
+}
+
 func (s *ServiceContext) SetDB(db *gorm.DB) {
-	s.DB = db
+	s.ensureDB()
+	s.db.DB = db
 }
 
 func (s *ServiceContext) SetTx(tx *gorm.DB) {
-	s.Tx = tx
+	s.ensureDB()
+	s.db.Tx = tx
 	if tx != nil {
-		s.InTx = true
+		s.db.InTx = true
 	} else {
-		s.InTx = false
+		s.db.InTx = false
 	}
 }
 
-// GetDB returns Tx if in transaction else DB
-func (s *ServiceContext) GetDB() *gorm.DB {
-	if s.InTx && s.Tx != nil {
-		return s.Tx
+// DefaultDB returns tx if in transaction else base db (convenience for use in services)
+func (s *ServiceContext) DefaultDB() *gorm.DB {
+	if s.db == nil {
+		return nil
 	}
-	return s.DB
+	if s.db.InTx && s.db.Tx != nil {
+		return s.db.Tx
+	}
+	return s.db.DB
+}
+
+// PlainDB returns the underlying base DB (not the tx). May be nil.
+func (s *ServiceContext) PlainDB() *gorm.DB {
+	if s.db == nil {
+		return nil
+	}
+	return s.db.DB
+}
+
+// GetDB kept for backward compatibility: alias for DefaultDB
+func (s *ServiceContext) GetDB() *gorm.DB {
+	return s.DefaultDB()
 }
 
 func (s *ServiceContext) IsInTransaction() bool {
-	return s.InTx
+	if s.db == nil {
+		return false
+	}
+	return s.db.InTx
 }
 
-// WithTransaction starts a transaction on baseDB (or s.DB if baseDB is nil), sets Tx/InTx on a copied ServiceContext
+// WithTransaction starts a transaction on baseDB (or s.PlainDB() if baseDB is nil), sets Tx/InTx on a copied ServiceContext
 // and calls fn with the new ServiceContext; handles commit/rollback and panic.
 func (s *ServiceContext) WithTransaction(baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
 	var dbToUse *gorm.DB
 	if baseDB != nil {
 		dbToUse = baseDB
-	} else {
-		dbToUse = s.DB
+	} else if s.db != nil {
+		dbToUse = s.db.DB
 	}
 	if dbToUse == nil {
 		return fmt.Errorf("no base DB available for WithTransaction")
@@ -145,7 +178,9 @@ func (s *ServiceContext) WithTransaction(baseDB *gorm.DB, fn func(txCtx *Service
 
 	// copy service context and attach tx
 	txCtx := *s
-	txCtx.SetTx(tx)
+	txCtx.ensureDB()
+	txCtx.db.Tx = tx
+	txCtx.db.InTx = true
 
 	if err := fn(&txCtx); err != nil {
 		_ = tx.Rollback().Error
