@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"nexus-core/sc"
 )
 
 //
@@ -28,12 +29,11 @@ func CorsMiddleware() gin.HandlerFunc {
 	}
 }
 
-//func ServiceContextMiddleware() gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//
-//		sc := ctx.InitContext(c)
-//		c.Set("ServiceContext", sc)
-//
-//		c.Next()
-//	}
-//}
+// ServiceContextMiddleware 将 ServiceContext 注入到 gin.Context 中
+func ServiceContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sctx := sc.InitContext(c)
+		c.Set("ServiceContext", sctx)
+		c.Next()
+	}
+}

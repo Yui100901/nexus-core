@@ -2,12 +2,14 @@ package api
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"nexus-core/config"
+	"nexus-core/sc"
 
 	_ "nexus-core/docs"
 )
@@ -24,7 +26,7 @@ var WebEngine *gin.Engine
 func NewServer() *gin.Engine {
 	r := gin.Default()
 	r.Use(CorsMiddleware())
-	//r.Use(ServiceContextMiddleware())
+	r.Use(ServiceContextMiddleware())
 	// simple logger
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
@@ -41,8 +43,18 @@ func NewServer() *gin.Engine {
 func RegisterDefaultRoutes() {
 	// health
 	WebEngine.GET("/health", func(c *gin.Context) {
-		// use unified success response
-		c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+		// try to get service context injected by middleware
+		var sCtx *sc.ServiceContext
+		if v, ok := c.Get("ServiceContext"); ok {
+			if vCtx, ok2 := v.(*sc.ServiceContext); ok2 {
+				sCtx = vCtx
+			}
+		}
+		if sCtx == nil {
+			// fallback to init local context
+			sCtx = sc.InitContext(c)
+		}
+		(&Api{}).Success(sCtx, map[string]string{"status": "ok"})
 	})
 
 	// controllers
@@ -51,8 +63,11 @@ func RegisterDefaultRoutes() {
 	NewNodeController().RegisterRoutes(WebEngine)
 	NewAccessController().RegisterRoutes(WebEngine)
 
-	// serve swagger UI under /docs to avoid conflicts with potential /swagger/doc.json
-	WebEngine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/swagger.json")))
+	// serve swagger UI under /swagger when enabled in config
+	cfg := config.Get()
+	if cfg.SwaggerEnabled {
+		WebEngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
+	}
 }
 
 func init() {
