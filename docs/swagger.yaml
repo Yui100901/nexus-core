@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  api.APIResponse:
+  api.CommonResponse:
     properties:
       code:
         description: 业务状态码
@@ -28,10 +28,30 @@ definitions:
     - node_id
     - product_id
     type: object
+  dto.AutoBindCommand:
+    properties:
+      device_code:
+        description: 设备唯一识别码
+        type: string
+      license_key:
+        description: 许可证
+        type: string
+      product_id:
+        description: 产品ID
+        type: integer
+      version_code:
+        description: 产品版本号
+        type: string
+    required:
+    - device_code
+    - license_key
+    - product_id
+    - version_code
+    type: object
   dto.CreateLicenseCommand:
     description: Command to create a license
     properties:
-      concurrent_limit:
+      max_concurrent:
         description: 并发限制
         type: integer
       max_nodes:
@@ -49,7 +69,7 @@ definitions:
         description: 有效时长（小时）
         type: integer
     required:
-    - concurrent_limit
+    - max_concurrent
     - max_nodes
     - scope_list
     - validity_hours
@@ -97,6 +117,16 @@ definitions:
     - product_id
     - version_code
     type: object
+  dto.DeprecateVersionCommand:
+    properties:
+      product_id:
+        type: integer
+      version_id:
+        type: integer
+    required:
+    - product_id
+    - version_id
+    type: object
   dto.ForceUnbindCommand:
     description: Command to force unbind a node binding using node and license IDs
     properties:
@@ -130,6 +160,21 @@ definitions:
     - license_key
     - product_id
     - version_code
+    type: object
+  dto.ReleaseNewVersionCommand:
+    properties:
+      product_id:
+        description: 所属产品ID
+        type: integer
+      release_date:
+        description: 发布时间
+        type: string
+      version_id:
+        description: 版本ID
+        type: integer
+    required:
+    - product_id
+    - version_id
     type: object
   dto.ScopeDTO:
     description: Scope transfer object
@@ -205,13 +250,16 @@ definitions:
     type: object
   entity.Node:
     properties:
+      banned:
+        description: 是否被封禁，0 = 未封禁，1 = 已封禁
+        type: integer
       deviceCode:
         description: 设备唯一识别码，用于区分不同设备
         type: string
       id:
         description: 节点唯一标识符
         type: integer
-      metaInfo:
+      metadata:
         description: 设备元信息，包含操作系统、版本等信息
         type: string
     type: object
@@ -277,6 +325,35 @@ info:
   title: Nexus Core API
   version: 0.0.1
 paths:
+  /access/auto-bind:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auto Bind
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AutoBindCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Client auto bind
+      tags:
+      - access
   /access/heartbeat:
     post:
       consumes:
@@ -294,15 +371,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Client heartbeat
       tags:
       - access
@@ -326,15 +403,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Batch create licenses
       tags:
       - licenses
@@ -356,15 +433,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Create a license
       tags:
       - licenses
@@ -378,11 +455,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Delete expired licenses
       tags:
       - licenses
@@ -402,15 +479,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get license by ID
       tags:
       - licenses
@@ -430,15 +507,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get license by key
       tags:
       - licenses
@@ -459,15 +536,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Update license
       tags:
       - licenses
@@ -488,15 +565,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Update license status
       tags:
       - licenses
@@ -521,11 +598,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Add node binding
       tags:
       - nodes
@@ -554,11 +631,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Batch create nodes
       tags:
       - nodes
@@ -583,11 +660,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Create a node
       tags:
       - nodes
@@ -608,15 +685,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Delete a node
       tags:
       - nodes
@@ -640,11 +717,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get node by device code
       tags:
       - nodes
@@ -668,11 +745,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "504":
           description: Gateway Timeout
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get node by ID
       tags:
       - nodes
@@ -693,15 +770,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Force unbind a node binding using node and license IDs
       tags:
       - nodes
@@ -722,15 +799,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Update binding status
       tags:
       - nodes
@@ -759,11 +836,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Batch create products
       tags:
       - products
@@ -788,11 +865,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Create a product
       tags:
       - products
@@ -817,11 +894,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Create a product version
       tags:
       - products
@@ -842,16 +919,45 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Delete product
+      tags:
+      - products
+  /product/deprecateVersion:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Deprecate Version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DeprecateVersionCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Deprecate a version
       tags:
       - products
   /product/getByID:
@@ -874,11 +980,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get product by ID
       tags:
       - products
@@ -902,11 +1008,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Get product by name
       tags:
       - products
@@ -927,15 +1033,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.APIResponse'
+            $ref: '#/definitions/api.CommonResponse'
       summary: Set min supported version
       tags:
       - products

@@ -15,6 +15,51 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/access/auto-bind": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "access"
+                ],
+                "summary": "Client auto bind",
+                "parameters": [
+                    {
+                        "description": "Auto Bind",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AutoBindCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/access/heartbeat": {
             "post": {
                 "consumes": [
@@ -42,19 +87,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -91,19 +136,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -137,19 +182,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -171,13 +216,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -208,19 +253,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -251,19 +296,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -296,19 +341,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -341,19 +386,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -392,13 +437,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -443,13 +488,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -488,13 +533,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -527,19 +572,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -576,13 +621,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -619,13 +664,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "504": {
                         "description": "Gateway Timeout",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -658,19 +703,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -703,19 +748,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -760,13 +805,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -805,13 +850,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -850,13 +895,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -889,19 +934,64 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/product/deprecateVersion": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Deprecate a version",
+                "parameters": [
+                    {
+                        "description": "Deprecate Version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DeprecateVersionCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -938,13 +1028,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -981,13 +1071,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -1020,19 +1110,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.APIResponse"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     }
                 }
@@ -1040,7 +1130,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "api.APIResponse": {
+        "api.CommonResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1079,17 +1169,44 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AutoBindCommand": {
+            "type": "object",
+            "required": [
+                "device_code",
+                "license_key",
+                "product_id",
+                "version_code"
+            ],
+            "properties": {
+                "device_code": {
+                    "description": "设备唯一识别码",
+                    "type": "string"
+                },
+                "license_key": {
+                    "description": "许可证",
+                    "type": "string"
+                },
+                "product_id": {
+                    "description": "产品ID",
+                    "type": "integer"
+                },
+                "version_code": {
+                    "description": "产品版本号",
+                    "type": "string"
+                }
+            }
+        },
         "dto.CreateLicenseCommand": {
             "description": "Command to create a license",
             "type": "object",
             "required": [
-                "concurrent_limit",
+                "max_concurrent",
                 "max_nodes",
                 "scope_list",
                 "validity_hours"
             ],
             "properties": {
-                "concurrent_limit": {
+                "max_concurrent": {
                     "description": "并发限制",
                     "type": "integer"
                 },
@@ -1174,6 +1291,21 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.DeprecateVersionCommand": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "version_id"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "integer"
+                },
+                "version_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.ForceUnbindCommand": {
             "description": "Command to force unbind a node binding using node and license IDs",
             "type": "object",
@@ -1217,6 +1349,27 @@ const docTemplate = `{
                 "version_code": {
                     "description": "产品版本号",
                     "type": "string"
+                }
+            }
+        },
+        "dto.ReleaseNewVersionCommand": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "version_id"
+            ],
+            "properties": {
+                "product_id": {
+                    "description": "所属产品ID",
+                    "type": "integer"
+                },
+                "release_date": {
+                    "description": "发布时间",
+                    "type": "string"
+                },
+                "version_id": {
+                    "description": "版本ID",
+                    "type": "integer"
                 }
             }
         },
@@ -1323,6 +1476,10 @@ const docTemplate = `{
         "entity.Node": {
             "type": "object",
             "properties": {
+                "banned": {
+                    "description": "是否被封禁，0 = 未封禁，1 = 已封禁",
+                    "type": "integer"
+                },
                 "deviceCode": {
                     "description": "设备唯一识别码，用于区分不同设备",
                     "type": "string"
@@ -1331,7 +1488,7 @@ const docTemplate = `{
                     "description": "节点唯一标识符",
                     "type": "integer"
                 },
-                "metaInfo": {
+                "metadata": {
                     "description": "设备元信息，包含操作系统、版本等信息",
                     "type": "string"
                 }
