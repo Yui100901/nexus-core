@@ -8,12 +8,19 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"nexus-core/api"
 	"nexus-core/config"
 	_ "nexus-core/docs"
+	"nexus-core/monitor"
+	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -26,10 +33,16 @@ import (
 // 仅在Windows环境下尝试打开浏览器
 func openBrowser(url string) {
 	if runtime.GOOS == "windows" {
-		_ = exec.Command("cmd", "/c", "start", url).Start()
+		_ = execCommand("cmd", "/c", "start", url)
 		return
 	}
-	_ = exec.Command("xdg-open", url).Start()
+	_ = execCommand("xdg-open", url)
+}
+
+// execCommand wraps exec.Command(...).Start
+func execCommand(name string, arg ...string) error {
+	cmd := exec.Command(name, arg...)
+	return cmd.Start()
 }
 
 // main 应用程序入口点
@@ -42,6 +55,9 @@ func main() {
 	// register default routes
 	api.RegisterDefaultRoutes()
 
+	// start monitor
+	monitor.GlobalMonitor.Start()
+
 	swaggerUrl := fmt.Sprintf("http://localhost:%d/swagger/index.html", cfg.Port)
 	fmt.Println("Swagger UI: ", swaggerUrl)
 	// optionally open browser if enabled
@@ -53,7 +69,32 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	if err := r.Run(addr); err != nil {
-		panic(err)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
+
+	// run server in background
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
+
+	// graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	fmt.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Printf("Server forced to shutdown: %v\n", err)
+	}
+
+	// stop monitor
+	monitor.GlobalMonitor.Stop()
+
+	fmt.Println("Server exiting")
 }

@@ -3,9 +3,8 @@ package api
 import (
 	"net/http"
 
-	"nexus-core/sc"
-
 	"github.com/gin-gonic/gin"
+	"nexus-core/sc"
 )
 
 //
@@ -34,7 +33,7 @@ func CorsMiddleware() gin.HandlerFunc {
 func ServiceContextMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sctx := sc.InitContext(c)
-		c.Set(ServiceContextKey, sctx)
+		c.Set(sc.ServiceContextKey, sctx)
 		c.Next()
 	}
 }

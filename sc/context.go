@@ -10,6 +10,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// ServiceContextKey is the key used to store ServiceContext in gin.Context
+const ServiceContextKey = "ServiceContext"
+
 //
 // @Author yfy2001
 // @Date 2026/2/27 14 22

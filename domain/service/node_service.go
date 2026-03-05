@@ -88,20 +88,42 @@ func (s *NodeService) AddBinding(ctx *sc.ServiceContext, nodeID, licenseID, prod
 
 // AutoCreateBind 节点自动绑定
 func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	//检查许可证的 MaxNodes 限制
-	bindingsCount, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, s.db, license.ID, productID)
+	// Use a transaction to avoid race conditions in counting and inserting
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("failed to begin transaction")
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	//检查许可证的 MaxNodes 限制 within tx
+	var bindingsCount int64
+	count, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, tx, license.ID, productID)
 	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("check binding failed")
 	}
+	bindingsCount = count
 	if ok := license.ValidateMaxNodesForProduct(productID, int(bindingsCount)); !ok {
+		tx.Rollback()
 		return fmt.Errorf("maximum nodes exceeded")
 	}
+
 	//添加绑定
 	binding, _ := entity.NewNodeLicenseBinding(nodeID, license.ID, productID)
 	binding.IsBound = 1
-	if err := s.nlr.AddBinding(ctx, s.db, binding); err != nil {
+	if err := s.nlr.AddBinding(ctx, tx, binding); err != nil {
+		tx.Rollback()
 		return fmt.Errorf("add binding failed")
 	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("commit failed: %v", err)
+	}
+
 	return nil
 }
 

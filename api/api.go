@@ -31,9 +31,6 @@ const (
 	CodeInternal   = 500 // 内部错误状态码
 )
 
-// ServiceContextKey 是注入到 gin.Context 中的键名，统一使用常量避免字符串散落
-const ServiceContextKey = "ServiceContext"
-
 type Api struct {
 }
 
@@ -75,7 +72,7 @@ func (a *Api) InternalError(ctx *sc.ServiceContext, message string) {
 // getServiceContextFromGin 从 gin.Context 中安全获取 *sc.ServiceContext
 // 返回 (nil, false) 当未注入或类型不匹配
 func getServiceContextFromGin(gCtx *gin.Context) (*sc.ServiceContext, bool) {
-	if v, ok := gCtx.Get(ServiceContextKey); ok {
+	if v, ok := gCtx.Get(sc.ServiceContextKey); ok {
 		if sctx, ok2 := v.(*sc.ServiceContext); ok2 {
 			return sctx, true
 		}
