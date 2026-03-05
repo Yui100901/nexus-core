@@ -82,7 +82,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 
 	// Wrap the critical section in a transaction and propagate tx via ServiceContext
 	var res *AutoBindResult
-	plainDB := ctx.PlainDB()
+	plainDB := ctx.MustPlainDB()
 	if plainDB == nil {
 		return nil, NewServiceError(500, "database not initialized in service context")
 	}
@@ -117,8 +117,8 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 		}
 
 		if toActivate {
-			// call license activation with tx (txCtx.GetDB() will return tx)
-			txDB := txCtx.GetDB()
+			// call license activation with tx (txCtx.MustDefaultDB() will return tx)
+			txDB := txCtx.MustDefaultDB()
 			if txDB == nil {
 				return fmt.Errorf("transaction not available for activation")
 			}

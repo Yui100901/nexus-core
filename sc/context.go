@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"nexus-core/persistence/base"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,14 @@ type dbInfo struct {
 	InTx bool
 }
 
+func newDBInfo() *dbInfo {
+	return &dbInfo{
+		DB:   base.Connect(),
+		Tx:   nil,
+		InTx: false,
+	}
+}
+
 type ServiceContext struct {
 	context.Context // 标准库 context
 	GinContext      *gin.Context
@@ -46,13 +55,13 @@ type ServiceContext struct {
 }
 
 // NewServiceContext 构造函数
-func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger) *ServiceContext {
+func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger, info *dbInfo) *ServiceContext {
 	return &ServiceContext{
 		Context:    ctx,
 		GinContext: c,
 		Metadata:   metadata,
 		Logger:     logger,
-		db:         &dbInfo{},
+		db:         info,
 	}
 }
 
@@ -79,7 +88,7 @@ func InitContext(c *gin.Context) *ServiceContext {
 	// 使用标准库 context，优先取 request.Context()
 	stdCtx := c.Request.Context()
 
-	return NewServiceContext(stdCtx, c, metaData, logger)
+	return NewServiceContext(stdCtx, c, metaData, logger, newDBInfo())
 }
 
 func (s *ServiceContext) SetMetadata(key string, value any) {
@@ -102,27 +111,12 @@ func (s *ServiceContext) Error(err error) {
 // DB/Transaction helpers on ServiceContext
 func (s *ServiceContext) ensureDB() {
 	if s.db == nil {
-		s.db = &dbInfo{}
+		s.db = newDBInfo()
 	}
 }
 
-func (s *ServiceContext) SetDB(db *gorm.DB) {
-	s.ensureDB()
-	s.db.DB = db
-}
-
-func (s *ServiceContext) SetTx(tx *gorm.DB) {
-	s.ensureDB()
-	s.db.Tx = tx
-	if tx != nil {
-		s.db.InTx = true
-	} else {
-		s.db.InTx = false
-	}
-}
-
-// DefaultDB returns tx if in transaction else base db (convenience for use in services)
-func (s *ServiceContext) DefaultDB() *gorm.DB {
+// MustDefaultDB returns tx if in transaction else base db (convenience for use in services)
+func (s *ServiceContext) MustDefaultDB() *gorm.DB {
 	if s.db == nil {
 		return nil
 	}
@@ -132,17 +126,12 @@ func (s *ServiceContext) DefaultDB() *gorm.DB {
 	return s.db.DB
 }
 
-// PlainDB returns the underlying base DB (not the tx). May be nil.
-func (s *ServiceContext) PlainDB() *gorm.DB {
+// MustPlainDB returns the underlying base DB (not the tx). May be nil.
+func (s *ServiceContext) MustPlainDB() *gorm.DB {
 	if s.db == nil {
 		return nil
 	}
 	return s.db.DB
-}
-
-// GetDB kept for backward compatibility: alias for DefaultDB
-func (s *ServiceContext) GetDB() *gorm.DB {
-	return s.DefaultDB()
 }
 
 func (s *ServiceContext) IsInTransaction() bool {
@@ -152,7 +141,7 @@ func (s *ServiceContext) IsInTransaction() bool {
 	return s.db.InTx
 }
 
-// WithTransaction starts a transaction on baseDB (or s.PlainDB() if baseDB is nil), sets Tx/InTx on a copied ServiceContext
+// WithTransaction starts a transaction on baseDB (or s.MustPlainDB() if baseDB is nil), sets Tx/InTx on a copied ServiceContext
 // and calls fn with the new ServiceContext; handles commit/rollback and panic.
 func (s *ServiceContext) WithTransaction(baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
 	var dbToUse *gorm.DB

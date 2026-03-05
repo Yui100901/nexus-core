@@ -2,25 +2,10 @@ package api
 
 import (
 	"net/http"
-
-	"nexus-core/persistence/base"
 	"nexus-core/sc"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
-
-var appDB *gorm.DB
-
-// SetDB sets the application-wide DB instance used by the middleware
-func SetDB(db *gorm.DB) {
-	appDB = db
-}
-
-// GetDB returns the configured app DB (may be nil)
-func GetDB() *gorm.DB {
-	return appDB
-}
 
 //
 // @Author yfy2001
@@ -48,13 +33,7 @@ func CorsMiddleware() gin.HandlerFunc {
 func ServiceContextMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sctx := sc.InitContext(c)
-		// inject app DB into service context so handlers/services can use sctx.GetDB()
-		if appDB != nil {
-			sctx.SetDB(appDB)
-		} else {
-			// fallback to base.Connect if SetDB was not called; this keeps backward compatibility
-			sctx.SetDB(base.Connect())
-		}
+		// inject app DB into service context so handlers/services can use sctx.MustDefaultDB()
 		c.Set(sc.ServiceContextKey, sctx)
 		c.Next()
 	}

@@ -24,10 +24,7 @@ func NewProductService() *ProductService {
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
 func (s *ProductService) CreateProduct(ctx *sc.ServiceContext, p *entity.Product) error {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	return s.pr.CreateProduct(ctx, db, p)
 }
 
@@ -44,43 +41,31 @@ func (s *ProductService) BatchCreateProduct(ctx *sc.ServiceContext, products []*
 	}
 
 	// 2. 调用仓储层批量创建 在事务中
-	db := ctx.PlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustPlainDB()
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
-		// txCtx.GetDB() returns tx
-		return s.pr.BatchCreateProduct(txCtx, txCtx.GetDB(), products)
+		// txCtx.MustDefaultDB() returns tx
+		return s.pr.BatchCreateProduct(txCtx, txCtx.MustDefaultDB(), products)
 	})
 }
 
 // GetByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
 func (s *ProductService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Product, error) {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return nil, fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	return s.pr.GetByID(ctx, db, id)
 }
 
 // GetByName 根据名称获取产品信息
 // 返回指定名称的完整产品信息，包括所有版本
 func (s *ProductService) GetByName(ctx *sc.ServiceContext, name string) (*entity.Product, error) {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return nil, fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	return s.pr.GetByName(ctx, db, name)
 }
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
 func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productID, versionID uint) error {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
@@ -98,10 +83,7 @@ func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productI
 // CheckProductVersionSupported 检查产品和版本是否支持
 func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, productID uint,
 	targetVersionId *uint, targetVersionCode *string) (bool, error) {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return false, fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return false, err
@@ -118,26 +100,20 @@ func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, pr
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
-	db := ctx.PlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustPlainDB()
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
-		err := s.pr.DeleteProduct(txCtx, txCtx.GetDB(), id)
+		err := s.pr.DeleteProduct(txCtx, txCtx.MustDefaultDB(), id)
 		if err != nil {
 			return err
 		}
-		return s.pr.DeleteVersion(txCtx, txCtx.GetDB(), id)
+		return s.pr.DeleteVersion(txCtx, txCtx.MustDefaultDB(), id)
 	})
 }
 
 // CreateNewVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
 func (s *ProductService) CreateNewVersion(ctx *sc.ServiceContext, productID uint, v *entity.Version) error {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
@@ -189,10 +165,7 @@ func (s *ProductService) ScheduleReleaseTask(ctx *sc.ServiceContext, productID, 
 
 // 内部方法执行版本发布
 func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) error {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
@@ -208,9 +181,6 @@ func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, ver
 }
 
 func (s *ProductService) DeprecateVersion(ctx *sc.ServiceContext, productID uint, versionID uint) error {
-	db := ctx.DefaultDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
+	db := ctx.MustDefaultDB()
 	return s.pr.DeprecateVersion(ctx, db, productID, versionID)
 }

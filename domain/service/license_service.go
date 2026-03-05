@@ -41,7 +41,7 @@ func (s *LicenseService) CreateLicense(ctx *sc.ServiceContext, license *entity.L
 	}
 
 	// 检查产品是否都存在
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
@@ -76,7 +76,7 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 		allIDList = append(allIDList, k)
 	}
 
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
@@ -90,28 +90,28 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 	}
 
 	// 批量插入
-	plain := ctx.PlainDB()
+	plain := ctx.MustPlainDB()
 	if plain == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
 	return ctx.WithTransactionUsingDB(plain, func(txCtx *sc.ServiceContext) error {
-		err := s.lr.BatchCreateLicense(txCtx, txCtx.GetDB(), licenses)
+		err := s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
 		if err != nil {
 			return err
 		}
-		return s.lr.BatchCreateLicenseScope(txCtx, txCtx.GetDB(), licenses)
+		return s.lr.BatchCreateLicenseScope(txCtx, txCtx.MustDefaultDB(), licenses)
 	})
 }
 
 // ActivateLicenseIfNeeded 激活许可证
 func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
 	// Use transaction wrapper for consistency
-	db := ctx.PlainDB()
+	db := ctx.MustPlainDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
-		return s.ActivateLicenseIfNeededWithTx(txCtx, txCtx.GetDB(), license)
+		return s.ActivateLicenseIfNeededWithTx(txCtx, txCtx.MustDefaultDB(), license)
 	})
 }
 
@@ -130,7 +130,7 @@ func (s *LicenseService) ActivateLicenseIfNeededWithTx(ctx *sc.ServiceContext, t
 
 // GetLicenseBindList 获取许可证绑定列表
 func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return nil, fmt.Errorf("database not initialized in service context")
 	}
@@ -139,7 +139,7 @@ func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID ui
 
 // UpdateLicenseStatus 更新许可证状态
 func (s *LicenseService) UpdateLicenseStatus(ctx *sc.ServiceContext, licenseID uint, status int) error {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
@@ -148,7 +148,7 @@ func (s *LicenseService) UpdateLicenseStatus(ctx *sc.ServiceContext, licenseID u
 
 // UpdateLicense 更新许可证信息
 func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.License) error {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
@@ -157,7 +157,7 @@ func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.L
 
 // GetLicenseByID 根据ID获取许可证
 func (s *LicenseService) GetLicenseByID(ctx *sc.ServiceContext, id uint) (*entity.License, error) {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return nil, fmt.Errorf("database not initialized in service context")
 	}
@@ -166,7 +166,7 @@ func (s *LicenseService) GetLicenseByID(ctx *sc.ServiceContext, id uint) (*entit
 
 // GetLicenseByKey 根据许可证密钥获取许可证
 func (s *LicenseService) GetLicenseByKey(ctx *sc.ServiceContext, key string) (*entity.License, error) {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return nil, fmt.Errorf("database not initialized in service context")
 	}
@@ -175,7 +175,7 @@ func (s *LicenseService) GetLicenseByKey(ctx *sc.ServiceContext, key string) (*e
 
 // DeleteExpiredLicenses 删除所有过期的许可证
 func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
-	db := ctx.DefaultDB()
+	db := ctx.MustDefaultDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
@@ -184,16 +184,16 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
 		return err
 	}
 
-	plain := ctx.PlainDB()
+	plain := ctx.MustPlainDB()
 	if plain == nil {
 		return fmt.Errorf("database not initialized in service context")
 	}
 
 	return ctx.WithTransactionUsingDB(plain, func(txCtx *sc.ServiceContext) error {
-		err := s.lr.BatchDeleteScopeByLicenseIdList(txCtx, txCtx.GetDB(), ids)
+		err := s.lr.BatchDeleteScopeByLicenseIdList(txCtx, txCtx.MustDefaultDB(), ids)
 		if err != nil {
 			return err
 		}
-		return s.lr.BatchDeleteByIdList(txCtx, txCtx.GetDB(), ids)
+		return s.lr.BatchDeleteByIdList(txCtx, txCtx.MustDefaultDB(), ids)
 	})
 }
