@@ -42,10 +42,10 @@ func main() {
 	// register default routes
 	api.RegisterDefaultRoutes()
 
-	swaggerUrl := fmt.Sprintf("http://localhost:%d/docs/index.html", cfg.Port)
+	swaggerUrl := fmt.Sprintf("http://localhost:%d/swagger/index.html", cfg.Port)
 	fmt.Println("Swagger UI: ", swaggerUrl)
-	// optionally open browser
-	if cfg.AutoOpenBrowser {
+	// optionally open browser if enabled
+	if cfg.AutoOpenBrowser && cfg.SwaggerEnabled {
 		go func() {
 			time.Sleep(500 * time.Millisecond)
 			openBrowser(swaggerUrl)
