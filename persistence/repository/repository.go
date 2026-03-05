@@ -47,7 +47,7 @@ func FindByColumn[T any](ctx context.Context, db *gorm.DB, column string, value 
 	return results, nil
 }
 
-// CountWhere 在给定条件下计数，query 是 SQL 条件字符串（例如 "license_id = ? AND is_bound = ?"）
+// CountWhere 在给定条件下计数，query 是 SQL 条件字符串（例如 "license_id = ? AND is_bound = ?")
 func CountWhere(ctx context.Context, db *gorm.DB, model any, query string, args ...any) (int64, error) {
 	var cnt int64
 	err := db.WithContext(ctx).
@@ -69,4 +69,27 @@ func UpdateByColumn[T any](ctx context.Context, db *gorm.DB, column string, valu
 		return 0, err
 	}
 	return rows, nil
+}
+
+// WithTransaction is a helper to run fn inside a database transaction (begin/commit/rollback)
+func WithTransaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
+	if db == nil {
+		return fmt.Errorf("db is nil in WithTransaction")
+	}
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback().Error
+		return err
+	}
+	return tx.Commit().Error
 }

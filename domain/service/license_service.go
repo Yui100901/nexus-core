@@ -99,17 +99,23 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 
 // ActivateLicenseIfNeeded 激活许可证
 func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
+	// Use transaction wrapper for consistency
+	return repository.WithTransaction(s.db, func(tx *gorm.DB) error {
+		return s.ActivateLicenseIfNeededWithTx(ctx, tx, license)
+	})
+}
 
+// ActivateLicenseIfNeededWithTx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
+func (s *LicenseService) ActivateLicenseIfNeededWithTx(ctx *sc.ServiceContext, tx *gorm.DB, license *entity.License) error {
 	if license.IsActive() {
 		return nil
 	}
 
-	err := license.Activate(time.Now())
-	if err != nil {
+	if err := license.Activate(time.Now()); err != nil {
 		return err
 	}
 
-	return s.lr.UpdateLicenseStatus(ctx, s.db, license.ID, entity.StatusActive)
+	return s.lr.UpdateLicenseStatus(ctx, tx, license.ID, entity.StatusActive)
 }
 
 // GetLicenseBindList 获取许可证绑定列表
