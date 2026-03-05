@@ -46,6 +46,7 @@ func (s *LicenseService) CreateLicense(ctx *sc.ServiceContext, license *entity.L
 
 	// 检查产品是否都存在
 	exist, err := s.pr.ExistIds(ctx, s.db, productIDs)
+	// err := s.pr.ExistIds(ctx, s.db, productIDs)
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 
 	// 一次性查询数据库
 	var allIDList []uint
-	for k, _ := range allIDs {
+	for k := range allIDs {
 		allIDList = append(allIDList, k)
 	}
 	exists, err := s.pr.ExistIds(ctx, s.db, allIDList) // 假设 repo
