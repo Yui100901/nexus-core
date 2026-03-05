@@ -24,7 +24,7 @@ type AddBindingCommand struct {
 func ToEntityNode(cmd CreateNodeCommand) *entity.Node {
 	return &entity.Node{
 		DeviceCode: cmd.DeviceCode,
-		MetaInfo:   cmd.MetaInfo,
+		Metadata:   cmd.MetaInfo,
 	}
 }
 

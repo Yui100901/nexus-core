@@ -25,7 +25,7 @@ func NewNodeRepository() *NodeRepository {
 func (r *NodeRepository) CreateNode(ctx *sc.ServiceContext, db *gorm.DB, node *entity.Node) error {
 	pNode := &model.Node{
 		DeviceCode: node.DeviceCode,
-		MetaInfo:   node.MetaInfo,
+		MetaInfo:   node.Metadata,
 	}
 	if err := gorm.G[model.Node](db).Create(ctx, pNode); err != nil {
 		return err
@@ -42,7 +42,7 @@ func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, db *gorm.DB, no
 	for _, node := range nodes {
 		pNodes = append(pNodes, model.Node{
 			DeviceCode: node.DeviceCode,
-			MetaInfo:   node.MetaInfo,
+			MetaInfo:   node.Metadata,
 		})
 	}
 
@@ -148,6 +148,6 @@ func toEntityNode(m *model.Node) *entity.Node {
 		ID:         m.ID,
 		DeviceCode: m.DeviceCode,
 		Banned:     m.Banned,
-		MetaInfo:   m.MetaInfo,
+		Metadata:   m.MetaInfo,
 	}
 }

@@ -13,7 +13,7 @@ type Node struct {
 	ID         uint    // 节点唯一标识符
 	DeviceCode string  // 设备唯一识别码，用于区分不同设备
 	Banned     int     // 是否被封禁，0 = 未封禁，1 = 已封禁
-	MetaInfo   *string // 设备元信息，包含操作系统、版本等信息
+	Metadata   *string // 设备元信息，包含操作系统、版本等信息
 }
 
 // NewNode 工厂方法
@@ -25,7 +25,7 @@ func NewNode(deviceCode string, metaInfo *string) (*Node, error) {
 
 	node := &Node{
 		DeviceCode: deviceCode,
-		MetaInfo:   metaInfo,
+		Metadata:   metaInfo,
 		Banned:     0,
 	}
 

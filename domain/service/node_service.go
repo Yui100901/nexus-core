@@ -34,16 +34,15 @@ func (s *NodeService) CreateNode(ctx *sc.ServiceContext, n *entity.Node) error {
 
 // AutoCreateNode 自动创建节点
 // 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
-func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, metaInfo *string) (*entity.Node, error) {
+func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
 	// 查找或创建 node
 	node, err := s.nr.GetByDeviceCode(ctx, s.db, deviceCode)
 	if err != nil {
-		// create new node
 		return nil, fmt.Errorf("get node failed")
 	}
 	//node不存在
 	if node == nil {
-		n, err := entity.NewNode(deviceCode, metaInfo)
+		n, err := entity.NewNode(deviceCode, metadata)
 		if err != nil {
 			return nil, fmt.Errorf("create node failed")
 		}
