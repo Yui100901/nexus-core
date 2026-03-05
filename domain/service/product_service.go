@@ -14,14 +14,12 @@ import (
 // ProductService 提供产品相关的业务逻辑服务
 // 管理产品的创建、查询、版本控制等操作
 type ProductService struct {
-	db *gorm.DB
 	pr *repository.ProductRepository // 产品仓库，用于数据持久化操作
 }
 
 // NewProductService 创建新的产品服务实例
 func NewProductService() *ProductService {
 	return &ProductService{
-		db: base.Connect(),
 		pr: repository.NewProductRepository(),
 	}
 }
@@ -29,7 +27,11 @@ func NewProductService() *ProductService {
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
 func (s *ProductService) CreateProduct(ctx *sc.ServiceContext, p *entity.Product) error {
-	return s.pr.CreateProduct(ctx, s.db, p)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.pr.CreateProduct(ctx, db, p)
 }
 
 // BatchCreateProduct 批量创建产品
@@ -44,28 +46,45 @@ func (s *ProductService) BatchCreateProduct(ctx *sc.ServiceContext, products []*
 		seen[p.Name] = true
 	}
 
-	// 2. 调用仓储层批量创建
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		return s.pr.BatchCreateProduct(ctx, tx, products)
+	// 2. 调用仓储层批量创建 在事务中
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+		// txCtx.GetDB() returns tx
+		return s.pr.BatchCreateProduct(txCtx, txCtx.GetDB(), products)
 	})
 }
 
 // GetByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
 func (s *ProductService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Product, error) {
-	return s.pr.GetByID(ctx, s.db, id)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.pr.GetByID(ctx, db, id)
 }
 
 // GetByName 根据名称获取产品信息
 // 返回指定名称的完整产品信息，包括所有版本
 func (s *ProductService) GetByName(ctx *sc.ServiceContext, name string) (*entity.Product, error) {
-	return s.pr.GetByName(ctx, s.db, name)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.pr.GetByName(ctx, db, name)
 }
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
 func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productID, versionID uint) error {
-	product, err := s.pr.GetByID(ctx, s.db, productID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
 	}
@@ -73,13 +92,17 @@ func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productI
 	if err != nil {
 		return err
 	}
-	return s.pr.UpdateMinSupportedVersion(ctx, s.db, product.ID, *product.MinSupportedVersionID)
+	return s.pr.UpdateMinSupportedVersion(ctx, db, product.ID, *product.MinSupportedVersionID)
 }
 
 // CheckProductVersionSupported 检查产品和版本是否支持
 func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, productID uint,
 	targetVersionId *uint, targetVersionCode *string) (bool, error) {
-	product, err := s.pr.GetByID(ctx, s.db, productID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return false, err
 	}
@@ -95,26 +118,34 @@ func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, pr
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		err := s.pr.DeleteProduct(ctx, tx, id)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+		err := s.pr.DeleteProduct(txCtx, txCtx.GetDB(), id)
 		if err != nil {
 			return err
 		}
-		return s.pr.DeleteVersion(ctx, tx, id)
+		return s.pr.DeleteVersion(txCtx, txCtx.GetDB(), id)
 	})
 }
 
 // CreateNewVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
 func (s *ProductService) CreateNewVersion(ctx *sc.ServiceContext, productID uint, v *entity.Version) error {
-	product, err := s.pr.GetByID(ctx, s.db, productID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
 	}
 	if err := product.CreateNewVersion(*v); err != nil {
 		return err
 	}
-	if err := s.pr.CreateNewVersion(ctx, s.db, product.ID, v); err != nil {
+	if err := s.pr.CreateNewVersion(ctx, db, product.ID, v); err != nil {
 		return err
 	}
 
@@ -140,7 +171,11 @@ func (s *ProductService) ReleaseVersion(ctx *sc.ServiceContext, productID, versi
 
 // 内部方法执行版本发布
 func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) error {
-	product, err := s.pr.GetByID(ctx, s.db, productID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
 	}
@@ -148,24 +183,13 @@ func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, ver
 	if err != nil {
 		return err
 	}
-	return s.pr.ReleaseVersion(ctx, s.db, versionID, releaseDate)
-}
-
-// ScheduleReleaseTask 简易定时发布
-// todo 后续考虑如何管理定时任务
-func (s *ProductService) ScheduleReleaseTask(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) {
-	delay := time.Until(releaseDate)
-	if delay <= 0 {
-		// 已经过了发布时间，直接发布
-		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
-		return
-	}
-	go func() {
-		<-time.After(delay)
-		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
-	}()
+	return s.pr.ReleaseVersion(ctx, db, versionID, releaseDate)
 }
 
 func (s *ProductService) DeprecateVersion(ctx *sc.ServiceContext, productID uint, versionID uint) error {
-	return s.pr.DeprecateVersion(ctx, s.db, productID, versionID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.pr.DeprecateVersion(ctx, db, productID, versionID)
 }

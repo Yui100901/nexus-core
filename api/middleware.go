@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"nexus-core/persistence/base"
 	"nexus-core/sc"
 )
 
@@ -33,6 +34,8 @@ func CorsMiddleware() gin.HandlerFunc {
 func ServiceContextMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sctx := sc.InitContext(c)
+		// inject base DB into service context so handlers/services can use sctx.GetDB()
+		sctx.SetDB(base.Connect())
 		c.Set(sc.ServiceContextKey, sctx)
 		c.Next()
 	}

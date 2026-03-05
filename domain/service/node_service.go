@@ -6,14 +6,12 @@ import (
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
-
-	"gorm.io/gorm"
 )
 
 // NodeService 提供节点相关的业务逻辑服务
 // 管理节点的创建、查询、绑定等操作
 type NodeService struct {
-	db  *gorm.DB
+	// db removed; use DB from sc.ServiceContext at runtime
 	nr  *repository.NodeRepository // 节点仓库，用于数据持久化操作
 	nlr *repository.NodeLicenseBindingRepository
 }
@@ -21,7 +19,6 @@ type NodeService struct {
 // NewNodeService 创建新的节点服务实例
 func NewNodeService() *NodeService {
 	return &NodeService{
-		db:  base.Connect(),
 		nr:  repository.NewNodeRepository(),
 		nlr: repository.NewNodeLicenseBindingRepository(),
 	}
@@ -30,14 +27,22 @@ func NewNodeService() *NodeService {
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
 func (s *NodeService) CreateNode(ctx *sc.ServiceContext, n *entity.Node) error {
-	return s.nr.CreateNode(ctx, s.db, n)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.nr.CreateNode(ctx, db, n)
 }
 
 // AutoCreateNode 自动创建节点
 // 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
 func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
 	// 查找或创建 node
-	node, err := s.nr.GetByDeviceCode(ctx, s.db, deviceCode)
+	node, err := s.nr.GetByDeviceCode(ctx, db, deviceCode)
 	if err != nil {
 		return nil, fmt.Errorf("get node failed")
 	}
@@ -47,7 +52,7 @@ func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, 
 		if err != nil {
 			return nil, fmt.Errorf("create node failed")
 		}
-		if err := s.nr.CreateNode(ctx, s.db, n); err != nil {
+		if err := s.nr.CreateNode(ctx, db, n); err != nil {
 			return nil, fmt.Errorf("create node failed")
 		}
 		node = n
@@ -55,11 +60,11 @@ func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, 
 	return node, nil
 }
 
-// AutoCreateNodeWithContext variant uses DB/Tx from sCtx.Context (if present) and does NOT start a transaction itself
+// AutoCreateNodeWithContext variant uses DB/Tx from sCtx (if present) and does NOT start a transaction itself
 func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
-	db := repository.GetDBFromContext(sCtx.Context)
+	db := sCtx.GetDB()
 	if db == nil {
-		db = s.db
+		db = base.Connect()
 	}
 
 	// 查找或创建 node using provided db (which may be a tx)
@@ -83,21 +88,33 @@ func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceC
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx *sc.ServiceContext, nodes []*entity.Node) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		return s.nr.BatchCreateNode(ctx, s.db, nodes)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+		return s.nr.BatchCreateNode(txCtx, txCtx.GetDB(), nodes)
 	})
 }
 
 // GetByID 根据ID获取节点信息
 // 返回指定ID的完整节点信息，包括所有绑定关系
 func (s *NodeService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Node, error) {
-	return s.nr.GetByID(ctx, s.db, id)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.nr.GetByID(ctx, db, id)
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
 func (s *NodeService) GetByDeviceCode(ctx *sc.ServiceContext, code string) (*entity.Node, error) {
-	return s.nr.GetByDeviceCode(ctx, s.db, code)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.nr.GetByDeviceCode(ctx, db, code)
 }
 
 // AddBinding 为节点添加许可证绑定关系
@@ -108,15 +125,22 @@ func (s *NodeService) AddBinding(ctx *sc.ServiceContext, nodeID, licenseID, prod
 		return err
 	}
 	binding.IsBound = 1
-	return s.nlr.AddBinding(ctx, s.db, binding)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.nlr.AddBinding(ctx, db, binding)
 }
 
 // AutoCreateBind 节点自动绑定
 func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	// Use WithTransaction helper from repository
-	return repository.WithTransaction(s.db, func(tx *gorm.DB) error {
-		//检查许可证的 MaxNodes 限制 within tx
-		count, err := s.nlr.CountActiveBindingsByLicenseForProduct(ctx, tx, license.ID, productID)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	// Use WithTransaction helper
+	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+		count, err := s.nlr.CountActiveBindingsByLicenseForProduct(txCtx, txCtx.GetDB(), license.ID, productID)
 		if err != nil {
 			return fmt.Errorf("check binding failed")
 		}
@@ -124,21 +148,20 @@ func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID u
 			return fmt.Errorf("maximum nodes exceeded")
 		}
 
-		//添加绑定
 		binding, _ := entity.NewNodeLicenseBinding(nodeID, license.ID, productID)
 		binding.IsBound = 1
-		if err := s.nlr.AddBinding(ctx, tx, binding); err != nil {
+		if err := s.nlr.AddBinding(txCtx, txCtx.GetDB(), binding); err != nil {
 			return fmt.Errorf("add binding failed")
 		}
 		return nil
 	})
 }
 
-// AutoCreateBindWithContext does binding using DB/Tx from sCtx.Context and does NOT start transaction itself
+// AutoCreateBindWithContext does binding using DB/Tx from sCtx and does NOT start transaction itself
 func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	db := repository.GetDBFromContext(sCtx.Context)
+	db := sCtx.GetDB()
 	if db == nil {
-		db = s.db
+		db = base.Connect()
 	}
 
 	count, err := s.nlr.CountActiveBindingsByLicenseForProduct(sCtx, db, license.ID, productID)
@@ -160,16 +183,24 @@ func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID,
 // UpdateBindingStatus 更新绑定状态
 // 修改节点与许可证之间的绑定状态
 func (s *NodeService) UpdateBindingStatus(ctx *sc.ServiceContext, id uint, status int) error {
-	return s.nlr.UpdateBindingStatus(ctx, s.db, id, status)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return s.nlr.UpdateBindingStatus(ctx, db, id, status)
 }
 
 // ForceUnbind 强制解绑节点绑定（根据绑定ID）
 // 将指定的绑定状态更新为解绑状态，并记录解绑时间
 // 同时更新运行时缓存，减少对应许可证和产品的节点计数
 func (s *NodeService) ForceUnbind(ctx *sc.ServiceContext, bindingID uint) error {
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
 
 	// 执行强制解绑操作
-	err := s.nr.ForceUnbind(ctx, s.db, bindingID)
+	err := s.nr.ForceUnbind(ctx, db, bindingID)
 	if err != nil {
 		return err
 	}
@@ -183,21 +214,24 @@ func (s *NodeService) ForceUnbind(ctx *sc.ServiceContext, bindingID uint) error 
 // DeleteNode 删除节点
 // 同时删除节点的所有绑定关系
 func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
-		err := s.nr.DeleteNode(ctx, tx, id)
+	db := ctx.GetDB()
+	if db == nil {
+		db = base.Connect()
+	}
+	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+		err := s.nr.DeleteNode(txCtx, txCtx.GetDB(), id)
 		if err != nil {
 			return err
 		}
-		return s.nlr.DeleteBindingByNodeID(ctx, tx, id)
+		return s.nlr.DeleteBindingByNodeID(txCtx, txCtx.GetDB(), id)
 	})
 }
 
 // GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
 func (s *NodeService) GetBindingByNodeAndLicense(ctx *sc.ServiceContext, nodeID, licenseID uint) (*entity.NodeLicenseBinding, error) {
-	// use db from context if available
-	db := repository.GetDBFromContext(ctx.Context)
+	db := ctx.GetDB()
 	if db == nil {
-		db = s.db
+		db = base.Connect()
 	}
 	return s.nlr.GetBindingByNodeAndLicense(ctx, db, nodeID, licenseID)
 }
