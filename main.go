@@ -16,6 +16,7 @@ import (
 	"nexus-core/config"
 	_ "nexus-core/docs"
 	"nexus-core/monitor"
+	"nexus-core/persistence/base"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -50,12 +51,26 @@ func execCommand(name string, arg ...string) error {
 func main() {
 	cfg := config.Load()
 	fmt.Println("Nexus Core starting...")
+
+	// initialize DB once at startup and verify connectivity
+	db := base.Connect()
+	if db == nil {
+		panic("failed to initialize database")
+	}
+	// optional lightweight health check: try a simple DB operation
+	if err := db.Exec("SELECT 1").Error; err != nil {
+		panic(fmt.Sprintf("database health check failed: %v", err))
+	}
+
+	// provide DB to api middleware so ServiceContext will be populated
+	api.SetDB(db)
+
 	r := api.WebEngine
 
 	// register default routes
 	api.RegisterDefaultRoutes()
 
-	// start monitor
+	// start monitor (after DB ready)
 	monitor.GlobalMonitor.Start()
 
 	swaggerUrl := fmt.Sprintf("http://localhost:%d/swagger/index.html", cfg.Port)
