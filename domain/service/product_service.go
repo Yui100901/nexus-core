@@ -86,6 +86,9 @@ func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productI
 	if err != nil {
 		return err
 	}
+	if product == nil {
+		return fmt.Errorf("product not found")
+	}
 	err = product.SetMinSupportedVersion(versionID)
 	if err != nil {
 		return err
@@ -140,6 +143,9 @@ func (s *ProductService) CreateNewVersion(ctx *sc.ServiceContext, productID uint
 	if err != nil {
 		return err
 	}
+	if product == nil {
+		return fmt.Errorf("product not found")
+	}
 	if err := product.CreateNewVersion(*v); err != nil {
 		return err
 	}
@@ -191,6 +197,9 @@ func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, ver
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
+	}
+	if product == nil {
+		return fmt.Errorf("product not found")
 	}
 	err = product.ReleaseVersion(versionID, releaseDate)
 	if err != nil {
