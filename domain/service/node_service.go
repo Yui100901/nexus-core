@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"nexus-core/domain/entity"
-	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 )
@@ -27,9 +26,9 @@ func NewNodeService() *NodeService {
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
 func (s *NodeService) CreateNode(ctx *sc.ServiceContext, n *entity.Node) error {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	return s.nr.CreateNode(ctx, db, n)
 }
@@ -37,9 +36,9 @@ func (s *NodeService) CreateNode(ctx *sc.ServiceContext, n *entity.Node) error {
 // AutoCreateNode 自动创建节点
 // 根据设备码自动创建节点，适用于心跳验证时自动注册新节点
 func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return nil, fmt.Errorf("database not initialized in service context")
 	}
 	// 查找或创建 node
 	node, err := s.nr.GetByDeviceCode(ctx, db, deviceCode)
@@ -62,9 +61,9 @@ func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, 
 
 // AutoCreateNodeWithContext variant uses DB/Tx from sCtx (if present) and does NOT start a transaction itself
 func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
-	db := sCtx.GetDB()
+	db := sCtx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return nil, fmt.Errorf("database not initialized in service context")
 	}
 
 	// 查找或创建 node using provided db (which may be a tx)
@@ -88,9 +87,9 @@ func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceC
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx *sc.ServiceContext, nodes []*entity.Node) error {
-	db := ctx.GetDB()
+	db := ctx.PlainDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
 		return s.nr.BatchCreateNode(txCtx, txCtx.GetDB(), nodes)
@@ -100,9 +99,9 @@ func (s *NodeService) BatchCreateNode(ctx *sc.ServiceContext, nodes []*entity.No
 // GetByID 根据ID获取节点信息
 // 返回指定ID的完整节点信息，包括所有绑定关系
 func (s *NodeService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Node, error) {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return nil, fmt.Errorf("database not initialized in service context")
 	}
 	return s.nr.GetByID(ctx, db, id)
 }
@@ -110,9 +109,9 @@ func (s *NodeService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Node, er
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
 func (s *NodeService) GetByDeviceCode(ctx *sc.ServiceContext, code string) (*entity.Node, error) {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return nil, fmt.Errorf("database not initialized in service context")
 	}
 	return s.nr.GetByDeviceCode(ctx, db, code)
 }
@@ -125,18 +124,18 @@ func (s *NodeService) AddBinding(ctx *sc.ServiceContext, nodeID, licenseID, prod
 		return err
 	}
 	binding.IsBound = 1
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	return s.nlr.AddBinding(ctx, db, binding)
 }
 
 // AutoCreateBind 节点自动绑定
 func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	db := ctx.GetDB()
+	db := ctx.PlainDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	// Use WithTransaction helper
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
@@ -159,9 +158,9 @@ func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID u
 
 // AutoCreateBindWithContext does binding using DB/Tx from sCtx and does NOT start transaction itself
 func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	db := sCtx.GetDB()
+	db := sCtx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 
 	count, err := s.nlr.CountActiveBindingsByLicenseForProduct(sCtx, db, license.ID, productID)
@@ -180,23 +179,18 @@ func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID,
 	return nil
 }
 
-// UpdateBindingStatus 更新绑定状态
-// 修改节点与许可证之间的绑定状态
 func (s *NodeService) UpdateBindingStatus(ctx *sc.ServiceContext, id uint, status int) error {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	return s.nlr.UpdateBindingStatus(ctx, db, id, status)
 }
 
-// ForceUnbind 强制解绑节点绑定（根据绑定ID）
-// 将指定的绑定状态更新为解绑状态，并记录解绑时间
-// 同时更新运行时缓存，减少对应许可证和产品的节点计数
 func (s *NodeService) ForceUnbind(ctx *sc.ServiceContext, bindingID uint) error {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 
 	// 执行强制解绑操作
@@ -205,18 +199,13 @@ func (s *NodeService) ForceUnbind(ctx *sc.ServiceContext, bindingID uint) error 
 		return err
 	}
 
-	// 从运行时缓存中移除该节点的并发计数
-	// 由于没有ProductID，我们暂时使用默认值0
-
 	return nil
 }
 
-// DeleteNode 删除节点
-// 同时删除节点的所有绑定关系
 func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
-	db := ctx.GetDB()
+	db := ctx.PlainDB()
 	if db == nil {
-		db = base.Connect()
+		return fmt.Errorf("database not initialized in service context")
 	}
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
 		err := s.nr.DeleteNode(txCtx, txCtx.GetDB(), id)
@@ -227,11 +216,10 @@ func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
 	})
 }
 
-// GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
 func (s *NodeService) GetBindingByNodeAndLicense(ctx *sc.ServiceContext, nodeID, licenseID uint) (*entity.NodeLicenseBinding, error) {
-	db := ctx.GetDB()
+	db := ctx.DefaultDB()
 	if db == nil {
-		db = base.Connect()
+		return nil, fmt.Errorf("database not initialized in service context")
 	}
 	return s.nlr.GetBindingByNodeAndLicense(ctx, db, nodeID, licenseID)
 }
