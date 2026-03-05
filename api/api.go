@@ -18,6 +18,10 @@ type CommonResponse struct {
 	Data    interface{} `json:"data,omitempty"` // 响应数据，可选
 }
 
+// 兼容历史 swagger 注释中使用的 APIResponse 名称，避免文档与代码不一致
+// 采用类型别名方式保持向后兼容，同时不破坏现有逻辑
+type APIResponse = CommonResponse
+
 const (
 	CodeOK         = 200 // 成功状态码
 	CodeBadRequest = 400 // 请求错误状态码
