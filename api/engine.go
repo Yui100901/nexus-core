@@ -43,16 +43,12 @@ func NewServer() *gin.Engine {
 func RegisterDefaultRoutes() {
 	// health
 	WebEngine.GET("/health", func(c *gin.Context) {
-		// try to get service context injected by middleware
-		var sCtx *sc.ServiceContext
-		if v, ok := c.Get("ServiceContext"); ok {
-			if vCtx, ok2 := v.(*sc.ServiceContext); ok2 {
-				sCtx = vCtx
-			}
-		}
-		if sCtx == nil {
-			// fallback to init local context
-			sCtx = sc.InitContext(c)
+		sCtx, ok := getServiceContextFromGin(c)
+		if !ok {
+			// fallback to minimal context so InternalError can respond
+			tmp := &sc.ServiceContext{GinContext: c}
+			(&Api{}).InternalError(tmp, "service context missing")
+			return
 		}
 		(&Api{}).Success(sCtx, map[string]string{"status": "ok"})
 	})

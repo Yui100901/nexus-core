@@ -52,7 +52,12 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/create [post]
 func (c *LicenseController) CreateLicense(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.CreateLicenseCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -84,7 +89,12 @@ func (c *LicenseController) CreateLicense(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/batchCreate [post]
 func (c *LicenseController) BatchCreate(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmds []dto.CreateLicenseCommand
 	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -119,7 +129,12 @@ func (c *LicenseController) BatchCreate(gCtx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /license/getByID [get]
 func (c *LicenseController) GetByID(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var query dto.GetLicenseByIDQuery
 	if err := gCtx.ShouldBindQuery(&query); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -145,7 +160,12 @@ func (c *LicenseController) GetByID(gCtx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /license/getByKey [get]
 func (c *LicenseController) GetByKey(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var query dto.GetLicenseByKeyQuery
 	if err := gCtx.ShouldBindQuery(&query); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -171,7 +191,12 @@ func (c *LicenseController) GetByKey(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/updateStatus [post]
 func (c *LicenseController) UpdateStatus(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.UpdateLicenseStatusCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -196,7 +221,12 @@ func (c *LicenseController) UpdateStatus(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/update [post]
 func (c *LicenseController) UpdateLicense(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.UpdateLicenseCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -227,7 +257,12 @@ func (c *LicenseController) UpdateLicense(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) DeleteExpired(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	if err := c.ls.DeleteExpiredLicenses(sCtx); err != nil {
 		c.InternalError(sCtx, err.Error())
 		return

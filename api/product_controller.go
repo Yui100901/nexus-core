@@ -50,7 +50,12 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/create [post]
 func (c *ProductController) CreateProduct(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.CreateProductCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -79,7 +84,12 @@ func (c *ProductController) CreateProduct(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/createVersion [post]
 func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.CreateProductVersionCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -105,7 +115,12 @@ func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
 // @Param body body dto.ReleaseNewVersionCommand true "Release New Version"
 // @Success 200 {object} entity.Version
 func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.ReleaseNewVersionCommand
 
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
@@ -134,7 +149,12 @@ func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/batchCreate [post]
 func (c *ProductController) BatchCreate(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmds []dto.CreateProductCommand
 	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -167,7 +187,12 @@ func (c *ProductController) BatchCreate(gCtx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByID [get]
 func (c *ProductController) GetByID(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	// 获取 query 参数
 	idStr := gCtx.Query("id")
 	if idStr == "" {
@@ -203,7 +228,12 @@ func (c *ProductController) GetByID(gCtx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByName [get]
 func (c *ProductController) GetByName(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var q dto.GetProductByNameQuery
 	if err := gCtx.ShouldBindQuery(&q); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -228,7 +258,12 @@ func (c *ProductController) GetByName(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/setMinVersion [post]
 func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.UpdateMinVersionCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -252,7 +287,12 @@ func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/deprecateVersion [post]
 func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.DeprecateVersionCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -276,7 +316,12 @@ func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/delete [post]
 func (c *ProductController) DeleteProduct(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var q struct {
 		ID uint `json:"id" binding:"required"`
 	}

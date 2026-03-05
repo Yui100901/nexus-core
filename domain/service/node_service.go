@@ -21,8 +21,9 @@ type NodeService struct {
 // NewNodeService 创建新的节点服务实例
 func NewNodeService() *NodeService {
 	return &NodeService{
-		db: base.Connect(),
-		nr: repository.NewNodeRepository(),
+		db:  base.Connect(),
+		nr:  repository.NewNodeRepository(),
+		nlr: repository.NewNodeLicenseBindingRepository(),
 	}
 }
 
@@ -137,4 +138,9 @@ func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
 		}
 		return s.nlr.DeleteBindingByNodeID(ctx, tx, id)
 	})
+}
+
+// GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
+func (s *NodeService) GetBindingByNodeAndLicense(ctx *sc.ServiceContext, nodeID, licenseID uint) (*entity.NodeLicenseBinding, error) {
+	return s.nlr.GetBindingByNodeAndLicense(ctx, s.db, nodeID, licenseID)
 }

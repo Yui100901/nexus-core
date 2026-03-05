@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"nexus-core/sc"
+
+	"github.com/gin-gonic/gin"
 )
 
 //
@@ -28,6 +30,9 @@ const (
 	CodeNotFound   = 404 // 未找到状态码
 	CodeInternal   = 500 // 内部错误状态码
 )
+
+// ServiceContextKey 是注入到 gin.Context 中的键名，统一使用常量避免字符串散落
+const ServiceContextKey = "ServiceContext"
 
 type Api struct {
 }
@@ -65,4 +70,15 @@ func (a *Api) NotFound(ctx *sc.ServiceContext, message string) {
 // InternalError 返回500错误响应
 func (a *Api) InternalError(ctx *sc.ServiceContext, message string) {
 	a.JSON(ctx, http.StatusInternalServerError, CodeInternal, message, nil)
+}
+
+// getServiceContextFromGin 从 gin.Context 中安全获取 *sc.ServiceContext
+// 返回 (nil, false) 当未注入或类型不匹配
+func getServiceContextFromGin(gCtx *gin.Context) (*sc.ServiceContext, bool) {
+	if v, ok := gCtx.Get(ServiceContextKey); ok {
+		if sctx, ok2 := v.(*sc.ServiceContext); ok2 {
+			return sctx, true
+		}
+	}
+	return nil, false
 }

@@ -6,8 +6,6 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"nexus-core/monitor"
-	"nexus-core/persistence/base"
-	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
 
@@ -18,23 +16,17 @@ import (
 // 负责验证许可证、管理节点绑定和控制并发访问
 type AccessController struct {
 	Api
-	ls  *service.LicenseService       // 许可证服务，处理许可证验证和激活
-	ns  *service.NodeService          // 节点服务，管理节点创建和绑定
-	ps  *service.ProductService       // 产品服务，处理产品版本验证
-	lr  *repository.LicenseRepository // 许可证仓库，直接访问许可证数据
-	nr  *repository.NodeRepository    // 节点仓库，直接访问节点数据
-	nlr *repository.NodeLicenseBindingRepository
+	ls *service.LicenseService // 许可证服务，处理许可证验证和激活
+	ns *service.NodeService    // 节点服务，管理节点创建和绑定
+	ps *service.ProductService // 产品服务，处理产品版本验证
 }
 
 // NewAccessController 创建新的访问控制器实例
 func NewAccessController() *AccessController {
 	return &AccessController{
-		ls:  service.NewLicenseService(),
-		ns:  service.NewNodeService(),
-		ps:  service.NewProductService(),
-		lr:  repository.NewLicenseRepository(),
-		nr:  repository.NewNodeRepository(),
-		nlr: repository.NewNodeLicenseBindingRepository(),
+		ls: service.NewLicenseService(),
+		ns: service.NewNodeService(),
+		ps: service.NewProductService(),
 	}
 }
 
@@ -59,7 +51,14 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
 func (c *AccessController) AutoBind(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	// prefer service context from middleware
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		// use minimal context so InternalError can write a response
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.AutoBindCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -115,7 +114,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, base.Connect(), node.ID, license.ID)
+	binding, err := c.ns.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return
@@ -130,7 +129,7 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 		//存在绑定，更新绑定状态为已绑定
 		if binding.IsBound == 0 {
 			binding.IsBound = 1
-			if err := c.nlr.UpdateBindingStatus(sCtx, base.Connect(), binding.ID, 1); err != nil {
+			if err := c.ns.UpdateBindingStatus(sCtx, binding.ID, 1); err != nil {
 				c.InternalError(sCtx, "update binding status failed")
 				return
 			}
@@ -160,7 +159,13 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/heartbeat [post]
 func (c *AccessController) Heartbeat(gCtx *gin.Context) {
-	sCtx := sc.InitContext(gCtx)
+	// prefer service context from middleware
+	sCtx, ok := getServiceContextFromGin(gCtx)
+	if !ok {
+		tmp := &sc.ServiceContext{GinContext: gCtx}
+		c.InternalError(tmp, "service context missing")
+		return
+	}
 	var cmd dto.HeartbeatCommand
 	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
 		c.BadRequest(sCtx, err.Error())
@@ -220,7 +225,7 @@ func (c *AccessController) Heartbeat(gCtx *gin.Context) {
 	}
 
 	// 检查绑定
-	binding, err := c.nlr.GetBindingByNodeAndLicense(sCtx, base.Connect(), node.ID, license.ID)
+	binding, err := c.ns.GetBindingByNodeAndLicense(sCtx, node.ID, license.ID)
 	if err != nil {
 		c.InternalError(sCtx, "check binding failed")
 		return
