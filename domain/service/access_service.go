@@ -1,11 +1,9 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/monitor"
-	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
 )
@@ -82,15 +80,13 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 		return nil, NewServiceError(400, "invalid license")
 	}
 
-	// Wrap the critical section in a transaction and propagate tx via context
+	// Wrap the critical section in a transaction and propagate tx via ServiceContext
 	var res *AutoBindResult
-	err = repository.WithTransactionCtx(s.ns.db, ctx.Context, func(ctxTx context.Context) error {
-		// create a copy of sc.ServiceContext with the tx-aware context
-		sCtxCopy := *ctx
-		sCtxCopy.Context = ctxTx
+	err = ctx.WithTransactionUsingDB(s.ns.db, func(txCtx *sc.ServiceContext) error {
+		// txCtx already has Tx set and InTx true
 
 		// 查找或创建节点 using context-aware node service (no nested tx)
-		node, err := s.ns.AutoCreateNodeWithContext(&sCtxCopy, deviceCode, nil)
+		node, err := s.ns.AutoCreateNodeWithContext(txCtx, deviceCode, nil)
 		if err != nil {
 			return fmt.Errorf("create node failed")
 		}
@@ -99,31 +95,30 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 		}
 
 		// 检查绑定
-		binding, err := s.ns.GetBindingByNodeAndLicense(&sCtxCopy, node.ID, license.ID)
+		binding, err := s.ns.GetBindingByNodeAndLicense(txCtx, node.ID, license.ID)
 		if err != nil {
 			return fmt.Errorf("check binding failed")
 		}
 
 		if binding == nil {
-			if err := s.ns.AutoCreateBindWithContext(&sCtxCopy, node.ID, productID, license); err != nil {
+			if err := s.ns.AutoCreateBindWithContext(txCtx, node.ID, productID, license); err != nil {
 				return fmt.Errorf("auto bind failed")
 			}
 		} else {
 			if binding.IsBound == 0 {
-				if err := s.ns.UpdateBindingStatus(&sCtxCopy, binding.ID, 1); err != nil {
+				if err := s.ns.UpdateBindingStatus(txCtx, binding.ID, 1); err != nil {
 					return fmt.Errorf("update binding status failed")
 				}
 			}
 		}
 
 		if toActivate {
-			// call license activation with tx (we need tx instance)
-			// GetDBFromContext will return tx
-			txDB := repository.GetDBFromContext(ctxTx)
+			// call license activation with tx (txCtx.GetDB() will return tx)
+			txDB := txCtx.GetDB()
 			if txDB == nil {
 				return fmt.Errorf("transaction not available for activation")
 			}
-			if err := s.ls.ActivateLicenseIfNeededWithTx(&sCtxCopy, txDB, license); err != nil {
+			if err := s.ls.ActivateLicenseIfNeededWithTx(txCtx, txDB, license); err != nil {
 				return fmt.Errorf("activate license failed")
 			}
 		}
