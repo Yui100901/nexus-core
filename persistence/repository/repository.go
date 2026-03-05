@@ -93,3 +93,71 @@ func WithTransaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
 	}
 	return tx.Commit().Error
 }
+
+// db context propagation helpers
+type dbCtxKeyType struct{}
+
+type dbCtxVal struct {
+	DB   *gorm.DB
+	Tx   *gorm.DB
+	InTx bool
+}
+
+// ContextWithDB returns a new context with base DB set
+func ContextWithDB(ctx context.Context, db *gorm.DB) context.Context {
+	return context.WithValue(ctx, dbCtxKeyType{}, &dbCtxVal{DB: db, Tx: nil, InTx: false})
+}
+
+// ContextWithTx returns a new context marked as in-transaction with tx set
+func ContextWithTx(ctx context.Context, tx *gorm.DB) context.Context {
+	return context.WithValue(ctx, dbCtxKeyType{}, &dbCtxVal{DB: nil, Tx: tx, InTx: true})
+}
+
+// GetDBFromContext returns tx if present, otherwise base db; nil if none set
+func GetDBFromContext(ctx context.Context) *gorm.DB {
+	if v := ctx.Value(dbCtxKeyType{}); v != nil {
+		if d, ok := v.(*dbCtxVal); ok {
+			if d.InTx && d.Tx != nil {
+				return d.Tx
+			}
+			return d.DB
+		}
+	}
+	return nil
+}
+
+// IsInTransaction reports whether the context carries an active tx
+func IsInTransaction(ctx context.Context) bool {
+	if v := ctx.Value(dbCtxKeyType{}); v != nil {
+		if d, ok := v.(*dbCtxVal); ok {
+			return d.InTx
+		}
+	}
+	return false
+}
+
+// WithTransactionCtx starts a transaction using baseDB and passes a new ServiceContext-like context
+// to fn where the context holds the tx (so services can fetch tx from ctx). fn receives a context.Context
+// For convenience we accept a raw context and return error. Caller typically will use sc.ServiceContext.Context
+func WithTransactionCtx(baseDB *gorm.DB, ctx context.Context, fn func(ctx context.Context) error) error {
+	if baseDB == nil {
+		return fmt.Errorf("baseDB is nil in WithTransactionCtx")
+	}
+	tx := baseDB.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	ctxWithTx := ContextWithTx(ctx, tx)
+	if err := fn(ctxWithTx); err != nil {
+		_ = tx.Rollback().Error
+		return err
+	}
+	return tx.Commit().Error
+}

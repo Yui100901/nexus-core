@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/monitor"
+	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
 )
@@ -80,41 +82,62 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 		return nil, NewServiceError(400, "invalid license")
 	}
 
-	// 查找或创建节点
-	node, err := s.ns.AutoCreateNode(ctx, deviceCode, nil)
-	if err != nil {
-		return nil, NewServiceError(500, "create node failed")
-	}
-	if !node.IsValid() {
-		return nil, NewServiceError(400, "invalid node")
-	}
+	// Wrap the critical section in a transaction and propagate tx via context
+	var res *AutoBindResult
+	err = repository.WithTransactionCtx(s.ns.db, ctx.Context, func(ctxTx context.Context) error {
+		// create a copy of sc.ServiceContext with the tx-aware context
+		sCtxCopy := *ctx
+		sCtxCopy.Context = ctxTx
 
-	// 检查绑定
-	binding, err := s.ns.GetBindingByNodeAndLicense(ctx, node.ID, license.ID)
-	if err != nil {
-		return nil, NewServiceError(500, "check binding failed")
-	}
-
-	if binding == nil {
-		if err := s.ns.AutoCreateBind(ctx, node.ID, productID, license); err != nil {
-			return nil, NewServiceError(500, "auto bind failed")
+		// 查找或创建节点 using context-aware node service (no nested tx)
+		node, err := s.ns.AutoCreateNodeWithContext(&sCtxCopy, deviceCode, nil)
+		if err != nil {
+			return fmt.Errorf("create node failed")
 		}
-	} else {
-		//存在绑定，更新绑定状态为已绑定
-		if binding.IsBound == 0 {
-			if err := s.ns.UpdateBindingStatus(ctx, binding.ID, 1); err != nil {
-				return nil, NewServiceError(500, "update binding status failed")
+		if !node.IsValid() {
+			return fmt.Errorf("invalid node")
+		}
+
+		// 检查绑定
+		binding, err := s.ns.GetBindingByNodeAndLicense(&sCtxCopy, node.ID, license.ID)
+		if err != nil {
+			return fmt.Errorf("check binding failed")
+		}
+
+		if binding == nil {
+			if err := s.ns.AutoCreateBindWithContext(&sCtxCopy, node.ID, productID, license); err != nil {
+				return fmt.Errorf("auto bind failed")
+			}
+		} else {
+			if binding.IsBound == 0 {
+				if err := s.ns.UpdateBindingStatus(&sCtxCopy, binding.ID, 1); err != nil {
+					return fmt.Errorf("update binding status failed")
+				}
 			}
 		}
-	}
 
-	if toActivate {
-		if err := s.ls.ActivateLicenseIfNeeded(ctx, license); err != nil {
-			return nil, NewServiceError(500, "activate license failed")
+		if toActivate {
+			// call license activation with tx (we need tx instance)
+			// GetDBFromContext will return tx
+			txDB := repository.GetDBFromContext(ctxTx)
+			if txDB == nil {
+				return fmt.Errorf("transaction not available for activation")
+			}
+			if err := s.ls.ActivateLicenseIfNeededWithTx(&sCtxCopy, txDB, license); err != nil {
+				return fmt.Errorf("activate license failed")
+			}
 		}
+
+		res = &AutoBindResult{NodeID: node.ID, BindingOK: true}
+		return nil
+	})
+
+	if err != nil {
+		// map error to ServiceError
+		return nil, NewServiceError(500, err.Error())
 	}
 
-	return &AutoBindResult{NodeID: node.ID, BindingOK: true}, nil
+	return res, nil
 }
 
 // Heartbeat 处理心跳逻辑

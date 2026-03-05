@@ -55,6 +55,31 @@ func (s *NodeService) AutoCreateNode(ctx *sc.ServiceContext, deviceCode string, 
 	return node, nil
 }
 
+// AutoCreateNodeWithContext variant uses DB/Tx from sCtx.Context (if present) and does NOT start a transaction itself
+func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceCode string, metadata *string) (*entity.Node, error) {
+	db := repository.GetDBFromContext(sCtx.Context)
+	if db == nil {
+		db = s.db
+	}
+
+	// 查找或创建 node using provided db (which may be a tx)
+	node, err := s.nr.GetByDeviceCode(sCtx, db, deviceCode)
+	if err != nil {
+		return nil, fmt.Errorf("get node failed")
+	}
+	if node == nil {
+		n, err := entity.NewNode(deviceCode, metadata)
+		if err != nil {
+			return nil, fmt.Errorf("create node failed")
+		}
+		if err := s.nr.CreateNode(sCtx, db, n); err != nil {
+			return nil, fmt.Errorf("create node failed")
+		}
+		node = n
+	}
+	return node, nil
+}
+
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx *sc.ServiceContext, nodes []*entity.Node) error {
@@ -109,6 +134,29 @@ func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID u
 	})
 }
 
+// AutoCreateBindWithContext does binding using DB/Tx from sCtx.Context and does NOT start transaction itself
+func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
+	db := repository.GetDBFromContext(sCtx.Context)
+	if db == nil {
+		db = s.db
+	}
+
+	count, err := s.nlr.CountActiveBindingsByLicenseForProduct(sCtx, db, license.ID, productID)
+	if err != nil {
+		return fmt.Errorf("check binding failed")
+	}
+	if ok := license.ValidateMaxNodesForProduct(productID, int(count)); !ok {
+		return fmt.Errorf("maximum nodes exceeded")
+	}
+
+	binding, _ := entity.NewNodeLicenseBinding(nodeID, license.ID, productID)
+	binding.IsBound = 1
+	if err := s.nlr.AddBinding(sCtx, db, binding); err != nil {
+		return fmt.Errorf("add binding failed")
+	}
+	return nil
+}
+
 // UpdateBindingStatus 更新绑定状态
 // 修改节点与许可证之间的绑定状态
 func (s *NodeService) UpdateBindingStatus(ctx *sc.ServiceContext, id uint, status int) error {
@@ -146,5 +194,10 @@ func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
 
 // GetBindingByNodeAndLicense 查询指定节点和许可证的绑定关系
 func (s *NodeService) GetBindingByNodeAndLicense(ctx *sc.ServiceContext, nodeID, licenseID uint) (*entity.NodeLicenseBinding, error) {
-	return s.nlr.GetBindingByNodeAndLicense(ctx, s.db, nodeID, licenseID)
+	// use db from context if available
+	db := repository.GetDBFromContext(ctx.Context)
+	if db == nil {
+		db = s.db
+	}
+	return s.nlr.GetBindingByNodeAndLicense(ctx, db, nodeID, licenseID)
 }
