@@ -2,6 +2,8 @@ package base
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"nexus-core/config"
@@ -46,6 +48,16 @@ func Connect() *gorm.DB {
 }
 
 func InitDatabaseSqlite(dsn string) (*gorm.DB, error) {
+	// if dsn is a file path, ensure parent directories exist
+	if dsn != ":memory:" {
+		dir := filepath.Dir(dsn)
+		if dir != "." && dir != "" {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return nil, fmt.Errorf("failed to create directories for db path %s: %w", dir, err)
+			}
+		}
+	}
+
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		fmt.Println("Failed to connect Sqlite!")
