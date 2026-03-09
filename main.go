@@ -51,17 +51,7 @@ func execCommand(name string, arg ...string) error {
 func main() {
 	cfg := config.Load()
 	fmt.Println("Nexus Core starting...")
-
-	// initialize DB once at startup and verify connectivity
-	db := base.Connect()
-	if db == nil {
-		panic("failed to initialize database")
-	}
-	// optional lightweight health check: try a simple DB operation
-	if err := db.Exec("SELECT 1").Error; err != nil {
-		panic(fmt.Sprintf("database health check failed: %v", err))
-	}
-
+	base.DefaultDBManager.Init(cfg.DBList)
 	r := api.WebEngine
 
 	// register default routes

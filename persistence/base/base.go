@@ -19,32 +19,97 @@ import (
 // @Date 2025/7/21 15 26
 //
 
-var (
-	dbInstance *gorm.DB
-	once       sync.Once
-)
+var DefaultDBManager = NewDBManager()
 
-func Connect() *gorm.DB {
-	once.Do(func() {
-		cfg := config.Get()
-		db, err := InitDatabaseSqlite(cfg.DBPath)
-		if err != nil {
+type DBManager struct {
+	mu            sync.Mutex
+	dbInstanceMap map[string]*gorm.DB
+	defaultName   string
+}
+
+func NewDBManager() *DBManager {
+	return &DBManager{
+		dbInstanceMap: make(map[string]*gorm.DB),
+		defaultName:   "main",
+	}
+}
+
+func (m *DBManager) GetDB(name string) *gorm.DB {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	db, ok := m.dbInstanceMap[name]
+	if !ok {
+		panic(fmt.Sprintf("db instance %s not initialized", name))
+	}
+
+	return db
+}
+
+func (m *DBManager) GetDefaultDB() *gorm.DB {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	db, ok := m.dbInstanceMap[m.defaultName]
+	if !ok {
+		panic(fmt.Sprintf("default db instance %s not initialized", m.defaultName))
+	}
+
+	return db
+}
+
+func (m *DBManager) Init(cfgs []config.DBConfig) {
+	for _, cfg := range cfgs {
+		if err := m.InitDB(cfg.Name, cfg.DBType, cfg.DBPath); err != nil {
 			panic(fmt.Sprintf("failed to initialize database: %v", err))
 		}
-		// 自动迁移模型，确保表存在
-		if err := db.AutoMigrate(
-			&model.License{},
-			&model.LicenseScope{},
-			&model.Product{},
-			&model.ProductVersion{},
-			&model.Node{},
-			&model.NodeLicenseBinding{},
-		); err != nil {
-			panic(fmt.Sprintf("failed to automigrate database: %v", err))
-		}
-		dbInstance = db
-	})
-	return dbInstance
+	}
+}
+
+func (m *DBManager) InitDB(name, dbType, dsn string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 如果已经存在，阻止重复初始化
+	if _, ok := m.dbInstanceMap[name]; ok {
+		return fmt.Errorf("db instance %s already initialized", name)
+	}
+
+	var (
+		db  *gorm.DB
+		err error
+	)
+
+	switch dbType {
+	case "sqlite":
+		db, err = InitDatabaseSqlite(dsn)
+	case "mysql":
+		db, err = InitDatabaseMysql(dsn)
+	default:
+		return fmt.Errorf("unsupported database type: %s", dbType)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	m.dbInstanceMap[name] = db
+	return nil
+}
+
+func AutoMigrate(db *gorm.DB) {
+
+	// 自动迁移模型，确保表存在
+	if err := db.AutoMigrate(
+		&model.License{},
+		&model.LicenseScope{},
+		&model.Product{},
+		&model.ProductVersion{},
+		&model.Node{},
+		&model.NodeLicenseBinding{},
+	); err != nil {
+		panic(fmt.Sprintf("failed to automigrate database: %v", err))
+	}
 }
 
 func InitDatabaseSqlite(dsn string) (*gorm.DB, error) {

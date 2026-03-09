@@ -46,7 +46,7 @@ type DBManager struct {
 
 func NewDBManager(defaultDB *gorm.DB) *DBManager {
 	if defaultDB == nil {
-		defaultDB = base.Connect()
+		defaultDB = base.DefaultDBManager.GetDefaultDB()
 	}
 	m := &DBManager{
 		infos:       make(map[string]*dbInfo),
@@ -64,8 +64,7 @@ func (m *DBManager) ensureInfo(name string) *dbInfo {
 	defer m.mu.Unlock()
 	info, ok := m.infos[name]
 	if !ok || info == nil {
-		// create with global base.Connect() if not present
-		info = newDBInfo(base.Connect())
+		info = newDBInfo(base.DefaultDBManager.GetDefaultDB())
 		m.infos[name] = info
 	}
 	return info
@@ -162,7 +161,7 @@ func InitContext(c *gin.Context) *ServiceContext {
 	stdCtx := c.Request.Context()
 
 	// create DBManager with default DB
-	dbMgr := NewDBManager(base.Connect())
+	dbMgr := NewDBManager(base.DefaultDBManager.GetDefaultDB())
 
 	return NewServiceContext(stdCtx, c, metaData, logger, dbMgr)
 }
@@ -187,7 +186,7 @@ func (s *ServiceContext) Error(err error) {
 // DB/Transaction helpers on ServiceContext
 func (s *ServiceContext) ensureDBMgr() {
 	if s.dbMgr == nil {
-		s.dbMgr = NewDBManager(base.Connect())
+		s.dbMgr = NewDBManager(base.DefaultDBManager.GetDefaultDB())
 	}
 }
 
@@ -198,7 +197,7 @@ func (s *ServiceContext) MustDefaultDB() *gorm.DB {
 	db := s.dbMgr.GetActive("")
 	if db == nil {
 		// ensure non-nil by connecting
-		db = base.Connect()
+		db = base.DefaultDBManager.GetDefaultDB()
 		s.dbMgr.AddDB("", db)
 	}
 	return db
@@ -209,7 +208,7 @@ func (s *ServiceContext) MustPlainDB() *gorm.DB {
 	s.ensureDBMgr()
 	db := s.dbMgr.GetPlain("")
 	if db == nil {
-		db = base.Connect()
+		db = base.DefaultDBManager.GetDefaultDB()
 		s.dbMgr.AddDB("", db)
 	}
 	return db
