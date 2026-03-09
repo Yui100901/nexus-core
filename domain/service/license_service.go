@@ -7,8 +7,6 @@ import (
 
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
-
-	"gorm.io/gorm"
 )
 
 //
@@ -105,12 +103,13 @@ func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license
 		return fmt.Errorf("database not initialized in service context")
 	}
 	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
-		return s.ActivateLicenseIfNeededWithTx(txCtx, txCtx.MustDefaultDB(), license)
+		return s.ActivateLicenseIfNeededWithCtx(txCtx, license)
 	})
 }
 
-// ActivateLicenseIfNeededWithTx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
-func (s *LicenseService) ActivateLicenseIfNeededWithTx(ctx *sc.ServiceContext, tx *gorm.DB, license *entity.License) error {
+// ActivateLicenseIfNeededWithCtx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
+// 使用 ServiceContext 来获取当前活跃的 DB（可能是 tx）
+func (s *LicenseService) ActivateLicenseIfNeededWithCtx(ctx *sc.ServiceContext, license *entity.License) error {
 	if license.IsActive() {
 		return nil
 	}
@@ -119,7 +118,8 @@ func (s *LicenseService) ActivateLicenseIfNeededWithTx(ctx *sc.ServiceContext, t
 		return err
 	}
 
-	return s.lr.UpdateLicenseStatus(ctx, tx, license.ID, entity.StatusActive)
+	// use ctx.MustDefaultDB() so callers don't need to pass tx explicitly
+	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, entity.StatusActive)
 }
 
 // GetLicenseBindList 获取许可证绑定列表
