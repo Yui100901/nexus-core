@@ -91,20 +91,20 @@ func (s *ServiceContext) ensureDBHelper() {
 
 func (s *ServiceContext) MustDefaultDB() *gorm.DB {
 	s.ensureDBHelper()
-	db := s.dbMgr.GetActive("")
+	db := s.dbMgr.GetActive(base.DefaultDBName)
 	if db == nil {
 		db = base.DefaultDBManager.GetDefaultDB()
-		s.dbMgr.AddDB("", db)
+		s.dbMgr.AddDB(base.DefaultDBName, db)
 	}
 	return db
 }
 
 func (s *ServiceContext) MustPlainDB() *gorm.DB {
 	s.ensureDBHelper()
-	db := s.dbMgr.GetPlain("")
+	db := s.dbMgr.GetPlain(base.DefaultDBName)
 	if db == nil {
 		db = base.DefaultDBManager.GetDefaultDB()
-		s.dbMgr.AddDB("", db)
+		s.dbMgr.AddDB(base.DefaultDBName, db)
 	}
 	return db
 }
@@ -112,13 +112,6 @@ func (s *ServiceContext) MustPlainDB() *gorm.DB {
 func (s *ServiceContext) GetActiveDB(name string) *gorm.DB {
 	s.ensureDBHelper()
 	return s.dbMgr.GetActive(name)
-}
-
-func (s *ServiceContext) IsInTransaction() bool {
-	if s.dbMgr == nil {
-		return false
-	}
-	return s.dbMgr.IsInTx("")
 }
 
 // ---------- 公共工具函数 ----------
