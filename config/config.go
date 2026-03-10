@@ -10,13 +10,18 @@ import (
 // Config 应用程序配置结构
 // 包含服务器端口、数据库路径和其他运行时选项
 type Config struct {
-	Port            int        `yaml:"port"`              // 服务器监听端口
-	DBList          []DBConfig `yaml:"db_list"`           // 数据库文件路径
-	SwaggerEnabled  bool       `yaml:"swagger_enabled"`   // 是否启用Swagger文档
-	AutoOpenBrowser bool       `yaml:"auto_open_browser"` // 是否自动打开浏览器
+	Port            int       `yaml:"port"`              // 服务器监听端口
+	DBConfig        *DBConfig `yaml:"db_list"`           // 数据库文件路径
+	SwaggerEnabled  bool      `yaml:"swagger_enabled"`   // 是否启用Swagger文档
+	AutoOpenBrowser bool      `yaml:"auto_open_browser"` // 是否自动打开浏览器
 }
 
 type DBConfig struct {
+	DefaultDBName string            `yaml:"default_db_name"` // 默认数据库名称
+	ConnectList   []DBConnectConfig `yaml:"connect_list"`    // 数据库连接配置列表
+}
+
+type DBConnectConfig struct {
 	Name   string `yaml:"name"`
 	DBType string `yaml:"db_type"`
 	DBPath string `yaml:"db_path"`
@@ -32,8 +37,13 @@ func Load() *Config {
 	}
 	// defaults
 	cfg = &Config{
-		Port:            8080,
-		DBList:          []DBConfig{{Name: "test", DBType: "sqlite", DBPath: "test.db"}},
+		Port: 8080,
+		DBConfig: &DBConfig{
+			DefaultDBName: "test",
+			ConnectList: []DBConnectConfig{
+				{Name: "test", DBType: "sqlite", DBPath: "test.db"},
+			},
+		},
 		SwaggerEnabled:  true,
 		AutoOpenBrowser: true,
 	}
@@ -47,8 +57,10 @@ func Load() *Config {
 	if cfg.Port == 0 {
 		cfg.Port = 8080
 	}
-	if cfg.DBList == nil || len(cfg.DBList) == 0 {
-		cfg.DBList = []DBConfig{{Name: "test", DBType: "sqlite", DBPath: "test.db"}}
+	if cfg.DBConfig.ConnectList == nil || len(cfg.DBConfig.ConnectList) == 0 {
+		cfg.DBConfig.ConnectList = []DBConnectConfig{
+			{Name: "test", DBType: "sqlite", DBPath: "test.db"},
+		}
 	}
 	// ensure DBList timestamp suffix to avoid lock in tests? keep as is
 	_ = time.Now()

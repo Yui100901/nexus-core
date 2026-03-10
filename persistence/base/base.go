@@ -19,7 +19,9 @@ import (
 // @Date 2025/7/21 15 26
 //
 
-var DefaultDBManager = NewDBManager("test")
+var defaultDBName = config.Get().DBConfig.DefaultDBName
+
+var DefaultDBManager = NewDBManager(defaultDBName)
 
 type DBManager struct {
 	mu            sync.Mutex
@@ -52,7 +54,7 @@ func (m *DBManager) GetDefaultDB() *gorm.DB {
 	return m.GetDB(m.defaultName)
 }
 
-func (m *DBManager) Init(cfgs []config.DBConfig) {
+func (m *DBManager) Init(cfgs []config.DBConnectConfig) {
 	for _, cfg := range cfgs {
 		if err := m.InitDB(cfg.Name, cfg.DBType, cfg.DBPath); err != nil {
 			panic(fmt.Sprintf("failed to initialize database: %v", err))
