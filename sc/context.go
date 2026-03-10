@@ -238,24 +238,19 @@ func rollbackOnPanic(tx *gorm.DB, rollbackSQL string) {
 	}
 }
 
-// ---------- 统一事务 API ----------
-
 // RunInTransaction 在指定数据源上运行事务逻辑
-func (s *ServiceContext) RunInTransaction(dbName string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
+func (s *ServiceContext) RunInTransaction(name string, fn func(txCtx *ServiceContext) error) error {
 	s.ensureDBHelper()
-	dbToUse := baseDB
+	dbToUse := s.dbMgr.GetPlain(name)
 	if dbToUse == nil {
-		dbToUse = s.dbMgr.GetPlain(dbName)
-	}
-	if dbToUse == nil {
-		return fmt.Errorf("no base DB available for datasource '%s'", dbName)
+		return fmt.Errorf("no base DB available for datasource '%s'", name)
 	}
 
-	info := s.dbMgr.ensureInfo(dbName)
-	if info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
+	info := s.dbMgr.ensureInfo(name)
+	if info.InTx && info.Tx != nil {
 		// 已在事务中 → 使用 savepoint 模拟嵌套
 		txCtx := *s
-		copiedMgr := s.copyDBHelperWithInfo(dbName)
+		copiedMgr := s.copyDBHelperWithInfo(name)
 		txCtx.dbMgr = copiedMgr
 		tx := info.Tx
 		sp := newSavepointName()
@@ -280,9 +275,9 @@ func (s *ServiceContext) RunInTransaction(dbName string, baseDB *gorm.DB, fn fun
 	defer rollbackOnPanic(tx, "ROLLBACK")
 
 	txCtx := *s
-	copiedMgr := s.copyDBHelperWithInfo(dbName)
-	copiedMgr.infos[dbName].Tx = tx
-	copiedMgr.infos[dbName].InTx = true
+	copiedMgr := s.copyDBHelperWithInfo(name)
+	copiedMgr.infos[name].Tx = tx
+	copiedMgr.infos[name].InTx = true
 	txCtx.dbMgr = copiedMgr
 
 	if err := fn(&txCtx); err != nil {
@@ -293,6 +288,6 @@ func (s *ServiceContext) RunInTransaction(dbName string, baseDB *gorm.DB, fn fun
 }
 
 // RunInSavepoint 在已有事务中使用 savepoint，或开启新事务
-func (s *ServiceContext) RunInSavepoint(name string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	return s.RunInTransaction(name, baseDB, fn)
+func (s *ServiceContext) RunInSavepoint(name string, fn func(txCtx *ServiceContext) error) error {
+	return s.RunInTransaction(name, fn)
 }
