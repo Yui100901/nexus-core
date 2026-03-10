@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/monitor"
+	"nexus-core/persistence/base"
 	"nexus-core/sc"
 	"time"
 )
@@ -82,11 +83,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 
 	// Wrap the critical section in a transaction and propagate tx via ServiceContext
 	var res *AutoBindResult
-	plainDB := ctx.MustPlainDB()
-	if plainDB == nil {
-		return nil, NewServiceError(500, "database not initialized in service context")
-	}
-	err = ctx.RunInTransaction("plainDB", func(txCtx *sc.ServiceContext) error {
+	err = ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		// txCtx already has Tx set and InTx true
 
 		// 查找或创建节点 using context-aware node service (no nested tx)
