@@ -22,15 +22,15 @@ import (
 // ServiceContextKey is the key used to store ServiceContext in gin.Context
 const ServiceContextKey = "ServiceContext"
 
-// dbInfo wraps DB/Tx and transaction flag for a single datasource
-type dbInfo struct {
+// DBInfo wraps DB/Tx and transaction flag for a single datasource
+type DBInfo struct {
 	DB   *gorm.DB
 	Tx   *gorm.DB
 	InTx bool
 }
 
-func newDBInfo(db *gorm.DB) *dbInfo {
-	return &dbInfo{
+func newDBInfo(db *gorm.DB) *DBInfo {
+	return &DBInfo{
 		DB:   db,
 		Tx:   nil,
 		InTx: false,
@@ -39,9 +39,10 @@ func newDBInfo(db *gorm.DB) *dbInfo {
 
 // DBHelper holds multiple dbInfo instances keyed by datasource name
 type DBHelper struct {
-	mu          sync.RWMutex
-	infos       map[string]*dbInfo
-	defaultName string
+	mu            sync.RWMutex
+	infos         map[string]*DBInfo
+	defaultName   string //默认数据源
+	currentTxName string //当前事务数据源名称
 }
 
 func NewDBHelper(defaultDB *gorm.DB) *DBHelper {
@@ -49,14 +50,14 @@ func NewDBHelper(defaultDB *gorm.DB) *DBHelper {
 		defaultDB = base.DefaultDBManager.GetDefaultDB()
 	}
 	m := &DBHelper{
-		infos:       make(map[string]*dbInfo),
-		defaultName: "default",
+		infos:       make(map[string]*DBInfo),
+		defaultName: base.DefaultDBName,
 	}
 	m.infos[m.defaultName] = newDBInfo(defaultDB)
 	return m
 }
 
-func (m *DBHelper) ensureInfo(name string) *dbInfo {
+func (m *DBHelper) MustGet(name string) *DBInfo {
 	if name == "" {
 		name = m.defaultName
 	}
@@ -64,8 +65,11 @@ func (m *DBHelper) ensureInfo(name string) *dbInfo {
 	defer m.mu.Unlock()
 	info, ok := m.infos[name]
 	if !ok || info == nil {
-		info = newDBInfo(base.DefaultDBManager.GetDefaultDB())
-		m.infos[name] = info
+		if name == m.defaultName {
+			info = newDBInfo(base.DefaultDBManager.GetDefaultDB())
+			m.infos[name] = info
+		}
+		panic(fmt.Sprintf("no base DB available for datasource %s", name))
 	}
 	return info
 }
@@ -80,7 +84,7 @@ func (m *DBHelper) AddDB(name string, db *gorm.DB) {
 }
 
 func (m *DBHelper) GetActive(name string) *gorm.DB {
-	info := m.ensureInfo(name)
+	info := m.MustGet(name)
 	if info.InTx && info.Tx != nil {
 		return info.Tx
 	}
@@ -88,17 +92,17 @@ func (m *DBHelper) GetActive(name string) *gorm.DB {
 }
 
 func (m *DBHelper) GetPlain(name string) *gorm.DB {
-	info := m.ensureInfo(name)
+	info := m.MustGet(name)
 	return info.DB
 }
 
 func (m *DBHelper) IsInTx(name string) bool {
-	info := m.ensureInfo(name)
+	info := m.MustGet(name)
 	return info.InTx
 }
 
 func (m *DBHelper) setTx(name string, tx *gorm.DB) {
-	info := m.ensureInfo(name)
+	info := m.MustGet(name)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	info.Tx = tx
@@ -214,14 +218,14 @@ func (s *ServiceContext) IsInTransaction() bool {
 func (s *ServiceContext) copyDBHelperWithInfo(name string) *DBHelper {
 	copiedMgr := &DBHelper{
 		defaultName: s.dbMgr.defaultName,
-		infos:       make(map[string]*dbInfo),
+		infos:       make(map[string]*DBInfo),
 	}
 	s.dbMgr.mu.RLock()
 	for k, v := range s.dbMgr.infos {
 		copiedMgr.infos[k] = v
 	}
 	s.dbMgr.mu.RUnlock()
-	target := copiedMgr.ensureInfo(name)
+	target := copiedMgr.MustGet(name)
 	copied := *target
 	copiedMgr.infos[name] = &copied
 	return copiedMgr
@@ -246,7 +250,7 @@ func (s *ServiceContext) RunInTransaction(name string, fn func(txCtx *ServiceCon
 		return fmt.Errorf("no base DB available for datasource '%s'", name)
 	}
 
-	info := s.dbMgr.ensureInfo(name)
+	info := s.dbMgr.MustGet(name)
 	if info.InTx && info.Tx != nil {
 		// 已在事务中 → 使用 savepoint 模拟嵌套
 		txCtx := *s

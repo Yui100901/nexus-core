@@ -86,7 +86,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 	if plainDB == nil {
 		return nil, NewServiceError(500, "database not initialized in service context")
 	}
-	err = ctx.WithTransactionUsingDB(plainDB, func(txCtx *sc.ServiceContext) error {
+	err = ctx.RunInTransaction("plainDB", func(txCtx *sc.ServiceContext) error {
 		// txCtx already has Tx set and InTx true
 
 		// 查找或创建节点 using context-aware node service (no nested tx)

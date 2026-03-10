@@ -62,34 +62,12 @@ func CountWhere(ctx context.Context, db *gorm.DB, model any, query string, args 
 
 // UpdateByColumn 通用按列更新记录的函数，updates 可以是 struct 或 map[string]interface{}
 func UpdateByColumn[T any](ctx context.Context, db *gorm.DB, column string, value any, updates any) (int, error) {
+	updatesT := updates.(T)
 	rows, err := gorm.G[T](db).
 		Where(fmt.Sprintf("%s = ?", column), value).
-		Updates(ctx, updates)
+		Updates(ctx, updatesT)
 	if err != nil {
 		return 0, err
 	}
 	return rows, nil
-}
-
-// WithTransaction is a helper to run fn inside a database transaction (begin/commit/rollback)
-func WithTransaction(db *gorm.DB, fn func(tx *gorm.DB) error) error {
-	if db == nil {
-		return fmt.Errorf("db is nil in WithTransaction")
-	}
-	tx := db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	if err := fn(tx); err != nil {
-		_ = tx.Rollback().Error
-		return err
-	}
-	return tx.Commit().Error
 }

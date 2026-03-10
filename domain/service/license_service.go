@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"nexus-core/persistence/base"
 	"nexus-core/sc"
 	"time"
 
@@ -81,12 +82,7 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 		return fmt.Errorf("some products in scope do not exist")
 	}
 
-	// 批量插入
-	plain := ctx.MustPlainDB()
-	if plain == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
-	return ctx.WithTransactionUsingDB(plain, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		err := s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
 		if err != nil {
 			return err
@@ -98,11 +94,7 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 // ActivateLicenseIfNeeded 激活许可证
 func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
 	// Use transaction wrapper for consistency
-	db := ctx.MustPlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		return s.ActivateLicenseIfNeededWithCtx(txCtx, license)
 	})
 }
@@ -160,12 +152,7 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
 		return err
 	}
 
-	plain := ctx.MustPlainDB()
-	if plain == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
-
-	return ctx.WithTransactionUsingDB(plain, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		err := s.lr.BatchDeleteScopeByLicenseIdList(txCtx, txCtx.MustDefaultDB(), ids)
 		if err != nil {
 			return err

@@ -19,9 +19,9 @@ import (
 // @Date 2025/7/21 15 26
 //
 
-var defaultDBName = config.Get().DBConfig.DefaultDBName
+var DefaultDBName = config.Get().DBConfig.DefaultDBName
 
-var DefaultDBManager = NewDBManager(defaultDBName)
+var DefaultDBManager = NewDBManager(DefaultDBName)
 
 type DBManager struct {
 	mu            sync.Mutex

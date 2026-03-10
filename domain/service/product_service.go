@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"nexus-core/domain/entity"
+	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 	"time"
@@ -41,8 +42,7 @@ func (s *ProductService) BatchCreateProduct(ctx *sc.ServiceContext, products []*
 	}
 
 	// 2. 调用仓储层批量创建 在事务中
-	db := ctx.MustPlainDB()
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		// txCtx.MustDefaultDB() returns tx
 		return s.pr.BatchCreateProduct(txCtx, txCtx.MustDefaultDB(), products)
 	})
@@ -100,8 +100,7 @@ func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, pr
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
-	db := ctx.MustPlainDB()
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		err := s.pr.DeleteProduct(txCtx, txCtx.MustDefaultDB(), id)
 		if err != nil {
 			return err

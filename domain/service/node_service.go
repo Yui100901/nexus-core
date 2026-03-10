@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"nexus-core/domain/entity"
+	"nexus-core/persistence/base"
 	"nexus-core/persistence/repository"
 	"nexus-core/sc"
 )
@@ -78,11 +79,7 @@ func (s *NodeService) AutoCreateNodeWithContext(sCtx *sc.ServiceContext, deviceC
 // BatchCreateNode 批量创建节点
 // 支持一次性创建多个节点
 func (s *NodeService) BatchCreateNode(ctx *sc.ServiceContext, nodes []*entity.Node) error {
-	db := ctx.MustPlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		return s.nr.BatchCreateNode(txCtx, txCtx.MustDefaultDB(), nodes)
 	})
 }
@@ -115,12 +112,8 @@ func (s *NodeService) AddBinding(ctx *sc.ServiceContext, nodeID, licenseID, prod
 
 // AutoCreateBind 节点自动绑定
 func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID uint, license *entity.License) error {
-	db := ctx.MustPlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
 	// Use WithTransaction helper
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		count, err := s.nlr.CountActiveBindingsByLicenseForProduct(txCtx, txCtx.MustDefaultDB(), license.ID, productID)
 		if err != nil {
 			return fmt.Errorf("check binding failed")
@@ -176,11 +169,7 @@ func (s *NodeService) ForceUnbind(ctx *sc.ServiceContext, bindingID uint) error 
 }
 
 func (s *NodeService) DeleteNode(ctx *sc.ServiceContext, id uint) error {
-	db := ctx.MustPlainDB()
-	if db == nil {
-		return fmt.Errorf("database not initialized in service context")
-	}
-	return ctx.WithTransactionUsingDB(db, func(txCtx *sc.ServiceContext) error {
+	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		err := s.nr.DeleteNode(txCtx, txCtx.MustDefaultDB(), id)
 		if err != nil {
 			return err
