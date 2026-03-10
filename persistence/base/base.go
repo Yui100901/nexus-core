@@ -34,6 +34,7 @@ func NewDBManager(defaultName string) *DBManager {
 	}
 }
 
+// GetDB 获取指定名称的数据库实例，如果不存在则 panic
 func (m *DBManager) GetDB(name string) *gorm.DB {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -46,16 +47,9 @@ func (m *DBManager) GetDB(name string) *gorm.DB {
 	return db
 }
 
+// GetDefaultDB 获取默认数据库实例
 func (m *DBManager) GetDefaultDB() *gorm.DB {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	db, ok := m.dbInstanceMap[m.defaultName]
-	if !ok {
-		panic(fmt.Sprintf("default db instance %s not initialized", m.defaultName))
-	}
-
-	return db
+	return m.GetDB(m.defaultName)
 }
 
 func (m *DBManager) Init(cfgs []config.DBConfig) {
