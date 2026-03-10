@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"nexus-core/config"
 	"nexus-core/persistence/model"
@@ -24,7 +25,7 @@ var DefaultDBName = config.Get().DBConfig.DefaultDBName
 var DefaultDBManager = NewDBManager(DefaultDBName)
 
 type DBManager struct {
-	mu            sync.Mutex
+	mu            sync.RWMutex
 	dbInstanceMap map[string]*gorm.DB
 	defaultName   string
 }
@@ -38,8 +39,8 @@ func NewDBManager(defaultName string) *DBManager {
 
 // GetDB 获取指定名称的数据库实例，如果不存在则 panic
 func (m *DBManager) GetDB(name string) *gorm.DB {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	db, ok := m.dbInstanceMap[name]
 	if !ok {
@@ -56,19 +57,19 @@ func (m *DBManager) GetDefaultDB() *gorm.DB {
 
 func (m *DBManager) Init(cfgs []config.DBConnectConfig) {
 	for _, cfg := range cfgs {
-		if err := m.InitDB(cfg.Name, cfg.DBType, cfg.DBPath); err != nil {
+		if err := m.InitDB(cfg); err != nil {
 			panic(fmt.Sprintf("failed to initialize database: %v", err))
 		}
 	}
 }
 
-func (m *DBManager) InitDB(name, dbType, dsn string) error {
+func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// 如果已经存在，阻止重复初始化
-	if _, ok := m.dbInstanceMap[name]; ok {
-		return fmt.Errorf("db instance %s already initialized", name)
+	if _, ok := m.dbInstanceMap[cfg.Name]; ok {
+		return fmt.Errorf("db instance %s already initialized", cfg.Name)
 	}
 
 	var (
@@ -76,20 +77,20 @@ func (m *DBManager) InitDB(name, dbType, dsn string) error {
 		err error
 	)
 
-	switch dbType {
+	switch cfg.DBType {
 	case "sqlite":
-		db, err = InitDatabaseSqlite(dsn)
+		db, err = InitDatabaseSqlite(cfg)
 	case "mysql":
-		db, err = InitDatabaseMysql(dsn)
+		db, err = InitDatabaseMysql(cfg)
 	default:
-		return fmt.Errorf("unsupported database type: %s", dbType)
+		return fmt.Errorf("unsupported database type: %s", cfg.DBType)
 	}
 
 	if err != nil {
 		return err
 	}
 
-	m.dbInstanceMap[name] = db
+	m.dbInstanceMap[cfg.Name] = db
 	return nil
 }
 
@@ -107,10 +108,24 @@ func AutoMigrate(db *gorm.DB) {
 	}
 }
 
-func InitDatabaseSqlite(dsn string) (*gorm.DB, error) {
+func configureSQLDB(db *gorm.DB, cfg config.DBConnectConfig) error {
+	// get underlying *sql.DB and set sensible defaults
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	// sensible defaults; can be tuned via config later
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetimeMinutes) * time.Minute)
+	// optional ping to validate connection
+	return sqlDB.Ping()
+}
+
+func InitDatabaseSqlite(cfg config.DBConnectConfig) (*gorm.DB, error) {
 	// if dsn is a file path, ensure parent directories exist
-	if dsn != ":memory:" {
-		dir := filepath.Dir(dsn)
+	if cfg.DBPath != ":memory:" {
+		dir := filepath.Dir(cfg.DBPath)
 		if dir != "." && dir != "" {
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return nil, fmt.Errorf("failed to create directories for db path %s: %w", dir, err)
@@ -118,22 +133,30 @@ func InitDatabaseSqlite(dsn string) (*gorm.DB, error) {
 		}
 	}
 
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
 		fmt.Println("Failed to connect Sqlite!")
 		return nil, err
 	}
 	fmt.Println("Connected to Sqlite!")
+	// configure pool
+	if err := configureSQLDB(db, cfg); err != nil {
+		return nil, err
+	}
 	return db, err
 }
 
-func InitDatabaseMysql(dsn string) (*gorm.DB, error) {
+func InitDatabaseMysql(cfg config.DBConnectConfig) (*gorm.DB, error) {
 	// 尝试连接 MySQL
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
 		fmt.Println("Failed to connect MySQL!")
 		return nil, err
 	}
 	fmt.Println("Connected to MySQL!")
+	// configure pool
+	if err := configureSQLDB(db, cfg); err != nil {
+		return nil, err
+	}
 	return db, err
 }

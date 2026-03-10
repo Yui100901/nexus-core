@@ -22,9 +22,12 @@ type DBConfig struct {
 }
 
 type DBConnectConfig struct {
-	Name   string `yaml:"name"`
-	DBType string `yaml:"db_type"`
-	DBPath string `yaml:"db_path"`
+	Name                   string `yaml:"name"`
+	DBType                 string `yaml:"db_type"`
+	DBPath                 string `yaml:"db_path"`
+	MaxOpenConns           int    `yaml:"max_open_conns"`
+	MaxIdleConns           int    `yaml:"max_idle_conns"`
+	ConnMaxLifetimeMinutes int    `yaml:"conn_max_lifetime"`
 }
 
 var cfg *Config // 全局配置实例

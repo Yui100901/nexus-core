@@ -69,17 +69,29 @@ func (m *DBHelper) MustGet(name string) *DBInfo {
 	if name == "" {
 		name = m.defaultName
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	// fast read path using RLock
+	m.mu.RLock()
 	info, ok := m.infos[name]
-	if !ok || info == nil {
-		if name == m.defaultName {
+	m.mu.RUnlock()
+	if ok && info != nil {
+		return info
+	}
+
+	// if requested name is the default, try to create it under write lock
+	if name == m.defaultName {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		// double-check in write lock
+		info, ok = m.infos[name]
+		if !ok || info == nil {
 			info = NewDBInfo(base.DefaultDBManager.GetDefaultDB())
 			m.infos[name] = info
 		}
-		panic(fmt.Sprintf("no base DB available for datasource %s", name))
+		return info
 	}
-	return info
+
+	// non-default datasource missing -> panic as before
+	panic(fmt.Sprintf("no base DB available for datasource %s", name))
 }
 
 func (m *DBHelper) AddDB(name string, db *gorm.DB) {
