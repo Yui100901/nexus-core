@@ -7,7 +7,6 @@ import (
 	"nexus-core/persistence/base"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,97 +20,6 @@ import (
 
 // ServiceContextKey is the key used to store ServiceContext in gin.Context
 const ServiceContextKey = "ServiceContext"
-
-// DBInfo wraps DB/Tx and transaction flag for a single datasource
-type DBInfo struct {
-	DB   *gorm.DB
-	Tx   *gorm.DB
-	InTx bool
-}
-
-func newDBInfo(db *gorm.DB) *DBInfo {
-	return &DBInfo{
-		DB:   db,
-		Tx:   nil,
-		InTx: false,
-	}
-}
-
-// DBHelper holds multiple dbInfo instances keyed by datasource name
-type DBHelper struct {
-	mu            sync.RWMutex
-	infos         map[string]*DBInfo
-	defaultName   string //默认数据源
-	currentTxName string //当前事务数据源名称
-}
-
-func NewDBHelper(defaultDB *gorm.DB) *DBHelper {
-	if defaultDB == nil {
-		defaultDB = base.DefaultDBManager.GetDefaultDB()
-	}
-	m := &DBHelper{
-		infos:       make(map[string]*DBInfo),
-		defaultName: base.DefaultDBName,
-	}
-	m.infos[m.defaultName] = newDBInfo(defaultDB)
-	return m
-}
-
-func (m *DBHelper) MustGet(name string) *DBInfo {
-	if name == "" {
-		name = m.defaultName
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	info, ok := m.infos[name]
-	if !ok || info == nil {
-		if name == m.defaultName {
-			info = newDBInfo(base.DefaultDBManager.GetDefaultDB())
-			m.infos[name] = info
-		}
-		panic(fmt.Sprintf("no base DB available for datasource %s", name))
-	}
-	return info
-}
-
-func (m *DBHelper) AddDB(name string, db *gorm.DB) {
-	if name == "" {
-		name = m.defaultName
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.infos[name] = newDBInfo(db)
-}
-
-func (m *DBHelper) GetActive(name string) *gorm.DB {
-	info := m.MustGet(name)
-	if info.InTx && info.Tx != nil {
-		return info.Tx
-	}
-	return info.DB
-}
-
-func (m *DBHelper) GetPlain(name string) *gorm.DB {
-	info := m.MustGet(name)
-	return info.DB
-}
-
-func (m *DBHelper) IsInTx(name string) bool {
-	info := m.MustGet(name)
-	return info.InTx
-}
-
-func (m *DBHelper) setTx(name string, tx *gorm.DB) {
-	info := m.MustGet(name)
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	info.Tx = tx
-	info.InTx = tx != nil
-}
-
-func (m *DBHelper) clearTx(name string) {
-	m.setTx(name, nil)
-}
 
 // ServiceContext now holds a DBHelper to support multiple datasources
 type ServiceContext struct {
@@ -153,7 +61,7 @@ func InitContext(c *gin.Context) *ServiceContext {
 
 	stdCtx := c.Request.Context()
 	//这里获取默认数据库实例并创建DBHelper
-	dbHelper := NewDBHelper(base.DefaultDBManager.GetDefaultDB())
+	dbHelper := NewDBHelper([]string{base.DefaultDBName})
 
 	return NewServiceContext(stdCtx, c, metaData, logger, dbHelper)
 }
@@ -177,7 +85,7 @@ func (s *ServiceContext) Error(err error) {
 
 func (s *ServiceContext) ensureDBHelper() {
 	if s.dbMgr == nil {
-		s.dbMgr = NewDBHelper(base.DefaultDBManager.GetDefaultDB())
+		s.dbMgr = NewDBHelper([]string{base.DefaultDBName})
 	}
 }
 
