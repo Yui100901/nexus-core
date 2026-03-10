@@ -130,7 +130,13 @@ func (s *ServiceContext) copyDBHelperWithInfo(name string) *DBHelper {
 	}
 	s.dbMgr.mu.RLock()
 	for k, v := range s.dbMgr.infos {
-		copiedMgr.infos[k] = v
+		// deep copy each DBInfo so the copied manager does not share pointers
+		if v == nil {
+			copiedMgr.infos[k] = nil
+			continue
+		}
+		temp := *v
+		copiedMgr.infos[k] = &temp
 	}
 	s.dbMgr.mu.RUnlock()
 	target := copiedMgr.MustGet(name)
@@ -143,9 +149,10 @@ func newSavepointName() string {
 	return "sp_" + strings.ReplaceAll(uuid.New().String(), "-", "_")
 }
 
-func rollbackOnPanic(tx *gorm.DB, rollbackSQL string) {
+func rollbackOnPanic(ctx context.Context, tx *gorm.DB, rollbackSQL string) {
 	if r := recover(); r != nil {
-		_ = tx.Exec(rollbackSQL).Error
+		// ensure Exec uses the provided context
+		_ = tx.WithContext(ctx).Exec(rollbackSQL).Error
 		panic(r)
 	}
 }
@@ -161,15 +168,16 @@ func (s *ServiceContext) RunInTransaction(name string, fn func(txCtx *ServiceCon
 	info := s.dbMgr.MustGet(name)
 	if info.InTx && info.Tx != nil {
 		// 已在事务中 → 使用 savepoint 模拟嵌套
+		tx := info.Tx.WithContext(s.Context)
+		// create a copied context so modifications don't affect parent
 		txCtx := *s
 		copiedMgr := s.copyDBHelperWithInfo(name)
 		txCtx.dbMgr = copiedMgr
-		tx := info.Tx
 		sp := newSavepointName()
 		if err := tx.Exec("SAVEPOINT " + sp).Error; err != nil {
 			return err
 		}
-		defer rollbackOnPanic(tx, "ROLLBACK TO SAVEPOINT "+sp)
+		defer rollbackOnPanic(s.Context, tx, "ROLLBACK TO SAVEPOINT "+sp)
 
 		if err := fn(&txCtx); err != nil {
 			_ = tx.Exec("ROLLBACK TO SAVEPOINT " + sp).Error
@@ -179,12 +187,12 @@ func (s *ServiceContext) RunInTransaction(name string, fn func(txCtx *ServiceCon
 		return nil
 	}
 
-	// 不在事务中 → 开启新事务
-	tx := dbToUse.Begin()
+	// 不在事务中 → 开启新事务，确保 tx 使用当前 context
+	tx := dbToUse.WithContext(s.Context).Begin()
 	if tx.Error != nil {
 		return tx.Error
 	}
-	defer rollbackOnPanic(tx, "ROLLBACK")
+	defer rollbackOnPanic(s.Context, tx, "ROLLBACK")
 
 	txCtx := *s
 	copiedMgr := s.copyDBHelperWithInfo(name)
