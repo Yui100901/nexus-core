@@ -51,7 +51,7 @@ func execCommand(name string, arg ...string) error {
 func main() {
 	cfg := config.Load()
 	fmt.Println("Nexus Core starting...")
-	base.DefaultDBManager.Init(cfg.DBList)
+	base.DefaultDBManager.Init(cfg.DBConfig.ConnectList)
 	base.AutoMigrate(base.DefaultDBManager.GetDefaultDB())
 	r := api.WebEngine
 
