@@ -14,13 +14,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// ServiceContextKey is the key used to store ServiceContext in gin.Context
-const ServiceContextKey = "ServiceContext"
-
 //
 // @Author yfy2001
 // @Date 2026/2/27 14 22
 //
+
+// ServiceContextKey is the key used to store ServiceContext in gin.Context
+const ServiceContextKey = "ServiceContext"
 
 // dbInfo wraps DB/Tx and transaction flag for a single datasource
 type dbInfo struct {
@@ -70,7 +70,6 @@ func (m *DBHelper) ensureInfo(name string) *dbInfo {
 	return info
 }
 
-// AddDB registers a datasource under the given name (overwrites if exists)
 func (m *DBHelper) AddDB(name string, db *gorm.DB) {
 	if name == "" {
 		name = m.defaultName
@@ -80,7 +79,6 @@ func (m *DBHelper) AddDB(name string, db *gorm.DB) {
 	m.infos[name] = newDBInfo(db)
 }
 
-// GetActive returns the active DB for the given datasource name (tx if in tx else base DB)
 func (m *DBHelper) GetActive(name string) *gorm.DB {
 	info := m.ensureInfo(name)
 	if info.InTx && info.Tx != nil {
@@ -89,19 +87,16 @@ func (m *DBHelper) GetActive(name string) *gorm.DB {
 	return info.DB
 }
 
-// GetPlain returns the base DB (not tx) for the datasource
 func (m *DBHelper) GetPlain(name string) *gorm.DB {
 	info := m.ensureInfo(name)
 	return info.DB
 }
 
-// IsInTx reports whether given datasource is in transaction
 func (m *DBHelper) IsInTx(name string) bool {
 	info := m.ensureInfo(name)
 	return info.InTx
 }
 
-// setTx attaches tx to the dbInfo for given name
 func (m *DBHelper) setTx(name string, tx *gorm.DB) {
 	info := m.ensureInfo(name)
 	m.mu.Lock()
@@ -110,23 +105,19 @@ func (m *DBHelper) setTx(name string, tx *gorm.DB) {
 	info.InTx = tx != nil
 }
 
-// clearTx clears tx on given datasource
 func (m *DBHelper) clearTx(name string) {
 	m.setTx(name, nil)
 }
 
 // ServiceContext now holds a DBHelper to support multiple datasources
 type ServiceContext struct {
-	context.Context // 标准库 context
-	GinContext      *gin.Context
-	Metadata        map[string]any
-	Logger          *log.Logger
-
-	// DB/Tx propagation fields (managed at service layer)
-	dbMgr *DBHelper
+	context.Context
+	GinContext *gin.Context
+	Metadata   map[string]any
+	Logger     *log.Logger
+	dbMgr      *DBHelper
 }
 
-// NewServiceContext 构造函数
 func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger, mgr *DBHelper) *ServiceContext {
 	return &ServiceContext{
 		Context:    ctx,
@@ -137,7 +128,6 @@ func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]
 	}
 }
 
-// InitContext 从 gin.Context 初始化 ServiceContext
 func InitContext(c *gin.Context) *ServiceContext {
 	traceID := c.GetHeader("X-Trace-ID")
 	if traceID == "" {
@@ -157,10 +147,8 @@ func InitContext(c *gin.Context) *ServiceContext {
 		"RequestID": requestID,
 	}
 
-	// 使用标准库 context，优先取 request.Context()
 	stdCtx := c.Request.Context()
-
-	// create DBHelper with default DB
+	//这里获取默认数据库实例并创建DBHelper
 	dbHelper := NewDBHelper(base.DefaultDBManager.GetDefaultDB())
 
 	return NewServiceContext(stdCtx, c, metaData, logger, dbHelper)
@@ -183,29 +171,24 @@ func (s *ServiceContext) Error(err error) {
 	s.Logger.Println(err)
 }
 
-// DB/Transaction helpers on ServiceContext
-func (s *ServiceContext) ensureDBMgr() {
+func (s *ServiceContext) ensureDBHelper() {
 	if s.dbMgr == nil {
 		s.dbMgr = NewDBHelper(base.DefaultDBManager.GetDefaultDB())
 	}
 }
 
-// MustDefaultDB returns the active DB (tx if in transaction) for default datasource
-// Guaranteed to return a non-nil *gorm.DB by creating a default DB if necessary
 func (s *ServiceContext) MustDefaultDB() *gorm.DB {
-	s.ensureDBMgr()
+	s.ensureDBHelper()
 	db := s.dbMgr.GetActive("")
 	if db == nil {
-		// ensure non-nil by connecting
 		db = base.DefaultDBManager.GetDefaultDB()
 		s.dbMgr.AddDB("", db)
 	}
 	return db
 }
 
-// MustPlainDB returns the underlying base DB (not the tx) for the default datasource (or given name - kept for compatibility)
 func (s *ServiceContext) MustPlainDB() *gorm.DB {
-	s.ensureDBMgr()
+	s.ensureDBHelper()
 	db := s.dbMgr.GetPlain("")
 	if db == nil {
 		db = base.DefaultDBManager.GetDefaultDB()
@@ -214,13 +197,11 @@ func (s *ServiceContext) MustPlainDB() *gorm.DB {
 	return db
 }
 
-// GetActiveDB returns active DB for named datasource (tx if present)
 func (s *ServiceContext) GetActiveDB(name string) *gorm.DB {
-	s.ensureDBMgr()
+	s.ensureDBHelper()
 	return s.dbMgr.GetActive(name)
 }
 
-// IsInTransaction reports whether default datasource is in transaction
 func (s *ServiceContext) IsInTransaction() bool {
 	if s.dbMgr == nil {
 		return false
@@ -228,178 +209,60 @@ func (s *ServiceContext) IsInTransaction() bool {
 	return s.dbMgr.IsInTx("")
 }
 
-// WithTransaction starts a transaction on default DB, sets Tx/InTx on a copied ServiceContext
-// and calls fn with the new ServiceContext; handles commit/rollback and panic.
-// If the caller is already in a transaction for the same datasource, a savepoint is used to emulate nested transaction
-func (s *ServiceContext) WithTransaction(baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	return s.WithTransactionFor("", baseDB, fn)
-}
+// ---------- 公共工具函数 ----------
 
-// WithTransactionFor starts a transaction for a named datasource (name=="" => default)
-func (s *ServiceContext) WithTransactionFor(name string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	s.ensureDBMgr()
-
-	// decide dbToUse: provided baseDB overrides stored base
-	var dbToUse *gorm.DB
-	if baseDB != nil {
-		dbToUse = baseDB
-	} else {
-		dbToUse = s.dbMgr.GetPlain(name)
+func (s *ServiceContext) copyDBHelperWithInfo(name string) *DBHelper {
+	copiedMgr := &DBHelper{
+		defaultName: s.dbMgr.defaultName,
+		infos:       make(map[string]*dbInfo),
 	}
-	if dbToUse == nil {
-		return fmt.Errorf("no base DB available for WithTransaction for datasource '%s'", name)
-	}
-
-	// If already in transaction on this datasource and baseDB is nil or equals current base DB, use savepoint to emulate nested transaction
-	info := s.dbMgr.ensureInfo(name)
-	if info != nil && info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
-		// copy context and manager (shallow copy of manager pointer is fine; we'll copy dbInfo)
-		txCtx := *s
-		// create a shallow copy of DBHelper but deep-copy the specific dbInfo to avoid mutating outer info
-		copiedMgr := &DBHelper{}
-		// copy minimal fields
-		copiedMgr.defaultName = s.dbMgr.defaultName
-		copiedMgr.infos = make(map[string]*dbInfo)
-		// copy all existing infos pointers but replace the one for 'name' with a copied value
-		s.dbMgr.mu.RLock()
-		for k, v := range s.dbMgr.infos {
-			copiedMgr.infos[k] = v
-		}
-		s.dbMgr.mu.RUnlock()
-		// deep-copy the targeted info
-		copied := *info
-		copiedMgr.infos[name] = &copied
-		txCtx.dbMgr = copiedMgr
-
-		// reuse existing tx
-		tx := info.Tx
-		copiedMgr.infos[name].Tx = tx
-		copiedMgr.infos[name].InTx = true
-
-		// create unique savepoint name
-		sp := "sp_" + strings.ReplaceAll(uuid.New().String(), "-", "_")
-		if err := tx.Exec("SAVEPOINT " + sp).Error; err != nil {
-			return err
-		}
-
-		// ensure we attempt to rollback to savepoint on panic
-		defer func() {
-			if r := recover(); r != nil {
-				_ = tx.Exec("ROLLBACK TO SAVEPOINT " + sp).Error
-				panic(r)
-			}
-		}()
-
-		if err := fn(&txCtx); err != nil {
-			// rollback to savepoint to undo inner changes
-			_ = tx.Exec("ROLLBACK TO SAVEPOINT " + sp).Error
-			return err
-		}
-
-		// attempt to release savepoint; ignore release error but log if occurs
-		_ = tx.Exec("RELEASE SAVEPOINT " + sp).Error
-		return nil
-	}
-
-	// Otherwise begin a new transaction on dbToUse
-	tx := dbToUse.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	// defer panic handling to rollback the started tx
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback().Error
-			panic(r)
-		}
-	}()
-
-	// copy service context and attach tx (copy DBHelper and targeted dbInfo)
-	txCtx := *s
-	// deep copy DBHelper structure to avoid mutating outer context
-	copiedMgr := &DBHelper{}
-	copiedMgr.defaultName = s.dbMgr.defaultName
-	copiedMgr.infos = make(map[string]*dbInfo)
 	s.dbMgr.mu.RLock()
 	for k, v := range s.dbMgr.infos {
 		copiedMgr.infos[k] = v
 	}
 	s.dbMgr.mu.RUnlock()
-	// ensure targeted info exists and copy it
-	targetInfo := copiedMgr.ensureInfo(name)
-	copied := *targetInfo
+	target := copiedMgr.ensureInfo(name)
+	copied := *target
 	copiedMgr.infos[name] = &copied
+	return copiedMgr
+}
 
-	// attach the new tx
-	copiedMgr.infos[name].Tx = tx
-	copiedMgr.infos[name].InTx = true
-	txCtx.dbMgr = copiedMgr
+func newSavepointName() string {
+	return "sp_" + strings.ReplaceAll(uuid.New().String(), "-", "_")
+}
 
-	if err := fn(&txCtx); err != nil {
-		_ = tx.Rollback().Error
-		return err
+func rollbackOnPanic(tx *gorm.DB, rollbackSQL string) {
+	if r := recover(); r != nil {
+		_ = tx.Exec(rollbackSQL).Error
+		panic(r)
 	}
-	// commit and clear tx on original manager as needed
-	if err := tx.Commit().Error; err != nil {
-		return err
-	}
-	return nil
 }
 
-// WithTransactionUsingDB convenience: use given db and start transaction for default datasource
-func (s *ServiceContext) WithTransactionUsingDB(db *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	return s.WithTransaction(db, fn)
-}
+// ---------- 统一事务 API ----------
 
-// WithSavepoint is a convenience wrapper that behaves like WithTransaction but prefers savepoint when already in tx
-func (s *ServiceContext) WithSavepoint(baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	return s.WithSavepointFor("", baseDB, fn)
-}
-
-// WithSavepointFor operates on named datasource
-func (s *ServiceContext) WithSavepointFor(name string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	s.ensureDBMgr()
-
-	var dbToUse *gorm.DB
-	if baseDB != nil {
-		dbToUse = baseDB
-	} else {
-		dbToUse = s.dbMgr.GetPlain(name)
+// RunInTransaction 在指定数据源上运行事务逻辑
+func (s *ServiceContext) RunInTransaction(dbName string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
+	s.ensureDBHelper()
+	dbToUse := baseDB
+	if dbToUse == nil {
+		dbToUse = s.dbMgr.GetPlain(dbName)
 	}
 	if dbToUse == nil {
-		return fmt.Errorf("no base DB available for WithSavepoint for datasource '%s'", name)
+		return fmt.Errorf("no base DB available for datasource '%s'", dbName)
 	}
 
-	info := s.dbMgr.ensureInfo(name)
-	if info != nil && info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
-		// nested: use savepoint similar to WithTransactionFor
+	info := s.dbMgr.ensureInfo(dbName)
+	if info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
+		// 已在事务中 → 使用 savepoint 模拟嵌套
 		txCtx := *s
-		copiedMgr := &DBHelper{}
-		copiedMgr.defaultName = s.dbMgr.defaultName
-		copiedMgr.infos = make(map[string]*dbInfo)
-		s.dbMgr.mu.RLock()
-		for k, v := range s.dbMgr.infos {
-			copiedMgr.infos[k] = v
-		}
-		s.dbMgr.mu.RUnlock()
-		copied := *info
-		copiedMgr.infos[name] = &copied
+		copiedMgr := s.copyDBHelperWithInfo(dbName)
 		txCtx.dbMgr = copiedMgr
-
 		tx := info.Tx
-		copiedMgr.infos[name].Tx = tx
-		copiedMgr.infos[name].InTx = true
-
-		sp := "sp_" + strings.ReplaceAll(uuid.New().String(), "-", "_")
+		sp := newSavepointName()
 		if err := tx.Exec("SAVEPOINT " + sp).Error; err != nil {
 			return err
 		}
-		defer func() {
-			if r := recover(); r != nil {
-				_ = tx.Exec("ROLLBACK TO SAVEPOINT " + sp).Error
-				panic(r)
-			}
-		}()
+		defer rollbackOnPanic(tx, "ROLLBACK TO SAVEPOINT "+sp)
 
 		if err := fn(&txCtx); err != nil {
 			_ = tx.Exec("ROLLBACK TO SAVEPOINT " + sp).Error
@@ -409,33 +272,17 @@ func (s *ServiceContext) WithSavepointFor(name string, baseDB *gorm.DB, fn func(
 		return nil
 	}
 
-	// Not in transaction -> behave like WithTransactionFor (start a new tx)
+	// 不在事务中 → 开启新事务
 	tx := dbToUse.Begin()
 	if tx.Error != nil {
 		return tx.Error
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback().Error
-			panic(r)
-		}
-	}()
+	defer rollbackOnPanic(tx, "ROLLBACK")
 
 	txCtx := *s
-	copiedMgr := &DBHelper{}
-	copiedMgr.defaultName = s.dbMgr.defaultName
-	copiedMgr.infos = make(map[string]*dbInfo)
-	s.dbMgr.mu.RLock()
-	for k, v := range s.dbMgr.infos {
-		copiedMgr.infos[k] = v
-	}
-	s.dbMgr.mu.RUnlock()
-	targetInfo := copiedMgr.ensureInfo(name)
-	copied := *targetInfo
-	copiedMgr.infos[name] = &copied
-
-	copiedMgr.infos[name].Tx = tx
-	copiedMgr.infos[name].InTx = true
+	copiedMgr := s.copyDBHelperWithInfo(dbName)
+	copiedMgr.infos[dbName].Tx = tx
+	copiedMgr.infos[dbName].InTx = true
 	txCtx.dbMgr = copiedMgr
 
 	if err := fn(&txCtx); err != nil {
@@ -445,7 +292,7 @@ func (s *ServiceContext) WithSavepointFor(name string, baseDB *gorm.DB, fn func(
 	return tx.Commit().Error
 }
 
-// WithSavepointUsingDB convenience wrapper
-func (s *ServiceContext) WithSavepointUsingDB(db *gorm.DB, fn func(txCtx *ServiceContext) error) error {
-	return s.WithSavepoint(db, fn)
+// RunInSavepoint 在已有事务中使用 savepoint，或开启新事务
+func (s *ServiceContext) RunInSavepoint(name string, baseDB *gorm.DB, fn func(txCtx *ServiceContext) error) error {
+	return s.RunInTransaction(name, baseDB, fn)
 }
