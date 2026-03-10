@@ -1,5 +1,13 @@
-port: 8080
-db_path: test.db
-swagger_enabled: true
-auto_open_browser: true
+port: 8080                # 服务器监听端口
+swagger_enabled: true     # 是否启用Swagger文档
+auto_open_browser: true  # 是否自动打开浏览器
+
+db_list:                  # 数据库文件路径列表
+  - name: test
+    db_type: sqlite
+    db_path: ./test.db
+  - name: log_db
+    db_type: mysql
+    db_path: root:pass123456@tcp(127.0.0.1:3306)/log_db
+
 

@@ -19,7 +19,7 @@ import (
 // @Date 2025/7/21 15 26
 //
 
-var DefaultDBManager = NewDBManager()
+var DefaultDBManager = NewDBManager("test")
 
 type DBManager struct {
 	mu            sync.Mutex
@@ -27,10 +27,10 @@ type DBManager struct {
 	defaultName   string
 }
 
-func NewDBManager() *DBManager {
+func NewDBManager(defaultName string) *DBManager {
 	return &DBManager{
 		dbInstanceMap: make(map[string]*gorm.DB),
-		defaultName:   "main",
+		defaultName:   defaultName,
 	}
 }
 
@@ -98,7 +98,6 @@ func (m *DBManager) InitDB(name, dbType, dsn string) error {
 }
 
 func AutoMigrate(db *gorm.DB) {
-
 	// 自动迁移模型，确保表存在
 	if err := db.AutoMigrate(
 		&model.License{},
