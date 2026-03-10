@@ -37,18 +37,18 @@ func newDBInfo(db *gorm.DB) *dbInfo {
 	}
 }
 
-// DBManager holds multiple dbInfo instances keyed by datasource name
-type DBManager struct {
+// DBHelper holds multiple dbInfo instances keyed by datasource name
+type DBHelper struct {
 	mu          sync.RWMutex
 	infos       map[string]*dbInfo
 	defaultName string
 }
 
-func NewDBManager(defaultDB *gorm.DB) *DBManager {
+func NewDBHelper(defaultDB *gorm.DB) *DBHelper {
 	if defaultDB == nil {
 		defaultDB = base.DefaultDBManager.GetDefaultDB()
 	}
-	m := &DBManager{
+	m := &DBHelper{
 		infos:       make(map[string]*dbInfo),
 		defaultName: "default",
 	}
@@ -56,7 +56,7 @@ func NewDBManager(defaultDB *gorm.DB) *DBManager {
 	return m
 }
 
-func (m *DBManager) ensureInfo(name string) *dbInfo {
+func (m *DBHelper) ensureInfo(name string) *dbInfo {
 	if name == "" {
 		name = m.defaultName
 	}
@@ -71,7 +71,7 @@ func (m *DBManager) ensureInfo(name string) *dbInfo {
 }
 
 // AddDB registers a datasource under the given name (overwrites if exists)
-func (m *DBManager) AddDB(name string, db *gorm.DB) {
+func (m *DBHelper) AddDB(name string, db *gorm.DB) {
 	if name == "" {
 		name = m.defaultName
 	}
@@ -81,7 +81,7 @@ func (m *DBManager) AddDB(name string, db *gorm.DB) {
 }
 
 // GetActive returns the active DB for the given datasource name (tx if in tx else base DB)
-func (m *DBManager) GetActive(name string) *gorm.DB {
+func (m *DBHelper) GetActive(name string) *gorm.DB {
 	info := m.ensureInfo(name)
 	if info.InTx && info.Tx != nil {
 		return info.Tx
@@ -90,19 +90,19 @@ func (m *DBManager) GetActive(name string) *gorm.DB {
 }
 
 // GetPlain returns the base DB (not tx) for the datasource
-func (m *DBManager) GetPlain(name string) *gorm.DB {
+func (m *DBHelper) GetPlain(name string) *gorm.DB {
 	info := m.ensureInfo(name)
 	return info.DB
 }
 
 // IsInTx reports whether given datasource is in transaction
-func (m *DBManager) IsInTx(name string) bool {
+func (m *DBHelper) IsInTx(name string) bool {
 	info := m.ensureInfo(name)
 	return info.InTx
 }
 
 // setTx attaches tx to the dbInfo for given name
-func (m *DBManager) setTx(name string, tx *gorm.DB) {
+func (m *DBHelper) setTx(name string, tx *gorm.DB) {
 	info := m.ensureInfo(name)
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -111,11 +111,11 @@ func (m *DBManager) setTx(name string, tx *gorm.DB) {
 }
 
 // clearTx clears tx on given datasource
-func (m *DBManager) clearTx(name string) {
+func (m *DBHelper) clearTx(name string) {
 	m.setTx(name, nil)
 }
 
-// ServiceContext now holds a DBManager to support multiple datasources
+// ServiceContext now holds a DBHelper to support multiple datasources
 type ServiceContext struct {
 	context.Context // 标准库 context
 	GinContext      *gin.Context
@@ -123,11 +123,11 @@ type ServiceContext struct {
 	Logger          *log.Logger
 
 	// DB/Tx propagation fields (managed at service layer)
-	dbMgr *DBManager
+	dbMgr *DBHelper
 }
 
 // NewServiceContext 构造函数
-func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger, mgr *DBManager) *ServiceContext {
+func NewServiceContext(ctx context.Context, c *gin.Context, metadata map[string]any, logger *log.Logger, mgr *DBHelper) *ServiceContext {
 	return &ServiceContext{
 		Context:    ctx,
 		GinContext: c,
@@ -160,10 +160,10 @@ func InitContext(c *gin.Context) *ServiceContext {
 	// 使用标准库 context，优先取 request.Context()
 	stdCtx := c.Request.Context()
 
-	// create DBManager with default DB
-	dbMgr := NewDBManager(base.DefaultDBManager.GetDefaultDB())
+	// create DBHelper with default DB
+	dbHelper := NewDBHelper(base.DefaultDBManager.GetDefaultDB())
 
-	return NewServiceContext(stdCtx, c, metaData, logger, dbMgr)
+	return NewServiceContext(stdCtx, c, metaData, logger, dbHelper)
 }
 
 func (s *ServiceContext) SetMetadata(key string, value any) {
@@ -186,7 +186,7 @@ func (s *ServiceContext) Error(err error) {
 // DB/Transaction helpers on ServiceContext
 func (s *ServiceContext) ensureDBMgr() {
 	if s.dbMgr == nil {
-		s.dbMgr = NewDBManager(base.DefaultDBManager.GetDefaultDB())
+		s.dbMgr = NewDBHelper(base.DefaultDBManager.GetDefaultDB())
 	}
 }
 
@@ -255,8 +255,8 @@ func (s *ServiceContext) WithTransactionFor(name string, baseDB *gorm.DB, fn fun
 	if info != nil && info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
 		// copy context and manager (shallow copy of manager pointer is fine; we'll copy dbInfo)
 		txCtx := *s
-		// create a shallow copy of DBManager but deep-copy the specific dbInfo to avoid mutating outer info
-		copiedMgr := &DBManager{}
+		// create a shallow copy of DBHelper but deep-copy the specific dbInfo to avoid mutating outer info
+		copiedMgr := &DBHelper{}
 		// copy minimal fields
 		copiedMgr.defaultName = s.dbMgr.defaultName
 		copiedMgr.infos = make(map[string]*dbInfo)
@@ -314,10 +314,10 @@ func (s *ServiceContext) WithTransactionFor(name string, baseDB *gorm.DB, fn fun
 		}
 	}()
 
-	// copy service context and attach tx (copy DBManager and targeted dbInfo)
+	// copy service context and attach tx (copy DBHelper and targeted dbInfo)
 	txCtx := *s
-	// deep copy DBManager structure to avoid mutating outer context
-	copiedMgr := &DBManager{}
+	// deep copy DBHelper structure to avoid mutating outer context
+	copiedMgr := &DBHelper{}
 	copiedMgr.defaultName = s.dbMgr.defaultName
 	copiedMgr.infos = make(map[string]*dbInfo)
 	s.dbMgr.mu.RLock()
@@ -374,7 +374,7 @@ func (s *ServiceContext) WithSavepointFor(name string, baseDB *gorm.DB, fn func(
 	if info != nil && info.InTx && info.Tx != nil && (baseDB == nil || baseDB == info.DB) {
 		// nested: use savepoint similar to WithTransactionFor
 		txCtx := *s
-		copiedMgr := &DBManager{}
+		copiedMgr := &DBHelper{}
 		copiedMgr.defaultName = s.dbMgr.defaultName
 		copiedMgr.infos = make(map[string]*dbInfo)
 		s.dbMgr.mu.RLock()
@@ -422,7 +422,7 @@ func (s *ServiceContext) WithSavepointFor(name string, baseDB *gorm.DB, fn func(
 	}()
 
 	txCtx := *s
-	copiedMgr := &DBManager{}
+	copiedMgr := &DBHelper{}
 	copiedMgr.defaultName = s.dbMgr.defaultName
 	copiedMgr.infos = make(map[string]*dbInfo)
 	s.dbMgr.mu.RLock()
