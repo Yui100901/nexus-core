@@ -112,10 +112,16 @@ func AutoMigrate(db *gorm.DB) {
 	}
 }
 
-func ConfigureSQLDB(sqlDB *sql.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMinutes int) error {
-	sqlDB.SetMaxOpenConns(maxOpenConns)
-	sqlDB.SetMaxIdleConns(maxIdleConns)
-	sqlDB.SetConnMaxLifetime(time.Duration(connMaxLifetimeMinutes) * time.Minute)
+func ConfigureSQLDB(sqlDB *sql.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMinutes *int) error {
+	if maxOpenConns != nil {
+		sqlDB.SetMaxOpenConns(*maxOpenConns)
+	}
+	if maxIdleConns != nil {
+		sqlDB.SetMaxIdleConns(*maxIdleConns)
+	}
+	if connMaxLifetimeMinutes != nil {
+		sqlDB.SetConnMaxLifetime(time.Duration(*connMaxLifetimeMinutes) * time.Minute)
+	}
 	// optional ping to validate connection
 	return sqlDB.Ping()
 }
