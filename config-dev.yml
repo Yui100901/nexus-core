@@ -2,6 +2,10 @@ port: 8080
 swagger_enabled: true
 auto_open_browser: false
 
+# Swagger UI 配置
+swagger_url: /swagger/index.html
+swagger_doc_url: /swagger/doc.json
+
 db_list:
   default_db_name: test
   connect_list:

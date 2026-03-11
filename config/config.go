@@ -14,6 +14,11 @@ type Config struct {
 	DBConfig        *DBConfig `yaml:"db_list"`           // 数据库文件路径
 	SwaggerEnabled  bool      `yaml:"swagger_enabled"`   // 是否启用Swagger文档
 	AutoOpenBrowser bool      `yaml:"auto_open_browser"` // 是否自动打开浏览器
+	// SwaggerURL 是用于打印/打开的 Swagger UI 地址或路径。可配置为完整 URL（以 http:// 或 https:// 开头），
+	// 或以 "/" 开头的相对路径（会自动加上 http://localhost:PORT 前缀），或者包含端口占位符 %d（例如 http://localhost:%d/swagger/index.html）
+	SwaggerURL string `yaml:"swagger_url"`
+	// SwaggerDocURL 是 swagger UI 用来加载 swagger JSON 的 URL（默认为 /swagger/doc.json）
+	SwaggerDocURL string `yaml:"swagger_doc_url"`
 }
 
 type DBConfig struct {
@@ -49,6 +54,9 @@ func Load() *Config {
 		},
 		SwaggerEnabled:  true,
 		AutoOpenBrowser: true,
+		// sensible defaults
+		SwaggerURL:    "/swagger/index.html",
+		SwaggerDocURL: "/swagger/doc.json",
 	}
 	f, err := os.ReadFile("config-dev.yml")
 	if err != nil {

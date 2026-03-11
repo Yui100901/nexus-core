@@ -61,7 +61,35 @@ func main() {
 	// start monitor (after DB ready)
 	monitor.GlobalMonitor.Start()
 
-	swaggerUrl := fmt.Sprintf("http://localhost:%d/swagger/index.html", cfg.Port)
+	// construct swagger URL based on config.SwaggerURL
+	var swaggerUrl string
+	if cfg.SwaggerURL == "" {
+		cfg.SwaggerURL = "/swagger/index.html"
+	}
+	// if it's a full URL, use as-is (but allow %d for port formatting)
+	if len(cfg.SwaggerURL) >= 7 && (cfg.SwaggerURL[:7] == "http://" || cfg.SwaggerURL[:8] == "https://") {
+		// if contains %d, format with port
+		if containsPercentD(cfg.SwaggerURL) {
+			swaggerUrl = fmt.Sprintf(cfg.SwaggerURL, cfg.Port)
+		} else {
+			swaggerUrl = cfg.SwaggerURL
+		}
+	} else if containsPercentD(cfg.SwaggerURL) {
+		// not a full URL but has %d - treat as format and prefix with http://localhost:%d
+		swaggerUrl = fmt.Sprintf(cfg.SwaggerURL, cfg.Port)
+		// if resulting string does not start with http, prefix localhost
+		if !(len(swaggerUrl) >= 7 && (swaggerUrl[:7] == "http://" || swaggerUrl[:8] == "https://")) {
+			swaggerUrl = fmt.Sprintf("http://localhost:%d%s", cfg.Port, swaggerUrl)
+		}
+	} else {
+		// relative path or simple path: prefix with http://localhost:PORT
+		if len(cfg.SwaggerURL) > 0 && cfg.SwaggerURL[0] == '/' {
+			swaggerUrl = fmt.Sprintf("http://localhost:%d%s", cfg.Port, cfg.SwaggerURL)
+		} else {
+			swaggerUrl = fmt.Sprintf("http://localhost:%d/%s", cfg.Port, cfg.SwaggerURL)
+		}
+	}
+
 	fmt.Println("Swagger UI: ", swaggerUrl)
 	// optionally open browser if enabled
 	if cfg.AutoOpenBrowser && cfg.SwaggerEnabled {
@@ -100,4 +128,14 @@ func main() {
 	monitor.GlobalMonitor.Stop()
 
 	fmt.Println("Server exiting")
+}
+
+// containsPercentD checks if a string contains the %d format verb
+func containsPercentD(s string) bool {
+	for i := 0; i < len(s)-1; i++ {
+		if s[i] == '%' && s[i+1] == 'd' {
+			return true
+		}
+	}
+	return false
 }
