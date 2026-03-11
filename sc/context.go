@@ -93,7 +93,7 @@ func (s *ServiceContext) MustDefaultDB() *gorm.DB {
 	s.ensureDBHelper()
 	db := s.dbMgr.GetActive(base.DefaultDBName)
 	if db == nil {
-		db = base.DefaultDBManager.GetDefaultDB()
+		db = base.MainDBManager.GetDefaultDB()
 		s.dbMgr.AddDB(base.DefaultDBName, db)
 	}
 	return db
@@ -103,7 +103,7 @@ func (s *ServiceContext) MustPlainDB() *gorm.DB {
 	s.ensureDBHelper()
 	db := s.dbMgr.GetPlain(base.DefaultDBName)
 	if db == nil {
-		db = base.DefaultDBManager.GetDefaultDB()
+		db = base.MainDBManager.GetDefaultDB()
 		s.dbMgr.AddDB(base.DefaultDBName, db)
 	}
 	return db

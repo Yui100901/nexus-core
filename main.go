@@ -51,8 +51,8 @@ func execCommand(name string, arg ...string) error {
 func main() {
 	cfg := config.Load()
 	fmt.Println("Nexus Core starting...")
-	base.DefaultDBManager.Init(cfg.DBConfig.ConnectList)
-	base.AutoMigrate(base.DefaultDBManager.GetDefaultDB())
+	base.MainDBManager = base.InitDBManager(cfg.DBConfig)
+	base.AutoMigrate(base.MainDBManager.GetDefaultDB())
 	r := api.WebEngine
 
 	// register default routes

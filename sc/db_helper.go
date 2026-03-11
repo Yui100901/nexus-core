@@ -43,14 +43,14 @@ func NewDBHelper(dbNameList []string) *DBHelper {
 
 	// 如果没有传入任何数据源名，就至少注册默认数据源
 	if len(dbNameList) == 0 {
-		defaultDB := base.DefaultDBManager.GetDefaultDB()
+		defaultDB := base.MainDBManager.GetDefaultDB()
 		m.infos[m.defaultName] = NewDBInfo(defaultDB)
 		return m
 	}
 
 	// 遍历传入的数据源名，逐一注册
 	for _, name := range dbNameList {
-		db := base.DefaultDBManager.GetDB(name)
+		db := base.MainDBManager.GetDB(name)
 		if db == nil {
 			panic(fmt.Sprintf("no base DB available for datasource '%s'", name))
 		}
@@ -59,7 +59,7 @@ func NewDBHelper(dbNameList []string) *DBHelper {
 
 	// 确保默认数据源一定存在
 	if _, ok := m.infos[m.defaultName]; !ok {
-		m.infos[m.defaultName] = NewDBInfo(base.DefaultDBManager.GetDefaultDB())
+		m.infos[m.defaultName] = NewDBInfo(base.MainDBManager.GetDefaultDB())
 	}
 
 	return m
@@ -84,7 +84,7 @@ func (m *DBHelper) MustGet(name string) *DBInfo {
 		// double-check in write lock
 		info, ok = m.infos[name]
 		if !ok || info == nil {
-			info = NewDBInfo(base.DefaultDBManager.GetDefaultDB())
+			info = NewDBInfo(base.MainDBManager.GetDefaultDB())
 			m.infos[name] = info
 		}
 		return info

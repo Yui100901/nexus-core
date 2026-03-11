@@ -22,7 +22,7 @@ import (
 
 var DefaultDBName = config.Get().DBConfig.DefaultDBName
 
-var DefaultDBManager = NewDBManager(DefaultDBName)
+var MainDBManager *DBManager
 
 type DBManager struct {
 	mu            sync.RWMutex
@@ -30,11 +30,17 @@ type DBManager struct {
 	defaultName   string
 }
 
-func NewDBManager(defaultName string) *DBManager {
-	return &DBManager{
+func InitDBManager(cfg *config.DBConfig) *DBManager {
+	m := &DBManager{
 		dbInstanceMap: make(map[string]*gorm.DB),
-		defaultName:   defaultName,
+		defaultName:   cfg.DefaultDBName,
 	}
+	for _, connectConfig := range cfg.ConnectList {
+		if err := m.InitDB(connectConfig); err != nil {
+			panic(fmt.Sprintf("failed to initialize database: %v", err))
+		}
+	}
+	return m
 }
 
 // GetDB 获取指定名称的数据库实例，如果不存在则 panic
@@ -53,14 +59,6 @@ func (m *DBManager) GetDB(name string) *gorm.DB {
 // GetDefaultDB 获取默认数据库实例
 func (m *DBManager) GetDefaultDB() *gorm.DB {
 	return m.GetDB(m.defaultName)
-}
-
-func (m *DBManager) Init(cfgs []config.DBConnectConfig) {
-	for _, cfg := range cfgs {
-		if err := m.InitDB(cfg); err != nil {
-			panic(fmt.Sprintf("failed to initialize database: %v", err))
-		}
-	}
 }
 
 func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
