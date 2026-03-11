@@ -1,13 +1,20 @@
-port: 8080                # 服务器监听端口
-swagger_enabled: true     # 是否启用Swagger文档
-auto_open_browser: true  # 是否自动打开浏览器
+port: 8080
+swagger_enabled: true
+auto_open_browser: false
 
-db_list:                  # 数据库文件路径列表
-  - name: test
-    db_type: sqlite
-    db_path: ./test.db
-  - name: log_db
-    db_type: mysql
-    db_path: root:pass123456@tcp(127.0.0.1:3306)/log_db
+db_list:
+  default_db_name: test
+  connect_list:
+    - name: test
+      db_type: sqlite
+      db_path: ./data/test.db
+      max_open_conns: 20
+      max_idle_conns: 10
+      conn_max_lifetime: 30
 
-
+#    - name: analytics_db
+#      db_type: postgres
+#      db_path: host=127.0.0.1 port=5432 user=admin password=secret dbname=analytics sslmode=disable
+#      max_open_conns: 50
+#      # max_idle_conns 未配置 → nil
+#      # conn_max_lifetime 未配置 → nil

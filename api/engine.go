@@ -62,7 +62,8 @@ func RegisterDefaultRoutes() {
 	// serve swagger UI under /swagger when enabled in config
 	cfg := config.Get()
 	if cfg.SwaggerEnabled {
-		WebEngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
+		// the generated swagger JSON is served at /swagger/doc.json by swag; use that URL in the UI
+		WebEngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
 	}
 }
 
