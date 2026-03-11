@@ -1,6 +1,7 @@
 package base
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,8 +85,11 @@ func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 	if err != nil {
 		return err
 	}
-
-	err = ConfigureSQLDB(db, cfg.MaxOpenConns, cfg.MaxIdleConns, cfg.ConnMaxLifetimeMinutes)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("error to get sqlDB: %s", err)
+	}
+	err = ConfigureSQLDB(sqlDB, cfg.MaxOpenConns, cfg.MaxIdleConns, cfg.ConnMaxLifetimeMinutes)
 	if err != nil {
 		return fmt.Errorf("error to configure db: %s", err)
 	}
@@ -108,11 +112,7 @@ func AutoMigrate(db *gorm.DB) {
 	}
 }
 
-func ConfigureSQLDB(db *gorm.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMinutes int) error {
-	sqlDB, err := db.DB()
-	if err != nil {
-		return err
-	}
+func ConfigureSQLDB(sqlDB *sql.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMinutes int) error {
 	sqlDB.SetMaxOpenConns(maxOpenConns)
 	sqlDB.SetMaxIdleConns(maxIdleConns)
 	sqlDB.SetConnMaxLifetime(time.Duration(connMaxLifetimeMinutes) * time.Minute)
