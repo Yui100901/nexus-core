@@ -75,16 +75,7 @@ func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 		err error
 	)
 
-	switch cfg.DBType {
-	case "sqlite":
-		db, err = InitDatabaseSqlite(cfg)
-	case "mysql":
-		db, err = InitDatabaseMysql(cfg)
-	case "postgres":
-		db, err = InitDatabasePostgres(cfg)
-	default:
-		return fmt.Errorf("unsupported database type: %s", cfg.DBType)
-	}
+	db, err = InitDatabase(cfg)
 	if err != nil {
 		return err
 	}
@@ -127,6 +118,24 @@ func ConfigureSQLDB(sqlDB *sql.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMi
 	}
 	// optional ping to validate connection
 	return sqlDB.Ping()
+}
+
+func InitDatabase(cfg config.DBConnectConfig) (*gorm.DB, error) {
+	var (
+		db  *gorm.DB
+		err error
+	)
+	switch cfg.DBType {
+	case "sqlite":
+		db, err = InitDatabaseSqlite(cfg)
+	case "mysql":
+		db, err = InitDatabaseMysql(cfg)
+	case "postgres":
+		db, err = InitDatabasePostgres(cfg)
+	default:
+		return nil, fmt.Errorf("unsupported database type: %s", cfg.DBType)
+	}
+	return db, err
 }
 
 func InitDatabaseSqlite(cfg config.DBConnectConfig) (*gorm.DB, error) {
