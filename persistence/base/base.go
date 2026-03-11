@@ -13,6 +13,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -79,6 +80,8 @@ func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 		db, err = InitDatabaseSqlite(cfg)
 	case "mysql":
 		db, err = InitDatabaseMysql(cfg)
+	case "postgres":
+		db, err = InitDatabasePostgres(cfg)
 	default:
 		return fmt.Errorf("unsupported database type: %s", cfg.DBType)
 	}
@@ -154,5 +157,15 @@ func InitDatabaseMysql(cfg config.DBConnectConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 	fmt.Println("Connected to MySQL!")
+	return db, err
+}
+
+func InitDatabasePostgres(cfg config.DBConnectConfig) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(cfg.DBPath), &gorm.Config{})
+	if err != nil {
+		fmt.Println("Failed to connect Postgres!")
+		return nil, err
+	}
+	fmt.Println("Connected to Postgres!")
 	return db, err
 }
