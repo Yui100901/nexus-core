@@ -27,13 +27,11 @@ var MainDBManager *DBManager
 type DBManager struct {
 	mu            sync.RWMutex
 	dbInstanceMap map[string]*gorm.DB
-	defaultName   string
 }
 
 func InitDBManager(cfg *config.DBConfig) *DBManager {
 	m := &DBManager{
 		dbInstanceMap: make(map[string]*gorm.DB),
-		defaultName:   cfg.DefaultDBName,
 	}
 	for _, connectConfig := range cfg.ConnectList {
 		if err := m.InitDB(connectConfig); err != nil {
@@ -58,7 +56,7 @@ func (m *DBManager) GetDB(name string) *gorm.DB {
 
 // GetDefaultDB 获取默认数据库实例
 func (m *DBManager) GetDefaultDB() *gorm.DB {
-	return m.GetDB(m.defaultName)
+	return m.GetDB(DefaultDBName)
 }
 
 func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
@@ -83,9 +81,13 @@ func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 	default:
 		return fmt.Errorf("unsupported database type: %s", cfg.DBType)
 	}
-
 	if err != nil {
 		return err
+	}
+
+	err = ConfigureSQLDB(db, cfg.MaxOpenConns, cfg.MaxIdleConns, cfg.ConnMaxLifetimeMinutes)
+	if err != nil {
+		return fmt.Errorf("error to configure db: %s", err)
 	}
 
 	m.dbInstanceMap[cfg.Name] = db
@@ -106,16 +108,14 @@ func AutoMigrate(db *gorm.DB) {
 	}
 }
 
-func configureSQLDB(db *gorm.DB, cfg config.DBConnectConfig) error {
-	// get underlying *sql.DB and set sensible defaults
+func ConfigureSQLDB(db *gorm.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMinutes int) error {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return err
 	}
-	// sensible defaults; can be tuned via config later
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetimeMinutes) * time.Minute)
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetConnMaxLifetime(time.Duration(connMaxLifetimeMinutes) * time.Minute)
 	// optional ping to validate connection
 	return sqlDB.Ping()
 }
@@ -137,10 +137,6 @@ func InitDatabaseSqlite(cfg config.DBConnectConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 	fmt.Println("Connected to Sqlite!")
-	// configure pool
-	if err := configureSQLDB(db, cfg); err != nil {
-		return nil, err
-	}
 	return db, err
 }
 
@@ -152,9 +148,5 @@ func InitDatabaseMysql(cfg config.DBConnectConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 	fmt.Println("Connected to MySQL!")
-	// configure pool
-	if err := configureSQLDB(db, cfg); err != nil {
-		return nil, err
-	}
 	return db, err
 }
