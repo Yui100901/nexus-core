@@ -2,9 +2,6 @@ package dto
 
 import (
 	"errors"
-	"fmt"
-
-	"nexus-core/domain/entity"
 )
 
 // -------------------- Command --------------------
@@ -13,11 +10,11 @@ import (
 // @Description Command to create a license
 // @Tags License
 type CreateLicenseCommand struct {
-	ValidityHours int        `json:"validity_hours" binding:"required"` // 有效时长（小时）
-	MaxNodes      int        `json:"max_nodes" binding:"required"`      // 最大节点数
-	MaxConcurrent int        `json:"max_concurrent" binding:"required"` // 并发限制
-	ScopeList     []ScopeDTO `json:"scope_list" binding:"required"`     // 授权范围列表
-	Remark        *string    `json:"remark"`                            // 备注
+	ProductID     uint    `json:"product_id" binding:"required"`     // 授权范围列表
+	ValidityHours int     `json:"validity_hours" binding:"required"` // 有效时长（小时）
+	MaxNodes      int     `json:"max_nodes" binding:"required"`      // 最大节点数
+	MaxConcurrent int     `json:"max_concurrent" binding:"required"` // 并发限制
+	Remark        *string `json:"remark"`                            // 备注
 }
 
 // Validate 对 CreateLicenseCommand 做轻量校验，供 controller / service 使用
@@ -28,14 +25,16 @@ func (c *CreateLicenseCommand) Validate() error {
 	if c.ValidityHours <= 0 {
 		return errors.New("validity_hours must be > 0")
 	}
-	if len(c.ScopeList) == 0 {
-		return errors.New("scope_list is required and must contain at least one scope")
+	if c.MaxNodes < 0 {
+		return errors.New("max_nodes must be >= 0")
 	}
-	for i := range c.ScopeList {
-		if err := c.ScopeList[i].Validate(); err != nil {
-			return fmt.Errorf("scope_list[%d]: %w", i, err)
-		}
+	if c.MaxConcurrent < 0 {
+		return errors.New("max_concurrent must be >= 0")
 	}
+	if c.ProductID <= 0 {
+		return errors.New("product_id must be > 0")
+	}
+
 	return nil
 }
 
@@ -67,37 +66,4 @@ type GetLicenseByIDQuery struct {
 // @Description Query by license key
 type GetLicenseByKeyQuery struct {
 	Key string `form:"key" binding:"required"` // 许可证密钥
-}
-
-// -------------------- DTO 辅助 --------------------
-
-// ScopeDTO 用于传输授权范围的DTO对象
-// @Description Scope transfer object
-type ScopeDTO struct {
-	ProductID   uint   `json:"product_id" binding:"required"` // 产品ID
-	FeatureMask string `json:"feature_mask"`                  // 功能模块掩码
-}
-
-// Validate 对 ScopeDTO 做轻量校验
-func (s *ScopeDTO) Validate() error {
-	if s == nil {
-		return errors.New("scope is nil")
-	}
-	if s.ProductID == 0 {
-		return errors.New("product_id is required and must be > 0")
-	}
-	return nil
-}
-
-// ToEntityScopes 将DTO对象列表转换为领域对象列表
-// 注意：为了最小改动，保留当前映射函数（controller/service 仍然依赖 entity.Scope）。
-func ToEntityScopes(scopeDTOs []ScopeDTO) []entity.Scope {
-	var scopes []entity.Scope
-	for _, s := range scopeDTOs {
-		scopes = append(scopes, entity.Scope{
-			ProductID:   s.ProductID,
-			FeatureMask: s.FeatureMask,
-		})
-	}
-	return scopes
 }

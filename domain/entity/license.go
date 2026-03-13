@@ -25,59 +25,39 @@ const (
 // 包含许可证的基本信息、激活状态、有效期和授权范围
 type License struct {
 	ID            uint
+	ProductID     uint       // 产品id
 	LicenseKey    string     // 许可证密钥，用于客户端验证
 	ValidityHours int        // 有效时长（小时），从激活时刻开始计算
+	IssuedAt      time.Time  // 颁发时间，许可证创建时设置
 	ActivatedAt   *time.Time // 激活时间，首次激活时设置
 	ExpiredAt     *time.Time // 过期时间，基于激活时间和有效时长计算
 	Status        int        // 当前状态，使用LicenseStatus枚举值
 	Remark        *string    // 备注信息
-	ScopeList     []Scope    // 授权范围列表，定义了许可证对产品的使用权限
+	MaxNodes      int        // 最大节点数 (0 = 不限制)
+	MaxConcurrent int        // 并发限制 (0 = 不限制)
+	FeatureMask   string     // 功能模块掩码
+	//ScopeList     []Scope    // 授权范围列表，定义了许可证对产品的使用权限
 }
 
 // NewLicense 工厂方法
 // 创建一个新的许可证对象，默认状态为未激活
-func NewLicense(validityHours int, maxNodes int, concurrentLimit int, remark *string, scopes []Scope) (*License, error) {
+func NewLicense(productID uint, validityHours int, maxNodes int, concurrentLimit int, remark *string) (*License, error) {
 	if validityHours <= 0 {
 		return nil, fmt.Errorf("validity hours must be positive")
 	}
 
 	license := &License{
+		ProductID:     productID,
 		LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
 		ValidityHours: validityHours,
+		IssuedAt:      time.Now(),
 		Status:        StatusInactive, // 初始状态必须是未激活
+		MaxNodes:      maxNodes,
+		MaxConcurrent: concurrentLimit,
 		Remark:        remark,
-		ScopeList:     scopes,
 	}
 
 	return license, nil
-}
-
-// Scope 定义许可证对特定产品的授权范围
-// 包括功能模块掩码、节点数限制和并发限制
-type Scope struct {
-	ID            uint
-	ProductID     uint   // 关联的产品ID，指向Product实体
-	MaxNodes      int    `gorm:"type:int;not null;default:0"` // 最大节点数 (0 = 不限制)
-	MaxConcurrent int    `gorm:"type:int;not null;default:0"` // 并发限制 (0 = 不限制)
-	FeatureMask   string // 功能模块掩码，用于控制功能模块访问权限
-}
-
-func NewScope(productID uint, maxNodes, concurrentLimit int, featureMask string) *Scope {
-	return &Scope{
-		ProductID:     productID,
-		MaxNodes:      maxNodes,
-		MaxConcurrent: concurrentLimit,
-		FeatureMask:   featureMask,
-	}
-}
-
-// GetScopeProductIdList 获取授权范围中的产品ID列表
-func (l *License) GetScopeProductIdList() []uint {
-	ids := make([]uint, 0, len(l.ScopeList))
-	for _, p := range l.ScopeList {
-		ids = append(ids, p.ID)
-	}
-	return ids
 }
 
 func (l *License) IsActive() bool {
@@ -169,49 +149,49 @@ func (l *License) CheckStatus(now time.Time) int {
 	return l.Status
 }
 
-// AddScope 添加授权范围
-// 为许可证添加对特定产品的授权
-func (l *License) AddScope(scope Scope) bool {
-	for _, s := range l.ScopeList {
-		if s.ProductID == scope.ProductID {
-			return false
-		}
-	}
-	l.ScopeList = append(l.ScopeList, scope)
-	return true
-}
+//// AddScope 添加授权范围
+//// 为许可证添加对特定产品的授权
+//func (l *License) AddScope(scope Scope) bool {
+//	for _, s := range l.ScopeList {
+//		if s.ProductID == scope.ProductID {
+//			return false
+//		}
+//	}
+//	l.ScopeList = append(l.ScopeList, scope)
+//	return true
+//}
 
-// UpdateScope 更新特定产品的授权范围
-// 根据产品ID找到对应的授权范围并替换为新的授权范围
-func (l *License) UpdateScope(productID uint, newScope Scope) bool {
-	for i, s := range l.ScopeList {
-		if s.ProductID == productID {
-			l.ScopeList[i] = newScope
-			return true
-		}
-	}
-	return false
-}
+//// UpdateScope 更新特定产品的授权范围
+//// 根据产品ID找到对应的授权范围并替换为新的授权范围
+//func (l *License) UpdateScope(productID uint, newScope Scope) bool {
+//	for i, s := range l.ScopeList {
+//		if s.ProductID == productID {
+//			l.ScopeList[i] = newScope
+//			return true
+//		}
+//	}
+//	return false
+//}
 
-// RemoveScope 删除特定产品的授权范围
-// 根据产品ID移除对应的授权范围
-func (l *License) RemoveScope(productID uint) bool {
-	for i, s := range l.ScopeList {
-		if s.ProductID == productID {
-			l.ScopeList = append(l.ScopeList[:i], l.ScopeList[i+1:]...)
-			return true
-		}
-	}
-	return false
-}
+//// RemoveScope 删除特定产品的授权范围
+//// 根据产品ID移除对应的授权范围
+//func (l *License) RemoveScope(productID uint) bool {
+//	for i, s := range l.ScopeList {
+//		if s.ProductID == productID {
+//			l.ScopeList = append(l.ScopeList[:i], l.ScopeList[i+1:]...)
+//			return true
+//		}
+//	}
+//	return false
+//}
 
 // ValidateMaxNodesForProduct 验证许可证特定产品授权中的最大节点数
 func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int) bool {
-	scope := l.GetScope(productID)
-	if scope == nil {
-		return false
-	}
-	if scope.MaxNodes > 0 && currentBindings >= scope.MaxNodes {
+	//scope := l.GetScope(productID)
+	//if scope == nil {
+	//	return false
+	//}
+	if l.MaxNodes > 0 && currentBindings >= l.MaxNodes {
 		return false
 	}
 	return true
@@ -219,22 +199,22 @@ func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int
 
 // ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数
 func (l *License) ValidateMaxConcurrentForProduct(productID uint, currentConcurrent int) bool {
-	scope := l.GetScope(productID)
-	if scope == nil {
-		return false
-	}
-	if scope.MaxConcurrent > 0 && currentConcurrent >= scope.MaxConcurrent {
+	//scope := l.GetScope(productID)
+	//if scope == nil {
+	//	return false
+	//}
+	if l.MaxConcurrent > 0 && currentConcurrent >= l.MaxConcurrent {
 		return false
 	}
 	return true
 }
 
-// GetScope 获取授权范围
-func (l *License) GetScope(productID uint) *Scope {
-	for _, s := range l.ScopeList {
-		if s.ProductID == productID {
-			return &s
-		}
-	}
-	return nil
-}
+//// GetScope 获取授权范围
+//func (l *License) GetScope(productID uint) *Scope {
+//	for _, s := range l.ScopeList {
+//		if s.ProductID == productID {
+//			return &s
+//		}
+//	}
+//	return nil
+//}

@@ -37,25 +37,6 @@ func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, db *gorm.DB, l
 	license.ExpiredAt = pLicense.ExpiredAt
 	license.Status = pLicense.Status
 
-	// 保存 Scope 列表
-	var pScopeList []model.LicenseScope
-	for _, scope := range license.ScopeList {
-		pScopeList = append(pScopeList, model.LicenseScope{
-			LicenseID:   license.ID,
-			ProductID:   scope.ProductID,
-			FeatureMask: scope.FeatureMask,
-		})
-	}
-	if len(pScopeList) > 0 {
-		if err := gorm.G[model.LicenseScope](db).CreateInBatches(ctx, &pScopeList, 0); err != nil {
-			return err
-		}
-		// 回填 Scope ID
-		for i := range license.ScopeList {
-			license.ScopeList[i].ID = pScopeList[i].ID
-		}
-	}
-
 	return nil
 }
 
@@ -80,36 +61,6 @@ func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, db *gorm.
 		licenses[i].ActivatedAt = pLicenses[i].ActivatedAt
 		licenses[i].ExpiredAt = pLicenses[i].ExpiredAt
 		licenses[i].Status = pLicenses[i].Status
-	}
-
-	return nil
-}
-
-// BatchCreateLicenseScope 批量创建 LicenseScope
-func (r *LicenseRepository) BatchCreateLicenseScope(ctx *sc.ServiceContext, db *gorm.DB, licenses []*entity.License) error {
-	var pScopeList []model.LicenseScope
-	for _, license := range licenses {
-		for _, scope := range license.ScopeList {
-			pScopeList = append(pScopeList, model.LicenseScope{
-				LicenseID:   license.ID,
-				ProductID:   scope.ProductID,
-				FeatureMask: scope.FeatureMask,
-			})
-		}
-	}
-
-	if len(pScopeList) > 0 {
-		if err := gorm.G[model.LicenseScope](db).CreateInBatches(ctx, &pScopeList, 100); err != nil {
-			return err
-		}
-		// 回填 Scope ID
-		idx := 0
-		for i := range licenses {
-			for j := range licenses[i].ScopeList {
-				licenses[i].ScopeList[j].ID = pScopeList[idx].ID
-				idx++
-			}
-		}
 	}
 
 	return nil
@@ -154,12 +105,7 @@ func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint
 		return nil, nil
 	}
 
-	scopes, err := r.GetScopeListByLicenseId(ctx, db, m.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return toEntityLicense(m, scopes), nil
+	return toEntityLicense(m), nil
 }
 
 // GetByKey 根据 LicenseKey 获取领域对象 License
@@ -171,12 +117,7 @@ func (r *LicenseRepository) GetByKey(ctx *sc.ServiceContext, db *gorm.DB, key st
 		return nil, err
 	}
 
-	scopes, err := r.GetScopeListByLicenseId(ctx, db, m.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return toEntityLicense(m, scopes), nil
+	return toEntityLicense(m), nil
 }
 
 func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, db *gorm.DB, status int) ([]uint, error) {
@@ -211,57 +152,19 @@ func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, db *gorm
 	return nil
 }
 
-// BatchDeleteScopeByLicenseIdList 批量删除 License下的Scope
-func (r *LicenseRepository) BatchDeleteScopeByLicenseIdList(ctx *sc.ServiceContext, db *gorm.DB, ids []uint) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	// 删除 Scope（依赖 LicenseID）
-	if _, err := gorm.G[model.LicenseScope](db).
-		Where("license_id IN ?", ids).
-		Delete(ctx); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetScopeListByLicenseId 获取许可范围列表
-func (r *LicenseRepository) GetScopeListByLicenseId(ctx *sc.ServiceContext, db *gorm.DB, id uint) ([]model.LicenseScope, error) {
-	return gorm.G[model.LicenseScope](db).Where("license_id = ?", id).Find(ctx)
-}
-
-// AddScope 添加 Scope
-func (r *LicenseRepository) AddScope(ctx *sc.ServiceContext, db *gorm.DB, licenseID uint, scope entity.Scope) error {
-	pScope := &model.LicenseScope{
-		LicenseID:   licenseID,
-		ProductID:   scope.ProductID,
-		FeatureMask: scope.FeatureMask,
-	}
-	return gorm.G[model.LicenseScope](db).Create(ctx, pScope)
-}
-
-func toEntityLicense(m *model.License, scopes []model.LicenseScope) *entity.License {
-	var scopeList []entity.Scope
-	for _, s := range scopes {
-		scopeList = append(scopeList, entity.Scope{
-			ID:            s.ID,
-			ProductID:     s.ProductID,
-			FeatureMask:   s.FeatureMask,
-			MaxNodes:      s.MaxNodes,
-			MaxConcurrent: s.MaxConcurrent,
-		})
-	}
+func toEntityLicense(m *model.License) *entity.License {
 
 	return &entity.License{
 		ID:            m.ID,
+		ProductID:     m.ProductID,
 		LicenseKey:    m.LicenseKey,
 		ValidityHours: m.ValidityHours,
 		ActivatedAt:   m.ActivatedAt,
 		ExpiredAt:     m.ExpiredAt,
 		Status:        m.Status,
 		Remark:        m.Remark,
-		ScopeList:     scopeList,
+		MaxNodes:      m.MaxNodes,
+		MaxConcurrent: m.MaxConcurrent,
+		FeatureMask:   m.FeatureMask,
 	}
 }

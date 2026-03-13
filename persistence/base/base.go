@@ -96,7 +96,6 @@ func AutoMigrate(db *gorm.DB) {
 	// 自动迁移模型，确保表存在
 	if err := db.AutoMigrate(
 		&model.License{},
-		&model.LicenseScope{},
 		&model.Product{},
 		&model.ProductVersion{},
 		&model.Node{},

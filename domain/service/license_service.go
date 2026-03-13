@@ -34,14 +34,10 @@ func NewLicenseService() *LicenseService {
 
 // CreateLicense 创建单个许可证
 func (s *LicenseService) CreateLicense(ctx *sc.ServiceContext, license *entity.License) error {
-	productIDs := license.GetScopeProductIdList()
-	if len(productIDs) == 0 {
-		return fmt.Errorf("license scope cannot be empty")
-	}
 
 	// 检查产品是否都存在
 	db := ctx.MustDefaultDB()
-	exist, err := s.pr.ExistIds(ctx, db, productIDs)
+	exist, err := s.pr.ExistIds(ctx, db, []uint{license.ProductID})
 	if err != nil {
 		return err
 	}
@@ -62,9 +58,8 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 	// 收集所有需要的产品 ID
 	allIDs := make(map[uint]struct{})
 	for _, license := range licenses {
-		for _, id := range license.GetScopeProductIdList() {
-			allIDs[id] = struct{}{}
-		}
+		id := license.ProductID
+		allIDs[id] = struct{}{}
 	}
 
 	var allIDList []uint
@@ -83,11 +78,7 @@ func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*
 	}
 
 	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		err := s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
-		if err != nil {
-			return err
-		}
-		return s.lr.BatchCreateLicenseScope(txCtx, txCtx.MustDefaultDB(), licenses)
+		return s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
 	})
 }
 
@@ -153,10 +144,6 @@ func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
 	}
 
 	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		err := s.lr.BatchDeleteScopeByLicenseIdList(txCtx, txCtx.MustDefaultDB(), ids)
-		if err != nil {
-			return err
-		}
 		return s.lr.BatchDeleteByIdList(txCtx, txCtx.MustDefaultDB(), ids)
 	})
 }
