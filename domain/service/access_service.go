@@ -63,7 +63,6 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 	}
 
 	// 验证许可证是否对产品有效
-	//scope := license.GetScope(productID)
 	if license.ProductID != productID {
 		return nil, NewServiceError(400, "product not supported")
 	}
