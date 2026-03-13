@@ -24,7 +24,7 @@ type ProductVersion struct {
 	BaseModel
 	ProductID   uint       `gorm:"index;not null"`            // 所属产品 Product.ID
 	VersionCode string     `gorm:"type:varchar(50);not null"` // 版本号
-	ReleaseDate *time.Time `gorm:"type:datetime;not null"`    // 发布时间
+	ReleaseDate *time.Time `gorm:"type:datetime"`             // 发布时间
 	Description *string    `gorm:"type:text"`                 // 版本说明
 	IsEnabled   int        `gorm:"type:int;index;not null"`   // 是否启用
 }
