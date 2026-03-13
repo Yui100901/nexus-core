@@ -7,6 +7,12 @@ import "time"
 // @Date 2026/1/16 10 15
 //
 
+const (
+	VersionStatusUnreleased = 0 // 0 未发布
+	VersionStatusAvailable  = 1 // 1 可用
+	VersionStatusDeprecated = 2 // 2 已经弃用
+)
+
 // Product 产品信息
 type Product struct {
 	BaseModel
@@ -26,7 +32,7 @@ type ProductVersion struct {
 	VersionCode string     `gorm:"type:varchar(50);not null"` // 版本号
 	ReleaseDate *time.Time `gorm:"type:datetime"`             // 发布时间
 	Description *string    `gorm:"type:text"`                 // 版本说明
-	IsEnabled   int        `gorm:"type:int;index;not null"`   // 是否启用
+	Status      int        `gorm:"type:int;index;not null"`   // 是否启用
 }
 
 func (ProductVersion) TableName() string {

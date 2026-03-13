@@ -122,7 +122,7 @@ func (r *ProductRepository) CreateNewVersion(ctx *sc.ServiceContext, db *gorm.DB
 		VersionCode: v.VersionCode,
 		ReleaseDate: v.ReleaseDate,
 		Description: v.Description,
-		IsEnabled:   v.IsEnabled,
+		Status:      v.IsEnabled,
 	}
 	err := gorm.G[model.ProductVersion](db).
 		Create(ctx, m)
@@ -138,7 +138,7 @@ func (r *ProductRepository) ReleaseVersion(ctx *sc.ServiceContext, db *gorm.DB, 
 	_, err := gorm.G[model.ProductVersion](db).
 		Where("id = ?", versionID).
 		Updates(ctx, model.ProductVersion{
-			IsEnabled:   1,
+			Status:      1,
 			ReleaseDate: &releaseDate,
 		})
 	return err
@@ -219,7 +219,7 @@ func toEntityProduct(m *model.Product, versions []model.ProductVersion) *entity.
 			VersionCode: v.VersionCode,
 			ReleaseDate: v.ReleaseDate,
 			Description: v.Description,
-			IsEnabled:   v.IsEnabled,
+			IsEnabled:   v.Status,
 		})
 	}
 	return &entity.Product{
