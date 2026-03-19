@@ -5,15 +5,27 @@ package model
 // @Date 2026/3/19 11 06
 //
 
-//通用的功能表，存储产品侧实现，或可实现的功能
+//通用的功能表，存储产品功能
+
+const (
+	FeatureTypeAbility = "ability" //产品能力
+	FeatureTypeCommand = "command" //下发命令
+
+)
 
 type Feature struct {
-	BaseModel
-	Name        string `gorm:"type:varchar(255);not null;unique"` // 功能名称
-	Description string `gorm:"type:text"`                         // 功能描述
-	FeatureMask string `gorm:"type:varchar(255)"`                 // 功能模块掩码
+	Identifier  string  `json:"identifier" gorm:"type:varchar(255);unique"` // 功能标识符（通用表内唯一，产品内唯一）
+	Type        string  `json:"type" gorm:"type:varchar(255);not null"`     // 功能类型
+	Name        string  `json:"name" gorm:"type:varchar(255);not null"`     // 功能名称
+	Description *string `json:"description" gorm:"type:text"`               // 功能描述
+	Data        *string `json:"data" gorm:"type:text"`                      // 相关数据
 }
 
-func (Feature) TableName() string {
-	return "feature"
+type CommonFeature struct {
+	BaseModel
+	Feature
+}
+
+func (CommonFeature) TableName() string {
+	return "common_feature"
 }
