@@ -1,6 +1,7 @@
 package model
 
 import "time"
+import "gorm.io/datatypes"
 
 //
 // @Author yfy2001
@@ -16,9 +17,10 @@ const (
 // Product 产品信息
 type Product struct {
 	BaseModel
-	Name                  string  `gorm:"uniqueIndex;type:varchar(100);not null"` // 产品名称
-	Description           *string `gorm:"type:text"`                              // 产品描述
-	MinSupportedVersionID *uint   `gorm:"index"`                                  // 最低支持版本
+	Name                  string         `gorm:"uniqueIndex;type:varchar(100);not null"` // 产品名称
+	Description           *string        `gorm:"type:text"`                              // 产品描述
+	MinSupportedVersionID *uint          `gorm:"index"`                                  // 最低支持版本
+	FeatureList           datatypes.JSON `gorm:"type:json"`                              // json保存功能列表
 }
 
 func (Product) TableName() string {
