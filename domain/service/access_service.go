@@ -186,7 +186,7 @@ func (s *AccessService) Heartbeat(ctx *sc.ServiceContext, deviceCode string, pro
 
 	// 并发检查
 	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, productID)
-	if !license.ValidateMaxConcurrentForProduct(productID, totalConcurrent) {
+	if !license.ValidateMaxConcurrentForProduct(totalConcurrent) {
 		return nil, NewServiceError(400, "maximum concurrent exceeded")
 	}
 

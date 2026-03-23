@@ -118,7 +118,7 @@ func (s *NodeService) AutoCreateBind(ctx *sc.ServiceContext, nodeID, productID u
 		if err != nil {
 			return fmt.Errorf("check binding failed")
 		}
-		if ok := license.ValidateMaxNodesForProduct(productID, int(count)); !ok {
+		if ok := license.ValidateMaxNodesForProduct(int(count)); !ok {
 			return fmt.Errorf("maximum nodes exceeded")
 		}
 
@@ -139,7 +139,7 @@ func (s *NodeService) AutoCreateBindWithContext(sCtx *sc.ServiceContext, nodeID,
 	if err != nil {
 		return fmt.Errorf("check binding failed")
 	}
-	if ok := license.ValidateMaxNodesForProduct(productID, int(count)); !ok {
+	if ok := license.ValidateMaxNodesForProduct(int(count)); !ok {
 		return fmt.Errorf("maximum nodes exceeded")
 	}
 
