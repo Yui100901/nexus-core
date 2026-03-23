@@ -36,7 +36,6 @@ type License struct {
 	MaxNodes      int        // 最大节点数 (0 = 不限制)
 	MaxConcurrent int        // 并发限制 (0 = 不限制)
 	FeatureMask   string     // 功能模块掩码
-	//ScopeList     []Scope    // 授权范围列表，定义了许可证对产品的使用权限
 }
 
 // NewLicense 工厂方法
@@ -149,48 +148,8 @@ func (l *License) CheckStatus(now time.Time) int {
 	return l.Status
 }
 
-//// AddScope 添加授权范围
-//// 为许可证添加对特定产品的授权
-//func (l *License) AddScope(scope Scope) bool {
-//	for _, s := range l.ScopeList {
-//		if s.ProductID == scope.ProductID {
-//			return false
-//		}
-//	}
-//	l.ScopeList = append(l.ScopeList, scope)
-//	return true
-//}
-
-//// UpdateScope 更新特定产品的授权范围
-//// 根据产品ID找到对应的授权范围并替换为新的授权范围
-//func (l *License) UpdateScope(productID uint, newScope Scope) bool {
-//	for i, s := range l.ScopeList {
-//		if s.ProductID == productID {
-//			l.ScopeList[i] = newScope
-//			return true
-//		}
-//	}
-//	return false
-//}
-
-//// RemoveScope 删除特定产品的授权范围
-//// 根据产品ID移除对应的授权范围
-//func (l *License) RemoveScope(productID uint) bool {
-//	for i, s := range l.ScopeList {
-//		if s.ProductID == productID {
-//			l.ScopeList = append(l.ScopeList[:i], l.ScopeList[i+1:]...)
-//			return true
-//		}
-//	}
-//	return false
-//}
-
 // ValidateMaxNodesForProduct 验证许可证特定产品授权中的最大节点数
-func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int) bool {
-	//scope := l.GetScope(productID)
-	//if scope == nil {
-	//	return false
-	//}
+func (l *License) ValidateMaxNodesForProduct(currentBindings int) bool {
 	if l.MaxNodes > 0 && currentBindings >= l.MaxNodes {
 		return false
 	}
@@ -198,23 +157,9 @@ func (l *License) ValidateMaxNodesForProduct(productID uint, currentBindings int
 }
 
 // ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数
-func (l *License) ValidateMaxConcurrentForProduct(productID uint, currentConcurrent int) bool {
-	//scope := l.GetScope(productID)
-	//if scope == nil {
-	//	return false
-	//}
+func (l *License) ValidateMaxConcurrentForProduct(currentConcurrent int) bool {
 	if l.MaxConcurrent > 0 && currentConcurrent >= l.MaxConcurrent {
 		return false
 	}
 	return true
 }
-
-//// GetScope 获取授权范围
-//func (l *License) GetScope(productID uint) *Scope {
-//	for _, s := range l.ScopeList {
-//		if s.ProductID == productID {
-//			return &s
-//		}
-//	}
-//	return nil
-//}
