@@ -13,12 +13,14 @@ import (
 // @Date 2026/1/16 15 42
 //
 
-// LicenseStatus 定义许可证状态枚举
+// LicenseStatus 定义许可证状态枚举类型
+type LicenseStatus int
+
 const (
-	StatusInactive = iota // 0 未激活
-	StatusActive          // 1 已激活
-	StatusExpired         // 2 已过期
-	StatusRevoked         // 3 已吊销
+	StatusInactive LicenseStatus = iota // 0 未激活
+	StatusActive                        // 1 已激活
+	StatusExpired                       // 2 已过期
+	StatusRevoked                       // 3 已吊销
 )
 
 // License 表示许可证领域的核心实体
@@ -31,36 +33,52 @@ type License struct {
 	IssuedAt      time.Time  // 颁发时间，许可证创建时设置
 	ActivatedAt   *time.Time // 激活时间，首次激活时设置
 	ExpiredAt     *time.Time // 过期时间，基于激活时间和有效时长计算
-	Status        int        // 当前状态，使用LicenseStatus枚举值
-	Remark        *string    // 备注信息
-	MaxNodes      int        // 最大节点数 (0 = 不限制)
-	MaxConcurrent int        // 并发限制 (0 = 不限制)
-	FeatureMask   string     // 功能模块掩码
+	Status        LicenseStatus
+	Remark        *string // 备注信息
+	MaxNodes      int     // 最大节点数 (0 = 不限制)
+	MaxConcurrent int     // 并发限制 (0 = 不限制)
+	FeatureMask   string  // 功能模块掩码
 }
 
 // NewLicense 工厂方法
 // 创建一个新的许可证对象，默认状态为未激活
-func NewLicense(productID uint, validityHours int, maxNodes int, concurrentLimit int, remark *string) (*License, error) {
+func NewLicense(productID uint, validityHours, maxNodes, concurrentLimit int, remark *string) *License {
 	if validityHours <= 0 {
-		return nil, fmt.Errorf("validity hours must be positive")
+		validityHours = 0
 	}
 
-	license := &License{
+	return &License{
 		ProductID:     productID,
 		LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
 		ValidityHours: validityHours,
 		IssuedAt:      time.Now(),
-		Status:        StatusInactive, // 初始状态必须是未激活
+		Status:        StatusInactive,
 		MaxNodes:      maxNodes,
 		MaxConcurrent: concurrentLimit,
 		Remark:        remark,
 	}
-
-	return license, nil
 }
 
+// CalculateStatus 根据当前时间返回状态
+func (l *License) CalculateStatus(now time.Time) LicenseStatus {
+	switch l.Status {
+	case StatusInactive:
+		return StatusInactive
+	case StatusActive, StatusExpired:
+		if l.ExpiredAt != nil && now.After(*l.ExpiredAt) {
+			return StatusExpired
+		} else {
+			return StatusActive
+		}
+	case StatusRevoked:
+		return StatusRevoked
+	}
+	return StatusInactive
+}
+
+// IsActive 检查许可证是否处于激活状态
 func (l *License) IsActive() bool {
-	return l.CheckStatus(time.Now()) == StatusActive
+	return l.CalculateStatus(time.Now()) == StatusActive
 }
 
 // Activate 激活许可证
@@ -73,7 +91,6 @@ func (l *License) Activate(now time.Time) error {
 		return fmt.Errorf("validity hours must be positive")
 	}
 
-	// 只在第一次激活时设置 ActivatedAt
 	if l.ActivatedAt == nil {
 		l.ActivatedAt = &now
 	}
@@ -85,81 +102,57 @@ func (l *License) Activate(now time.Time) error {
 }
 
 // Renew 续期或缩短许可证
-// 根据extraHours参数增加或减少许可证的有效期
-func (l *License) Renew(now time.Time, extraHours int) error {
-	if l.Status == StatusRevoked {
-		return fmt.Errorf("license %s has been revoked and cannot be renewed", l.LicenseKey)
+// 根据 extraHours 参数增加或减少许可证的有效期
+func (l *License) Renew(now time.Time, extraHours int) {
+	l.ValidityHours += extraHours
+	if l.ValidityHours < 0 {
+		l.ValidityHours = 0
 	}
 
-	// 如果已过期，恢复为 Active，但不修改 ActivatedAt
-	if l.Status == StatusExpired {
-		l.Status = StatusActive
+	if l.Status == StatusInactive {
+		return
 	}
 
-	// 调整过期时间
 	if l.ExpiredAt == nil || now.After(*l.ExpiredAt) {
-		expired := now.Add(time.Duration(extraHours) * time.Hour)
+		expired := now.Add(time.Duration(l.ValidityHours) * time.Hour)
 		l.ExpiredAt = &expired
 	} else {
 		expired := l.ExpiredAt.Add(time.Duration(extraHours) * time.Hour)
 		l.ExpiredAt = &expired
 	}
 
-	// 更新总有效时长
-	l.ValidityHours += extraHours
-	if l.ValidityHours < 0 {
-		l.ValidityHours = 0
-	}
-
-	// 如果缩短后已经过期，更新状态
-	if l.ExpiredAt != nil && now.After(*l.ExpiredAt) {
-		l.Status = StatusExpired
-	}
-
-	return nil
+	l.Status = l.CalculateStatus(now)
 }
 
 // Revoke 吊销许可证
 // 将许可证状态设置为已吊销，使其立即失效
-func (l *License) Revoke(now time.Time) bool {
-	if l.Status == StatusRevoked {
-		return false
-	}
-	l.ExpiredAt = &now
+func (l *License) Revoke() {
 	l.Status = StatusRevoked
-	return true
 }
 
-// IsExpired 检查许可证是否已过期
-// 根据当前时间和过期时间判断
-func (l *License) IsExpired(now time.Time) bool {
-	if l.ExpiredAt == nil {
-		return false
-	}
-	return now.After(*l.ExpiredAt)
+// UnRevoke UnRevoke恢复
+func (l *License) UnRevoke() {
+	//先设为激活状态，然后重新计算
+	l.Status = StatusActive
+	l.Status = l.CalculateStatus(time.Now())
 }
 
-// CheckStatus 自动检查并更新许可证状态
-// 如果许可证处于活动状态且已过期，则将其状态更新为过期
-func (l *License) CheckStatus(now time.Time) int {
-	if l.Status == StatusActive && l.ExpiredAt != nil && now.After(*l.ExpiredAt) {
-		l.Status = StatusExpired
-	}
-	return l.Status
+// IsValid 是否有效
+func (l *License) IsValid() bool {
+	return l.CalculateStatus(time.Now()) == StatusActive
 }
 
-// ValidateMaxNodesForProduct 验证许可证特定产品授权中的最大节点数
-func (l *License) ValidateMaxNodesForProduct(currentBindings int) bool {
-	if l.MaxNodes > 0 && currentBindings >= l.MaxNodes {
-		return false
-	}
-	return true
+// ValidateMaxNodes 验证最大节点数限制
+func (l *License) ValidateMaxNodes(currentBindings int) bool {
+	return validateLimit(l.MaxNodes, currentBindings)
 }
 
-// ValidateMaxConcurrentForProduct 验证许可证特定产品授权中的最大并发数
-func (l *License) ValidateMaxConcurrentForProduct(currentConcurrent int) bool {
-	if l.MaxConcurrent > 0 && currentConcurrent >= l.MaxConcurrent {
-		return false
-	}
-	return true
+// ValidateMaxConcurrent 验证最大并发数限制
+func (l *License) ValidateMaxConcurrent(currentConcurrent int) bool {
+	return validateLimit(l.MaxConcurrent, currentConcurrent)
+}
+
+// 通用限制验证函数
+func validateLimit(limit, current int) bool {
+	return limit == 0 || current < limit
 }
