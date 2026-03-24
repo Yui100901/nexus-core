@@ -7,12 +7,14 @@ import "fmt"
 // @Date 2026/1/16 16 46
 //
 
+const NodeStatusNormal = 0
+
 // Node 表示用户环境的抽象节点
 // 代表一台物理设备、虚拟设备或其他运行环境
 type Node struct {
 	ID         uint    // 节点唯一标识符
 	DeviceCode string  // 设备唯一识别码，用于区分不同设备
-	Banned     int     // 是否被封禁，0 = 未封禁，1 = 已封禁
+	Status     int     // 是否被封禁，0 = 未封禁，1 = 已封禁
 	Metadata   *string // 设备元信息，包含操作系统、版本等信息
 }
 
@@ -26,12 +28,12 @@ func NewNode(deviceCode string, metaInfo *string) (*Node, error) {
 	node := &Node{
 		DeviceCode: deviceCode,
 		Metadata:   metaInfo,
-		Banned:     0,
+		Status:     0,
 	}
 
 	return node, nil
 }
 
 func (n *Node) IsValid() bool {
-	return n.Banned == 0
+	return n.Status == NodeStatusNormal
 }
