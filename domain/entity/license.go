@@ -62,16 +62,14 @@ func NewLicense(productID uint, validityHours, maxNodes, concurrentLimit int, re
 // CalculateStatus 根据当前时间返回状态
 func (l *License) CalculateStatus(now time.Time) LicenseStatus {
 	switch l.Status {
-	case StatusInactive:
-		return StatusInactive
+	case StatusInactive, StatusRevoked:
+		return l.Status
 	case StatusActive, StatusExpired:
 		if l.ExpiredAt != nil && now.After(*l.ExpiredAt) {
 			return StatusExpired
 		} else {
 			return StatusActive
 		}
-	case StatusRevoked:
-		return StatusRevoked
 	}
 	return StatusInactive
 }
