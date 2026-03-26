@@ -1,32 +1,35 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
+	"nexus-core/global"
 	"nexus-core/persistence/base"
-	"nexus-core/persistence/repository"
-	"nexus-core/sc"
+	"nexus-core/persistence/model"
 	"time"
 )
 
 // ProductService 提供产品相关的业务逻辑服务
 // 管理产品的创建、查询、版本控制等操作
 type ProductService struct {
-	pr *repository.ProductRepository // 产品仓库，用于数据持久化操作
 }
 
 // NewProductService 创建新的产品服务实例
 func NewProductService() *ProductService {
-	return &ProductService{
-		pr: repository.NewProductRepository(),
-	}
+	return &ProductService{}
 }
 
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
-func (s *ProductService) CreateProduct(ctx *sc.ServiceContext, p *entity.Product) error {
-	db := ctx.MustDefaultDB()
-	return s.pr.CreateProduct(ctx, db, p)
+func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) error {
+	product := entity.CreateProduct(cmd.Name, cmd.Description)
+	pProduct := &model.Product{
+		Name:        product.Name,
+		Description: product.Description,
+	}
+	return productRepo.Create(context.Background(), global.DB, pProduct)
 }
 
 // BatchCreateProduct 批量创建产品

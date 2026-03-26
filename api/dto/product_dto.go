@@ -39,7 +39,7 @@ func ToEntityVersion(cmd CreateProductVersionCommand) (*entity.Version, error) {
 }
 
 // ToEntityProduct 将创建产品命令转换为实体对象
-func ToEntityProduct(cmd CreateProductCommand) (*entity.Product, error) {
+func ToEntityProduct(cmd CreateProductCommand) *entity.Product {
 	return entity.NewProduct(cmd.Name, cmd.Description, nil)
 }
 

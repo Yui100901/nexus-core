@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
-	"nexus-core/sc"
 	"time"
 
 	"gorm.io/gorm"
@@ -20,6 +20,13 @@ type ProductRepository struct {
 
 func NewProductRepository() *ProductRepository {
 	return &ProductRepository{}
+}
+
+func (r *ProductRepository) Create(ctx context.Context, db *gorm.DB, product *model.Product) error {
+	if err := gorm.G[model.Product](db).Create(ctx, product); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CreateProduct 创建产品（回填 ID）
