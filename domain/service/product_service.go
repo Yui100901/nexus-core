@@ -61,15 +61,19 @@ func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.Produ
 
 // GetByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
-func (s *ProductService) GetByID(id uint) (*entity.Product, error) {
-	return productRepo.GetByID(global.DB, id)
-}
-
-// GetByName 根据名称获取产品信息
-// 返回指定名称的完整产品信息，包括所有版本
-func (s *ProductService) GetByName(ctx *sc.ServiceContext, name string) (*entity.Product, error) {
-	db := ctx.MustDefaultDB()
-	return s.pr.GetByName(ctx, db, name)
+func (s *ProductService) GetByID(id uint) (*dto.ProductData, error) {
+	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if pProduct == nil {
+		return nil, fmt.Errorf("pProduct not found")
+	}
+	return &dto.ProductData{
+		ID:          pProduct.ID,
+		Name:        pProduct.Name,
+		Description: pProduct.Description,
+	}, nil
 }
 
 // SetMinSupportedVersion 设置产品的最低支持版本

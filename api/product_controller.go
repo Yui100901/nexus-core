@@ -180,30 +180,6 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	Success(ctx, p)
 }
 
-// GetByName 根据名称查询产品
-// @Summary Get product by name
-// @Tags products
-// @Accept json
-// @Produce json
-// @Param name query string true "Product Name"
-// @Success 200 {object} entity.Product
-// @Failure 400 {object} api.CommonResponse
-// @Failure 404 {object} api.CommonResponse
-// @Router /product/getByName [get]
-func (c *ProductController) GetByName(ctx *gin.Context) {
-	var q dto.GetProductByNameQuery
-	if err := ctx.ShouldBindQuery(&q); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	p, err := c.ps.GetByName(ctx, q.Name)
-	if err != nil {
-		NotFound(ctx, err.Error())
-		return
-	}
-	Success(ctx, p)
-}
-
 // SetMinVersion 设置最小支持版本
 // @Summary Set min supported version
 // @Tags products

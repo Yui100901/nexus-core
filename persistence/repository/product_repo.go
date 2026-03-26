@@ -70,7 +70,7 @@ func (r *ProductRepository) BatchCreateProduct(ctx *sc.ServiceContext, db *gorm.
 }
 
 // GetByID 根据 ID 获取产品及其版本
-func (r *ProductRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.Product, error) {
+func (r *ProductRepository) GetByID(ctx context.Context, db *gorm.DB, id uint) (*model.Product, error) {
 	m, err := GetOneByUniqueColumn[model.Product](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
@@ -79,12 +79,7 @@ func (r *ProductRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint
 		return nil, nil
 	}
 
-	versions, err := r.GetVersionsByProductID(ctx, db, m.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return toEntityProduct(m, versions), nil
+	return m, nil
 }
 
 // GetByName 根据名称获取产品
