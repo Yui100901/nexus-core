@@ -23,39 +23,46 @@ func NewProductService() *ProductService {
 
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
-func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) error {
+func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.ProductData, error) {
 	product := entity.CreateProduct(cmd.Name, cmd.Description)
 	pProduct := &model.Product{
 		Name:        product.Name,
 		Description: product.Description,
 	}
-	return productRepo.Create(context.Background(), global.DB, pProduct)
-}
-
-// BatchCreateProduct 批量创建产品
-// 支持一次性创建多个产品及其版本信息
-func (s *ProductService) BatchCreateProduct(ctx *sc.ServiceContext, products []*entity.Product) error {
-	// 1. 校验重复名称
-	seen := make(map[string]bool)
-	for _, p := range products {
-		if seen[p.Name] {
-			return fmt.Errorf("duplicate product name: %s", p.Name)
-		}
-		seen[p.Name] = true
+	err := productRepo.Create(context.Background(), global.DB, pProduct)
+	if err != nil {
+		return nil, err
 	}
-
-	// 2. 调用仓储层批量创建 在事务中
-	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		// txCtx.MustDefaultDB() returns tx
-		return s.pr.BatchCreateProduct(txCtx, txCtx.MustDefaultDB(), products)
-	})
+	return &dto.ProductData{
+		ID:          pProduct.ID,
+		Name:        pProduct.Name,
+		Description: pProduct.Description,
+	}, nil
 }
+
+//// BatchCreateProduct 批量创建产品
+//// 支持一次性创建多个产品及其版本信息
+//func (s *ProductService) BatchCreateProduct(products []dto.CreateProductCommand) error {
+//	// 1. 校验重复名称
+//	seen := make(map[string]bool)
+//	for _, p := range products {
+//		if seen[p.Name] {
+//			return fmt.Errorf("duplicate product name: %s", p.Name)
+//		}
+//		seen[p.Name] = true
+//	}
+//
+//	// 2. 调用仓储层批量创建 在事务中
+//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
+//		// txCtx.MustDefaultDB() returns tx
+//		return s.pr.BatchCreateProduct(txCtx, txCtx.MustDefaultDB(), products)
+//	})
+//}
 
 // GetByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
-func (s *ProductService) GetByID(ctx *sc.ServiceContext, id uint) (*entity.Product, error) {
-	db := ctx.MustDefaultDB()
-	return s.pr.GetByID(ctx, db, id)
+func (s *ProductService) GetByID(id uint) (*entity.Product, error) {
+	return productRepo.GetByID(global.DB, id)
 }
 
 // GetByName 根据名称获取产品信息

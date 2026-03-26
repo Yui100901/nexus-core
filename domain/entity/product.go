@@ -22,8 +22,8 @@ type Product struct {
 
 func CreateProduct(name string, description *string) *Product {
 	return &Product{
-		Name:                  "Product",
-		Description:           nil,
+		Name:                  name,
+		Description:           description,
 		MinSupportedVersionID: nil,
 		VersionList:           []Version{},
 	}

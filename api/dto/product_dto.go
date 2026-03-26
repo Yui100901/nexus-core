@@ -13,6 +13,12 @@ type CreateProductCommand struct {
 	Description *string `json:"description"`             // 产品描述
 }
 
+type ProductData struct {
+	ID          uint    `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+}
+
 // CreateProductVersionCommand 产品版本的DTO对象
 // @Description Product version DTO
 type CreateProductVersionCommand struct {

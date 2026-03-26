@@ -53,11 +53,11 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProduct(cmd); err != nil {
+	if p, err := c.ps.CreateProduct(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx)
+	SuccessMsg(ctx, "创建成功")
 }
 
 // CreateProductVersion 创建产品版本
