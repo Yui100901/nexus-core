@@ -1,6 +1,5 @@
 package model
 
-import "time"
 import "gorm.io/datatypes"
 
 //
@@ -25,18 +24,4 @@ type Product struct {
 
 func (Product) TableName() string {
 	return "product"
-}
-
-// ProductVersion 产品版本信息
-type ProductVersion struct {
-	BaseModel
-	ProductID   uint       `gorm:"index;not null"`            // 所属产品 Product.ID
-	VersionCode string     `gorm:"type:varchar(50);not null"` // 版本号
-	ReleaseDate *time.Time `gorm:"type:datetime"`             // 发布时间
-	Description *string    `gorm:"type:text"`                 // 版本说明
-	Status      int        `gorm:"type:int;index;not null"`   // 是否启用
-}
-
-func (ProductVersion) TableName() string {
-	return "product_version"
 }
