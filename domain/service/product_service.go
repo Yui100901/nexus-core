@@ -59,9 +59,9 @@ func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.Produ
 //	})
 //}
 
-// GetByID 根据ID获取产品信息
+// GetProductDataByID 根据ID获取产品信息
 // 返回指定ID的完整产品信息，包括所有版本
-func (s *ProductService) GetByID(id uint) (*dto.ProductData, error) {
+func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
 	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
@@ -76,10 +76,24 @@ func (s *ProductService) GetByID(id uint) (*dto.ProductData, error) {
 	}, nil
 }
 
+func (s *ProductService) GetProductEntityByID(id uint) (*entity.Product, error) {
+	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if pProduct == nil {
+		return nil, fmt.Errorf("pProduct not found")
+	}
+	return &entity.Product{
+		ID:          pProduct.ID,
+		Name:        pProduct.Name,
+		Description: pProduct.Description,
+	}, nil
+}
+
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
-func (s *ProductService) SetMinSupportedVersion(ctx *sc.ServiceContext, productID, versionID uint) error {
-	db := ctx.MustDefaultDB()
+func (s *ProductService) SetMinSupportedVersion(productID, versionID uint) error {
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
@@ -123,9 +137,9 @@ func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
 	})
 }
 
-// CreateNewVersion 创建新产品版本
+// CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
-func (s *ProductService) CreateNewVersion(ctx *sc.ServiceContext, productID uint, v *entity.Version) error {
+func (s *ProductService) CreateProductVersion(cmd *dto.CreateProductVersionCommand) error {
 	db := ctx.MustDefaultDB()
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
