@@ -40,6 +40,6 @@ func (r *ProductVersionRepository) GetByID(ctx context.Context,
 }
 
 func (r *ProductVersionRepository) ListByProductID(ctx context.Context,
-	db *gorm.DB, productID string) ([]model.ProductVersion, error) {
+	db *gorm.DB, productID uint) ([]model.ProductVersion, error) {
 	return FindByColumn[model.ProductVersion](ctx, db, "product_id", productID)
 }

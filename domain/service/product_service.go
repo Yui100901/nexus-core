@@ -84,10 +84,27 @@ func (s *ProductService) GetProductEntityByID(id uint) (*entity.Product, error) 
 	if pProduct == nil {
 		return nil, fmt.Errorf("pProduct not found")
 	}
+	pVersionList, err := productVersionRepo.ListByProductID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	var versionList []entity.Version
+	for _, v := range pVersionList {
+		version := entity.Version{
+			ID:          v.ID,
+			VersionCode: v.VersionCode,
+			ReleaseDate: v.ReleaseDate,
+			Description: v.Description,
+			Status:      v.Status,
+		}
+		versionList = append(versionList, version)
+	}
 	return &entity.Product{
-		ID:          pProduct.ID,
-		Name:        pProduct.Name,
-		Description: pProduct.Description,
+		ID:                    pProduct.ID,
+		Name:                  pProduct.Name,
+		Description:           pProduct.Description,
+		MinSupportedVersionID: pProduct.MinSupportedVersionID,
+		VersionList:           versionList,
 	}, nil
 }
 

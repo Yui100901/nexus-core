@@ -49,7 +49,7 @@ type Version struct {
 	VersionCode string     // 版本号，遵循语义化版本规范
 	ReleaseDate *time.Time // 版本发布时间
 	Description *string    // 版本详细说明
-	IsEnabled   int        // 版本状态，用于标识版本是否可用
+	Status      int        // 版本状态，用于标识版本是否可用
 }
 
 // NewVersion 工厂方法
@@ -63,7 +63,7 @@ func NewVersion(versionCode string, releaseDate *time.Time, description *string)
 		VersionCode: versionCode,
 		ReleaseDate: releaseDate,
 		Description: description,
-		IsEnabled:   1, // 默认启用
+		Status:      1, // 默认启用
 	}
 
 	return version, nil
@@ -82,7 +82,7 @@ func (p *Product) SetMinSupportedVersion(versionID uint) error {
 		return fmt.Errorf("version with ID %d not found", versionID)
 	}
 
-	if targetVersion.IsEnabled != 1 {
+	if targetVersion.Status != 1 {
 		return fmt.Errorf("version with ID %d is not enabled", versionID)
 	}
 
@@ -123,12 +123,12 @@ func (p *Product) ReleaseVersion(versionID uint, releaseDate time.Time) error {
 	}
 
 	//如果已经发布则视为成功直接返回
-	if targetVersion.IsEnabled == 1 {
+	if targetVersion.Status == 1 {
 		return nil
 	}
 
 	// 更新状态为启用
-	targetVersion.IsEnabled = 1
+	targetVersion.Status = 1
 	if targetVersion.ReleaseDate == nil {
 		targetVersion.ReleaseDate = &releaseDate
 	}
@@ -161,7 +161,7 @@ func (p *Product) CheckVersionSupportedByCode(code string) bool {
 
 // IsVersionSupported 检测某个版本是否支持
 func (p *Product) IsVersionSupported(targetVersion Version) bool {
-	if targetVersion.IsEnabled != 1 {
+	if targetVersion.Status != 1 {
 		return false
 	}
 	// 版本没有发布时间说明未发布，不支持

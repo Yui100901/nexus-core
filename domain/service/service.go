@@ -8,5 +8,6 @@ import "nexus-core/persistence/repository"
 //
 
 var (
-	productRepo = repository.NewProductRepository()
+	productRepo        = repository.NewProductRepository()
+	productVersionRepo = repository.NewProductVersionRepository()
 )
