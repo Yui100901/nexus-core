@@ -102,7 +102,7 @@ func (s *LicenseService) ActivateLicenseIfNeededWithCtx(ctx *sc.ServiceContext, 
 	}
 
 	// use ctx.MustDefaultDB() so callers don't need to pass tx explicitly
-	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, entity.StatusActive)
+	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, int(entity.StatusActive))
 }
 
 // GetLicenseBindList 获取许可证绑定列表
@@ -138,7 +138,7 @@ func (s *LicenseService) GetLicenseByKey(ctx *sc.ServiceContext, key string) (*e
 // DeleteExpiredLicenses 删除所有过期的许可证
 func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
 	db := ctx.MustDefaultDB()
-	ids, err := s.lr.GetIdListByStatus(ctx, db, entity.StatusExpired)
+	ids, err := s.lr.GetIdListByStatus(ctx, db, int(entity.StatusExpired))
 	if err != nil {
 		return err
 	}
