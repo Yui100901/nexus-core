@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"net/http"
 	"nexus-core/api"
-	"nexus-core/config"
 	_ "nexus-core/docs"
+	"nexus-core/global"
 	"nexus-core/monitor"
 	"nexus-core/persistence/base"
 	"os"
@@ -49,7 +49,7 @@ func execCommand(name string, arg ...string) error {
 // main 应用程序入口点
 // 初始化配置、注册路由、启动服务器
 func main() {
-	cfg := config.Load()
+	cfg := global.LoadConfig()
 	fmt.Println("Nexus Core starting...")
 	base.MainDBManager = base.InitDBManager(cfg.DBConfig)
 	base.AutoMigrate(base.MainDBManager.GetDefaultDB())

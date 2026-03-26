@@ -1,4 +1,4 @@
-package config
+package global
 
 import (
 	"os"
@@ -11,7 +11,7 @@ import (
 // 包含服务器端口、数据库路径和其他运行时选项
 type Config struct {
 	Port            int       `yaml:"port"`              // 服务器监听端口
-	DBConfig        *DBConfig `yaml:"db_list"`           // 数据库文件路径
+	DBConfig        *DBConfig `yaml:"db_list"`           // 数据库配置
 	SwaggerEnabled  bool      `yaml:"swagger_enabled"`   // 是否启用Swagger文档
 	AutoOpenBrowser bool      `yaml:"auto_open_browser"` // 是否自动打开浏览器
 	// SwaggerURL 是用于打印/打开的 Swagger UI 地址或路径。可配置为完整 URL（以 http:// 或 https:// 开头），
@@ -37,9 +37,9 @@ type DBConnectConfig struct {
 
 var cfg *Config // 全局配置实例
 
-// Load 加载应用程序配置
+// LoadConfig 加载应用程序配置
 // 优先从config-dev.yml文件加载，如果文件不存在则使用默认值
-func Load() *Config {
+func LoadConfig() *Config {
 	if cfg != nil {
 		return cfg
 	}
@@ -78,11 +78,11 @@ func Load() *Config {
 	return cfg
 }
 
-// Get 获取配置实例
+// GetConfig 获取配置实例
 // 如果尚未加载配置，则先加载默认配置
-func Get() *Config {
+func GetConfig() *Config {
 	if cfg == nil {
-		return Load()
+		return LoadConfig()
 	}
 	return cfg
 }

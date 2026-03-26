@@ -8,7 +8,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"nexus-core/config"
+	"nexus-core/global"
 	"nexus-core/sc"
 
 	_ "nexus-core/docs"
@@ -60,7 +60,7 @@ func RegisterDefaultRoutes() {
 	NewAccessController().RegisterRoutes(WebEngine)
 
 	// serve swagger UI under /swagger when enabled in config
-	cfg := config.Get()
+	cfg := global.GetConfig()
 	if cfg.SwaggerEnabled {
 		// the generated swagger JSON is served at /swagger/doc.json by swag; use that URL in the UI
 		WebEngine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL(cfg.SwaggerDocURL)))

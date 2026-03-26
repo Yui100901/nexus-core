@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
-	"nexus-core/config"
+	"nexus-core/global"
 	"nexus-core/persistence/model"
 
 	"github.com/glebarez/sqlite"
@@ -22,53 +21,7 @@ import (
 // @Date 2025/7/21 15 26
 //
 
-var DefaultDBName = config.Get().DBConfig.DefaultDBName
-
-var MainDBManager *DBManager
-
-type DBManager struct {
-	mu            sync.RWMutex
-	dbInstanceMap map[string]*gorm.DB
-}
-
-func InitDBManager(cfg *config.DBConfig) *DBManager {
-	m := &DBManager{
-		dbInstanceMap: make(map[string]*gorm.DB),
-	}
-	for _, connectConfig := range cfg.ConnectList {
-		if err := m.InitDB(connectConfig); err != nil {
-			panic(fmt.Sprintf("failed to initialize database: %v", err))
-		}
-	}
-	return m
-}
-
-// GetDB 获取指定名称的数据库实例，如果不存在则 panic
-func (m *DBManager) GetDB(name string) *gorm.DB {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	db, ok := m.dbInstanceMap[name]
-	if !ok {
-		panic(fmt.Sprintf("db instance %s not initialized", name))
-	}
-
-	return db
-}
-
-// GetDefaultDB 获取默认数据库实例
-func (m *DBManager) GetDefaultDB() *gorm.DB {
-	return m.GetDB(DefaultDBName)
-}
-
-func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// 如果已经存在，阻止重复初始化
-	if _, ok := m.dbInstanceMap[cfg.Name]; ok {
-		return fmt.Errorf("db instance %s already initialized", cfg.Name)
-	}
+func InitDB(cfg global.DBConnectConfig) (*gorm.DB, error) {
 
 	var (
 		db  *gorm.DB
@@ -77,19 +30,18 @@ func (m *DBManager) InitDB(cfg config.DBConnectConfig) error {
 
 	db, err = InitDatabase(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("error to get sqlDB: %s", err)
+		return nil, fmt.Errorf("error to get sqlDB: %s", err)
 	}
 	err = ConfigureSQLDB(sqlDB, cfg.MaxOpenConns, cfg.MaxIdleConns, cfg.ConnMaxLifetimeMinutes)
 	if err != nil {
-		return fmt.Errorf("error to configure db: %s", err)
+		return nil, fmt.Errorf("error to configure db: %s", err)
 	}
 
-	m.dbInstanceMap[cfg.Name] = db
-	return nil
+	return db, nil
 }
 
 func AutoMigrate(db *gorm.DB) {
@@ -119,7 +71,7 @@ func ConfigureSQLDB(sqlDB *sql.DB, maxOpenConns, maxIdleConns, connMaxLifetimeMi
 	return sqlDB.Ping()
 }
 
-func InitDatabase(cfg config.DBConnectConfig) (*gorm.DB, error) {
+func InitDatabase(cfg global.DBConnectConfig) (*gorm.DB, error) {
 	var (
 		db  *gorm.DB
 		err error
@@ -137,7 +89,7 @@ func InitDatabase(cfg config.DBConnectConfig) (*gorm.DB, error) {
 	return db, err
 }
 
-func InitDatabaseSqlite(cfg config.DBConnectConfig) (*gorm.DB, error) {
+func InitDatabaseSqlite(cfg global.DBConnectConfig) (*gorm.DB, error) {
 	// if dsn is a file path, ensure parent directories exist
 	if cfg.DBPath != ":memory:" {
 		dir := filepath.Dir(cfg.DBPath)
@@ -157,7 +109,7 @@ func InitDatabaseSqlite(cfg config.DBConnectConfig) (*gorm.DB, error) {
 	return db, err
 }
 
-func InitDatabaseMysql(cfg config.DBConnectConfig) (*gorm.DB, error) {
+func InitDatabaseMysql(cfg global.DBConnectConfig) (*gorm.DB, error) {
 	// 尝试连接 MySQL
 	db, err := gorm.Open(mysql.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
@@ -168,7 +120,7 @@ func InitDatabaseMysql(cfg config.DBConnectConfig) (*gorm.DB, error) {
 	return db, err
 }
 
-func InitDatabasePostgres(cfg config.DBConnectConfig) (*gorm.DB, error) {
+func InitDatabasePostgres(cfg global.DBConnectConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
 		fmt.Println("Failed to connect Postgres!")
