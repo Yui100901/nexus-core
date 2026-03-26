@@ -4,7 +4,6 @@ import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
-	"nexus-core/sc"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -49,28 +48,22 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/create [post]
-func (c *ProductController) CreateProduct(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var cmd dto.CreateProductCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	p, err := dto.ToEntityProduct(cmd)
 	if err != nil {
-		c.BadRequest(sCtx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProduct(sCtx, p); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.CreateProduct(ctx, p); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, p)
+	c.Success(ctx, p)
 }
 
 // CreateProductVersion 创建产品版本
@@ -83,28 +76,22 @@ func (c *ProductController) CreateProduct(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/createVersion [post]
-func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 	var cmd dto.CreateProductVersionCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	v, err := dto.ToEntityVersion(cmd)
 	if err != nil {
-		c.BadRequest(sCtx, err.Error())
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.CreateNewVersion(sCtx, cmd.ProductID, v); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.CreateNewVersion(ctx, cmd.ProductID, v); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, v)
+	c.Success(ctx, v)
 }
 
 // ReleaseNewVersion 发布新版本
@@ -114,27 +101,21 @@ func (c *ProductController) CreateProductVersion(gCtx *gin.Context) {
 // @Produce json
 // @Param body body dto.ReleaseNewVersionCommand true "Release New Version"
 // @Success 200 {object} entity.Version
-func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	var cmd dto.ReleaseNewVersionCommand
 
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
-	err := c.ps.ReleaseVersion(sCtx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
+	err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
 	if err != nil {
-		c.InternalError(sCtx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(sCtx, cmd.VersionID)
+	c.Success(ctx, cmd.VersionID)
 
 }
 
@@ -148,32 +129,26 @@ func (c *ProductController) ReleaseNewVersion(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/batchCreate [post]
-func (c *ProductController) BatchCreate(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateProductCommand
-	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmds); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	var products []*entity.Product
 	for _, cmd := range cmds {
 		p, err := dto.ToEntityProduct(cmd)
 		if err != nil {
-			c.BadRequest(sCtx, err.Error())
+			c.BadRequest(ctx, err.Error())
 			return
 		}
 		products = append(products, p)
 	}
-	if err := c.ps.BatchCreateProduct(sCtx, products); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, products)
+	c.Success(ctx, products)
 }
 
 // GetByID 根据 ID 获取产品
@@ -186,35 +161,29 @@ func (c *ProductController) BatchCreate(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByID [get]
-func (c *ProductController) GetByID(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
-	idStr := gCtx.Query("id")
+	idStr := ctx.Query("id")
 	if idStr == "" {
-		c.NotFound(sCtx, "id is required")
+		c.NotFound(ctx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.NotFound(sCtx, "invalid id")
+		c.NotFound(ctx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetByID(sCtx, id)
+	p, err := c.ps.GetByID(ctx, id)
 	if err != nil {
-		c.NotFound(sCtx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, p)
+	c.Success(ctx, p)
 }
 
 // GetByName 根据名称查询产品
@@ -227,24 +196,18 @@ func (c *ProductController) GetByID(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
 // @Router /product/getByName [get]
-func (c *ProductController) GetByName(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) GetByName(ctx *gin.Context) {
 	var q dto.GetProductByNameQuery
-	if err := gCtx.ShouldBindQuery(&q); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindQuery(&q); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	p, err := c.ps.GetByName(sCtx, q.Name)
+	p, err := c.ps.GetByName(ctx, q.Name)
 	if err != nil {
-		c.NotFound(sCtx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, p)
+	c.Success(ctx, p)
 }
 
 // SetMinVersion 设置最小支持版本
@@ -257,23 +220,17 @@ func (c *ProductController) GetByName(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/setMinVersion [post]
-func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 	var cmd dto.UpdateMinVersionCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(sCtx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.SetMinSupportedVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(sCtx, "min supported version updated")
+	c.SuccessMsg(ctx, "min supported version updated")
 }
 
 // DeprecateVersion 废弃版本
@@ -286,23 +243,17 @@ func (c *ProductController) SetMinVersion(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/deprecateVersion [post]
-func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 	var cmd dto.DeprecateVersionCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeprecateVersion(sCtx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.DeprecateVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(sCtx, "version deprecated")
+	c.SuccessMsg(ctx, "version deprecated")
 }
 
 // DeleteProduct 删除产品
@@ -315,23 +266,17 @@ func (c *ProductController) DeprecateVersion(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/delete [post]
-func (c *ProductController) DeleteProduct(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 	var q struct {
 		ID uint `json:"id" binding:"required"`
 	}
-	if err := gCtx.ShouldBindJSON(&q); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&q); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeleteProduct(sCtx, q.ID); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ps.DeleteProduct(ctx, q.ID); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(sCtx, "product deleted")
+	c.SuccessMsg(ctx, "product deleted")
 }

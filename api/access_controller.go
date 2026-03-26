@@ -3,7 +3,6 @@ package api
 import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/service"
-	"nexus-core/sc"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,39 +51,32 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
-func (c *AccessController) AutoBind(gCtx *gin.Context) {
-	// get service context
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *AccessController) AutoBind(ctx *gin.Context) {
 	var cmd dto.AutoBindCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
-	res, err := c.as.AutoBind(sCtx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
+	res, err := c.as.AutoBind(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
 	if err != nil {
 		if se, ok := err.(*service.ServiceError); ok {
 			// map service-defined HTTP status
 			switch se.HTTPStatus {
 			case 400:
-				c.BadRequest(sCtx, se.Error())
+				c.BadRequest(ctx, se.Error())
 			case 500:
-				c.InternalError(sCtx, se.Error())
+				c.InternalError(ctx, se.Error())
 			default:
-				c.InternalError(sCtx, se.Error())
+				c.InternalError(ctx, se.Error())
 			}
 			return
 		}
-		c.InternalError(sCtx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(sCtx, res)
+	c.Success(ctx, res)
 }
 
 // Heartbeat 现在也很薄
@@ -99,35 +91,29 @@ func (c *AccessController) AutoBind(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/heartbeat [post]
-func (c *AccessController) Heartbeat(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	var cmd dto.HeartbeatCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
-	res, err := c.as.Heartbeat(sCtx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
+	res, err := c.as.Heartbeat(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
 	if err != nil {
 		if se, ok := err.(*service.ServiceError); ok {
 			switch se.HTTPStatus {
 			case 400:
-				c.BadRequest(sCtx, se.Error())
+				c.BadRequest(ctx, se.Error())
 			case 500:
-				c.InternalError(sCtx, se.Error())
+				c.InternalError(ctx, se.Error())
 			default:
-				c.InternalError(sCtx, se.Error())
+				c.InternalError(ctx, se.Error())
 			}
 			return
 		}
-		c.InternalError(sCtx, err.Error())
+		c.InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(sCtx, res)
+	c.Success(ctx, res)
 }

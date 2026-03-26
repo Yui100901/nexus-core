@@ -47,25 +47,19 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/create [post]
-func (c *NodeController) CreateNode(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) CreateNode(ctx *gin.Context) {
 	var cmd dto.CreateNodeCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 
 	n := dto.ToEntityNode(cmd)
-	if err := c.ns.CreateNode(sCtx, n); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ns.CreateNode(ctx, n); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, n)
+	c.Success(ctx, n)
 }
 
 // BatchCreate 批量创建节点
@@ -78,27 +72,21 @@ func (c *NodeController) CreateNode(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/batchCreate [post]
-func (c *NodeController) BatchCreate(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateNodeCommand
-	if err := gCtx.ShouldBindJSON(&cmds); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmds); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	var nodes []*entity.Node
 	for _, cmd := range cmds {
 		nodes = append(nodes, dto.ToEntityNode(cmd))
 	}
-	if err := c.ns.BatchCreateNode(sCtx, nodes); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ns.BatchCreateNode(ctx, nodes); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, nodes)
+	c.Success(ctx, nodes)
 }
 
 // GetByID 根据 ID 获取节点信息
@@ -111,24 +99,18 @@ func (c *NodeController) BatchCreate(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 504 {object} api.CommonResponse
 // @Router /node/getByID [get]
-func (c *NodeController) GetByID(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) GetByID(ctx *gin.Context) {
 	var q dto.GetNodeByIDQuery
-	if err := gCtx.ShouldBindQuery(&q); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindQuery(&q); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByID(sCtx, q.ID)
+	n, err := c.ns.GetByID(ctx, q.ID)
 	if err != nil {
-		c.NotFound(sCtx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, n)
+	c.Success(ctx, n)
 }
 
 // GetByDeviceCode 根据设备码查询节点
@@ -141,24 +123,18 @@ func (c *NodeController) GetByID(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
 // @Router /node/getByDevice [get]
-func (c *NodeController) GetByDeviceCode(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	var q dto.GetNodeByDeviceCodeQuery
-	if err := gCtx.ShouldBindQuery(&q); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindQuery(&q); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByDeviceCode(sCtx, q.DeviceCode)
+	n, err := c.ns.GetByDeviceCode(ctx, q.DeviceCode)
 	if err != nil {
-		c.NotFound(sCtx, err.Error())
+		c.NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, n)
+	c.Success(ctx, n)
 }
 
 // AddBinding 添加节点绑定
@@ -171,23 +147,17 @@ func (c *NodeController) GetByDeviceCode(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/addBinding [post]
-func (c *NodeController) AddBinding(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) AddBinding(ctx *gin.Context) {
 	var cmd dto.AddBindingCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(sCtx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(sCtx, "")
+	c.Success(ctx, "")
 }
 
 // UpdateBindingStatus 更新绑定状态
@@ -200,23 +170,17 @@ func (c *NodeController) AddBinding(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/updateBindingStatus [post]
-func (c *NodeController) UpdateBindingStatus(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
 	var cmd dto.UpdateBindingStatusCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.UpdateBindingStatus(sCtx, cmd.ID, cmd.Status); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ns.UpdateBindingStatus(ctx, cmd.ID, cmd.Status); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(sCtx, "binding status updated")
+	c.SuccessMsg(ctx, "binding status updated")
 }
 
 // ForceUnbind 强制解绑节点
@@ -229,24 +193,18 @@ func (c *NodeController) UpdateBindingStatus(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/unbind [post]
-func (c *NodeController) ForceUnbind(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 	var cmd dto.ForceUnbindCommand
-	if err := gCtx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
 	// todo: implement force unbind logic
-	//if err := c.ns.ForceUnbindByNodeAndLicense(gCtx, cmd.NodeID, cmd.LicenseID); err != nil {
-	//	InternalError(gCtx, err.Error())
+	//if err := c.ns.ForceUnbindByNodeAndLicense(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
+	//	InternalError(ctx, err.Error())
 	//	return
 	//}
-	c.SuccessMsg(sCtx, "node binding forced to unbind")
+	c.SuccessMsg(ctx, "node binding forced to unbind")
 }
 
 // DeleteNode 删除节点
@@ -259,23 +217,17 @@ func (c *NodeController) ForceUnbind(gCtx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/delete [post]
-func (c *NodeController) DeleteNode(gCtx *gin.Context) {
-	sCtx, ok := getServiceContextFromGin(gCtx)
-	if !ok {
-		tmp := &sc.ServiceContext{GinContext: gCtx}
-		c.InternalError(tmp, "service context missing")
-		return
-	}
+func (c *NodeController) DeleteNode(ctx *gin.Context) {
 	var q struct {
 		ID uint `json:"id" binding:"required"`
 	}
-	if err := gCtx.ShouldBindJSON(&q); err != nil {
-		c.BadRequest(sCtx, err.Error())
+	if err := ctx.ShouldBindJSON(&q); err != nil {
+		c.BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.DeleteNode(sCtx, q.ID); err != nil {
-		c.InternalError(sCtx, err.Error())
+	if err := c.ns.DeleteNode(ctx, q.ID); err != nil {
+		c.InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(sCtx, "node deleted")
+	c.SuccessMsg(ctx, "node deleted")
 }
