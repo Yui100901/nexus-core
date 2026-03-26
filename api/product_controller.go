@@ -31,7 +31,6 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 		g.POST("/createVersion", c.CreateProductVersion) // 创建产品版本
 		g.POST("/batchCreate", c.BatchCreate)            // 批量创建产品
 		g.GET("/getByID", c.GetByID)                     // 根据ID获取产品
-		g.GET("/getByName", c.GetByName)                 // 根据名称获取产品
 		g.POST("/setMinVersion", c.SetMinVersion)        // 设置最小支持版本
 		g.POST("/delete", c.DeleteProduct)               // 删除产品
 	}
@@ -76,12 +75,7 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	v, err := dto.ToEntityVersion(cmd)
-	if err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	if err := c.ps.CreateNewVersion(ctx, cmd.ProductID, v); err != nil {
+	if err := c.ps.CreateProductVersion(ctx, cmd.ProductID, v); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -172,7 +166,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetByID(ctx, id)
+	p, err := c.ps.GetProductDataByID(ctx, id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
