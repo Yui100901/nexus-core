@@ -10,7 +10,6 @@ import (
 // AccessController 处理客户端心跳请求
 // 负责验证许可证、管理节点绑定和控制并发访问
 type AccessController struct {
-	Api
 	ls *service.LicenseService // 许可证服务，处理许可证验证和激活
 	ns *service.NodeService    // 节点服务，管理节点创建和绑定
 	ps *service.ProductService // 产品服务，处理产品版本验证
@@ -54,29 +53,29 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 func (c *AccessController) AutoBind(ctx *gin.Context) {
 	var cmd dto.AutoBindCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 
-	res, err := c.as.AutoBind(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
+	res, err := as.AutoBind(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
 	if err != nil {
 		if se, ok := err.(*service.ServiceError); ok {
 			// map service-defined HTTP status
 			switch se.HTTPStatus {
 			case 400:
-				c.BadRequest(ctx, se.Error())
+				BadRequest(ctx, se.Error())
 			case 500:
-				c.InternalError(ctx, se.Error())
+				InternalError(ctx, se.Error())
 			default:
-				c.InternalError(ctx, se.Error())
+				InternalError(ctx, se.Error())
 			}
 			return
 		}
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(ctx, res)
+	Success(ctx, res)
 }
 
 // Heartbeat 现在也很薄
@@ -94,7 +93,7 @@ func (c *AccessController) AutoBind(ctx *gin.Context) {
 func (c *AccessController) Heartbeat(ctx *gin.Context) {
 	var cmd dto.HeartbeatCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -103,17 +102,17 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		if se, ok := err.(*service.ServiceError); ok {
 			switch se.HTTPStatus {
 			case 400:
-				c.BadRequest(ctx, se.Error())
+				BadRequest(ctx, se.Error())
 			case 500:
-				c.InternalError(ctx, se.Error())
+				InternalError(ctx, se.Error())
 			default:
-				c.InternalError(ctx, se.Error())
+				InternalError(ctx, se.Error())
 			}
 			return
 		}
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(ctx, res)
+	Success(ctx, res)
 }

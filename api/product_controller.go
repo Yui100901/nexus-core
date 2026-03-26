@@ -14,7 +14,6 @@ import (
 // @Author yfy2001
 // @Date 2026/1/20 10 54
 type ProductController struct {
-	Api
 	ps *service.ProductService // 产品服务，处理产品相关的业务逻辑
 }
 
@@ -51,19 +50,14 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var cmd dto.CreateProductCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
-	p, err := dto.ToEntityProduct(cmd)
-	if err != nil {
-		c.BadRequest(ctx, err.Error())
+	if err := c.ps.CreateProduct(cmd); err != nil {
+		InternalError(ctx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProduct(ctx, p); err != nil {
-		c.InternalError(ctx, err.Error())
-		return
-	}
-	c.Success(ctx, p)
+	Success(ctx)
 }
 
 // CreateProductVersion 创建产品版本
@@ -79,19 +73,19 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 	var cmd dto.CreateProductVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	v, err := dto.ToEntityVersion(cmd)
 	if err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ps.CreateNewVersion(ctx, cmd.ProductID, v); err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(ctx, v)
+	Success(ctx, v)
 }
 
 // ReleaseNewVersion 发布新版本
@@ -105,17 +99,17 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	var cmd dto.ReleaseNewVersionCommand
 
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 
 	err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
 	if err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
 
-	c.Success(ctx, cmd.VersionID)
+	Success(ctx, cmd.VersionID)
 
 }
 
@@ -132,23 +126,23 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 func (c *ProductController) BatchCreate(ctx *gin.Context) {
 	var cmds []dto.CreateProductCommand
 	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	var products []*entity.Product
 	for _, cmd := range cmds {
 		p, err := dto.ToEntityProduct(cmd)
 		if err != nil {
-			c.BadRequest(ctx, err.Error())
+			BadRequest(ctx, err.Error())
 			return
 		}
 		products = append(products, p)
 	}
 	if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
-	c.Success(ctx, products)
+	Success(ctx, products)
 }
 
 // GetByID 根据 ID 获取产品
@@ -165,14 +159,14 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
 	idStr := ctx.Query("id")
 	if idStr == "" {
-		c.NotFound(ctx, "id is required")
+		NotFound(ctx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.NotFound(ctx, "invalid id")
+		NotFound(ctx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
@@ -180,10 +174,10 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 调用服务层
 	p, err := c.ps.GetByID(ctx, id)
 	if err != nil {
-		c.NotFound(ctx, err.Error())
+		NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(ctx, p)
+	Success(ctx, p)
 }
 
 // GetByName 根据名称查询产品
@@ -199,15 +193,15 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 func (c *ProductController) GetByName(ctx *gin.Context) {
 	var q dto.GetProductByNameQuery
 	if err := ctx.ShouldBindQuery(&q); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	p, err := c.ps.GetByName(ctx, q.Name)
 	if err != nil {
-		c.NotFound(ctx, err.Error())
+		NotFound(ctx, err.Error())
 		return
 	}
-	c.Success(ctx, p)
+	Success(ctx, p)
 }
 
 // SetMinVersion 设置最小支持版本
@@ -223,14 +217,14 @@ func (c *ProductController) GetByName(ctx *gin.Context) {
 func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 	var cmd dto.UpdateMinVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ps.SetMinSupportedVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "min supported version updated")
+	SuccessMsg(ctx, "min supported version updated")
 }
 
 // DeprecateVersion 废弃版本
@@ -246,14 +240,14 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 	var cmd dto.DeprecateVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ps.DeprecateVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "version deprecated")
+	SuccessMsg(ctx, "version deprecated")
 }
 
 // DeleteProduct 删除产品
@@ -271,12 +265,12 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 		ID uint `json:"id" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&q); err != nil {
-		c.BadRequest(ctx, err.Error())
+		BadRequest(ctx, err.Error())
 		return
 	}
 	if err := c.ps.DeleteProduct(ctx, q.ID); err != nil {
-		c.InternalError(ctx, err.Error())
+		InternalError(ctx, err.Error())
 		return
 	}
-	c.SuccessMsg(ctx, "product deleted")
+	SuccessMsg(ctx, "product deleted")
 }

@@ -1,11 +1,11 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/monitor"
 	"nexus-core/persistence/base"
-	"nexus-core/sc"
 	"time"
 )
 
@@ -46,7 +46,7 @@ type HeartbeatResult struct {
 }
 
 // AutoBind 执行自动绑定逻辑，返回 ServiceError 以便 controller 映射HTTP状态
-func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, productID uint, versionCode string, licenseKey string) (*AutoBindResult, error) {
+func (s *AccessService) AutoBind(ctx context.Context, deviceCode string, productID uint, versionCode string, licenseKey string) (*AutoBindResult, error) {
 	// 验证产品和版本是否支持
 	ok, err := s.ps.CheckProductVersionSupported(ctx, productID, nil, &versionCode)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 	}
 
 	// 检查许可证状态
-	currentStatus := license.CheckStatus(time.Now())
+	currentStatus := license.CalculateStatus(time.Now())
 	toActivate := false
 	switch currentStatus {
 	case entity.StatusInactive:
@@ -82,7 +82,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 
 	// Wrap the critical section in a transaction and propagate tx via ServiceContext
 	var res *AutoBindResult
-	err = ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
+	err = ctx.RunInTransaction(base.DefaultDBName, func(txCtx context.Context) error {
 		// txCtx already has Tx set and InTx true
 
 		// 查找或创建节点 using context-aware node service (no nested tx)
@@ -132,7 +132,7 @@ func (s *AccessService) AutoBind(ctx *sc.ServiceContext, deviceCode string, prod
 }
 
 // Heartbeat 处理心跳逻辑
-func (s *AccessService) Heartbeat(ctx *sc.ServiceContext, deviceCode string, productID uint, versionCode string, licenseKey string) (*HeartbeatResult, error) {
+func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, productID uint, versionCode string, licenseKey string) (*HeartbeatResult, error) {
 	ok, err := s.ps.CheckProductVersionSupported(ctx, productID, nil, &versionCode)
 	if err != nil {
 		return nil, NewServiceError(500, "internal error")
@@ -151,7 +151,7 @@ func (s *AccessService) Heartbeat(ctx *sc.ServiceContext, deviceCode string, pro
 		return nil, NewServiceError(400, "product not supported")
 	}
 
-	currentStatus := license.CheckStatus(time.Now())
+	currentStatus := license.CalculateStatus(time.Now())
 	switch currentStatus {
 	case entity.StatusInactive:
 		return nil, NewServiceError(400, "license not active")
@@ -186,7 +186,7 @@ func (s *AccessService) Heartbeat(ctx *sc.ServiceContext, deviceCode string, pro
 
 	// 并发检查
 	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, productID)
-	if !license.ValidateMaxConcurrentForProduct(totalConcurrent) {
+	if !license.ValidateMaxConcurrent(totalConcurrent) {
 		return nil, NewServiceError(400, "maximum concurrent exceeded")
 	}
 

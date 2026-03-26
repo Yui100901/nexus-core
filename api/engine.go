@@ -9,7 +9,6 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"nexus-core/global"
-	"nexus-core/sc"
 
 	_ "nexus-core/docs"
 )
@@ -26,7 +25,6 @@ var WebEngine *gin.Engine
 func NewServer() *gin.Engine {
 	r := gin.Default()
 	r.Use(CorsMiddleware())
-	r.Use(ServiceContextMiddleware())
 	// simple logger
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
@@ -43,14 +41,7 @@ func NewServer() *gin.Engine {
 func RegisterDefaultRoutes() {
 	// health
 	WebEngine.GET("/health", func(c *gin.Context) {
-		sCtx, ok := getServiceContextFromGin(c)
-		if !ok {
-			// fallback to minimal context so InternalError can respond
-			tmp := &sc.ServiceContext{GinContext: c}
-			(&Api{}).InternalError(tmp, "service context missing")
-			return
-		}
-		(&Api{}).Success(sCtx, map[string]string{"status": "ok"})
+		Success(c, map[string]string{"status": "ok"})
 	})
 
 	// controllers
