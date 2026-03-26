@@ -90,21 +90,18 @@ func (p *Product) SetMinSupportedVersion(versionID uint) error {
 	return nil
 }
 
-// CreateNewVersion 创建新版本
+// ExistsVersionCode 创建新版本
 // 为产品添加一个新的版本，默认未启用
-func (p *Product) CreateNewVersion(newVersion Version) error {
+func (p *Product) ExistsVersionCode(versionCode string) bool {
 
 	// 检查版本号是否已存在
 	for _, v := range p.VersionList {
-		if v.VersionCode == newVersion.VersionCode {
-			return fmt.Errorf("newVersion %s already exists", newVersion.VersionCode)
+		if v.VersionCode == versionCode {
+			return true
 		}
 	}
 
-	// 添加到版本列表
-	p.VersionList = append(p.VersionList, newVersion)
-
-	return nil
+	return false
 }
 
 // ReleaseVersion 发布新版本

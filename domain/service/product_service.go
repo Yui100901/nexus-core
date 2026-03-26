@@ -60,14 +60,13 @@ func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.Produ
 //}
 
 // GetProductDataByID 根据ID获取产品信息
-// 返回指定ID的完整产品信息，包括所有版本
 func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
 	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
 	}
 	if pProduct == nil {
-		return nil, fmt.Errorf("pProduct not found")
+		return nil, fmt.Errorf("product not found")
 	}
 	return &dto.ProductData{
 		ID:          pProduct.ID,
@@ -157,24 +156,30 @@ func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
 // CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
 func (s *ProductService) CreateProductVersion(cmd *dto.CreateProductVersionCommand) error {
-	db := ctx.MustDefaultDB()
-	product, err := s.pr.GetByID(ctx, db, productID)
+	product, err := s.GetProductEntityByID(cmd.ProductID)
 	if err != nil {
 		return err
 	}
 	if product == nil {
 		return fmt.Errorf("product not found")
 	}
-	if err := product.CreateNewVersion(*v); err != nil {
-		return err
+	if product.ExistsVersionCode(cmd.VersionCode) {
+		return fmt.Errorf("version code already exists")
 	}
-	if err := s.pr.CreateNewVersion(ctx, db, product.ID, v); err != nil {
+	newVersion := &model.ProductVersion{
+		ProductID:   cmd.ProductID,
+		VersionCode: cmd.VersionCode,
+		ReleaseDate: cmd.ReleaseDate,
+		Description: cmd.Description,
+		Status:      model.VersionStatusUnreleased, //默认未发布
+	}
+	if err := productVersionRepo.Create(context.Background(), global.DB, newVersion); err != nil {
 		return err
 	}
 
 	// 如果设置了发布时间，则注册定时任务
-	if v.ReleaseDate != nil {
-		s.ScheduleReleaseTask(ctx, product.ID, v.ID, *v.ReleaseDate)
+	if newVersion.ReleaseDate != nil {
+		s.ScheduleReleaseTask(product.ID, newVersion.ID, *newVersion.ReleaseDate)
 	}
 
 	return nil
@@ -182,7 +187,7 @@ func (s *ProductService) CreateProductVersion(cmd *dto.CreateProductVersionComma
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(ctx *sc.ServiceContext, productID, versionID uint, releaseDate *time.Time) error {
+func (s *ProductService) ReleaseVersion(productID, versionID uint, releaseDate *time.Time) error {
 	if releaseDate == nil {
 		return s.doReleaseVersion(ctx, productID, versionID, time.Now())
 	} else {
@@ -194,22 +199,21 @@ func (s *ProductService) ReleaseVersion(ctx *sc.ServiceContext, productID, versi
 
 // ScheduleReleaseTask 简易定时发布
 // todo 后续考虑如何管理定时任务
-func (s *ProductService) ScheduleReleaseTask(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) {
+func (s *ProductService) ScheduleReleaseTask(productID, versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
-		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(productID, versionID, releaseDate)
 		return
 	}
 	go func() {
 		<-time.After(delay)
-		_ = s.doReleaseVersion(ctx, productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(productID, versionID, releaseDate)
 	}()
 }
 
 // 内部方法执行版本发布
-func (s *ProductService) doReleaseVersion(ctx *sc.ServiceContext, productID, versionID uint, releaseDate time.Time) error {
-	db := ctx.MustDefaultDB()
+func (s *ProductService) doReleaseVersion(productID, versionID uint, releaseDate time.Time) error {
 	product, err := s.pr.GetByID(ctx, db, productID)
 	if err != nil {
 		return err
