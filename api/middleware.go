@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"nexus-core/sc"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,15 +25,5 @@ func CorsMiddleware() gin.HandlerFunc {
 			context.AbortWithStatus(http.StatusNoContent)
 		}
 		context.Next()
-	}
-}
-
-// ServiceContextMiddleware 将 ServiceContext 注入到 gin.Context 中
-func ServiceContextMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		sctx := sc.InitContext(c)
-		// inject app DB into service context so handlers/services can use sctx.MustDefaultDB()
-		c.Set(sc.ServiceContextKey, sctx)
-		c.Next()
 	}
 }
