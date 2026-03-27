@@ -75,7 +75,7 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.CreateProductVersion(cmd); err != nil {
+	if v, err := c.ps.CreateProductVersion(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
