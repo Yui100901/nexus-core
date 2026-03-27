@@ -4,6 +4,7 @@ import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -105,13 +106,22 @@ func (c *LicenseController) BatchCreateLicense(ctx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /license/getByID [get]
 func (c *LicenseController) GetByID(ctx *gin.Context) {
-	var query dto.GetLicenseByIDQuery
-	if err := ctx.ShouldBindQuery(&query); err != nil {
-		BadRequest(ctx, err.Error())
+	// 获取 query 参数
+	idStr := ctx.Query("id")
+	if idStr == "" {
+		NotFound(ctx, "id is required")
 		return
 	}
 
-	license, err := c.ls.GetLicenseByID(ctx, query.ID)
+	// 转换为 uint
+	idUint64, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		NotFound(ctx, "invalid id")
+		return
+	}
+	id := uint(idUint64)
+
+	license, err := c.ls.GetLicenseByID(id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -130,13 +140,10 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /license/getByKey [get]
 func (c *LicenseController) GetByKey(ctx *gin.Context) {
-	var query dto.GetLicenseByKeyQuery
-	if err := ctx.ShouldBindQuery(&query); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
+	// 获取 query 参数
+	key := ctx.Query("deviceCode")
 
-	license, err := c.ls.GetLicenseByKey(ctx, query.Key)
+	license, err := c.ls.GetLicenseByKey(key)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return

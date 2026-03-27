@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 //
@@ -140,15 +141,41 @@ func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.L
 }
 
 // GetLicenseByID 根据ID获取许可证
-func (s *LicenseService) GetLicenseByID(ctx *sc.ServiceContext, id uint) (*entity.License, error) {
-	db := ctx.MustDefaultDB()
-	return s.lr.GetByID(ctx, db, id)
+func (s *LicenseService) GetLicenseByID(id uint) (*dto.LicenseData, error) {
+	license, err := licenseRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if license == nil {
+		return nil, fmt.Errorf("product not found")
+	}
+	return &dto.LicenseData{
+		ID:            license.ID,
+		ProductID:     license.ProductID,
+		LicenseKey:    license.LicenseKey,
+		ValidityHours: license.ValidityHours,
+		Status:        license.Status,
+		Remark:        license.Remark,
+	}, nil
 }
 
 // GetLicenseByKey 根据许可证密钥获取许可证
-func (s *LicenseService) GetLicenseByKey(ctx *sc.ServiceContext, key string) (*entity.License, error) {
-	db := ctx.MustDefaultDB()
-	return s.lr.GetByKey(ctx, db, key)
+func (s *LicenseService) GetLicenseByKey(key string) (*dto.LicenseData, error) {
+	license, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
+	if err != nil {
+		return nil, err
+	}
+	if license == nil {
+		return nil, fmt.Errorf("product not found")
+	}
+	return &dto.LicenseData{
+		ID:            license.ID,
+		ProductID:     license.ProductID,
+		LicenseKey:    license.LicenseKey,
+		ValidityHours: license.ValidityHours,
+		Status:        license.Status,
+		Remark:        license.Remark,
+	}, nil
 }
 
 // DeleteExpiredLicenses 删除所有过期的许可证

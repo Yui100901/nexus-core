@@ -85,7 +85,7 @@ func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, db *gorm.DB, l
 }
 
 // GetByID 根据 id 获取领域对象 License
-func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.License, error) {
+func (r *LicenseRepository) GetByID(ctx context.Context, db *gorm.DB, id uint) (*model.License, error) {
 	m, err := GetOneByUniqueColumn[model.License](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
@@ -94,19 +94,20 @@ func (r *LicenseRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint
 		return nil, nil
 	}
 
-	return toEntityLicense(m), nil
+	return m, nil
 }
 
 // GetByKey 根据 LicenseKey 获取领域对象 License
-func (r *LicenseRepository) GetByKey(ctx *sc.ServiceContext, db *gorm.DB, key string) (*entity.License, error) {
-	m, err := gorm.G[*model.License](db).
-		Where("license_key = ?", key).
-		First(ctx)
+func (r *LicenseRepository) GetByKey(ctx context.Context, db *gorm.DB, key string) (*model.License, error) {
+	m, err := GetOneByUniqueColumn[model.License](ctx, db, "id", key)
 	if err != nil {
 		return nil, err
 	}
+	if m == nil {
+		return nil, nil
+	}
 
-	return toEntityLicense(m), nil
+	return m, nil
 }
 
 func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, db *gorm.DB, status int) ([]uint, error) {
