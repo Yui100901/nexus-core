@@ -212,7 +212,7 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeprecateVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
+	if err := c.ps.DeprecateVersion(cmd.VersionID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
