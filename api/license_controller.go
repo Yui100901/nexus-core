@@ -75,23 +75,23 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/batchCreate [post]
 func (c *LicenseController) BatchCreateLicense(ctx *gin.Context) {
-	var cmds []dto.CreateLicenseCommand
-	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-
-	var licenses []*entity.License
-	for _, cmd := range cmds {
-		license := entity.NewLicense(cmd.ProductID, cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark)
-		licenses = append(licenses, license)
-	}
-
-	if err := c.ls.BatchCreateLicense(ctx, licenses); err != nil {
-		InternalError(ctx, err.Error())
-		return
-	}
-	Success(ctx, licenses)
+	//var cmds []dto.CreateLicenseCommand
+	//if err := ctx.ShouldBindJSON(&cmds); err != nil {
+	//	BadRequest(ctx, err.Error())
+	//	return
+	//}
+	//
+	//var licenses []*entity.License
+	//for _, cmd := range cmds {
+	//	license := entity.NewLicense(cmd.ProductID, cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark)
+	//	licenses = append(licenses, license)
+	//}
+	//
+	//if err := c.ls.BatchCreateLicense(ctx, licenses); err != nil {
+	//	InternalError(ctx, err.Error())
+	//	return
+	//}
+	//Success(ctx, licenses)
 }
 
 // GetByID 根据 ID 获取 License（Query 参数传递）

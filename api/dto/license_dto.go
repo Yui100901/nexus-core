@@ -62,17 +62,3 @@ type UpdateLicenseStatusCommand struct {
 	ID     uint `json:"id" binding:"required"`     // 许可证ID
 	Status int  `json:"status" binding:"required"` // 新状态
 }
-
-// -------------------- Query --------------------
-
-// GetLicenseByIDQuery 按ID查询许可证的查询对象
-// @Description Query by license ID
-type GetLicenseByIDQuery struct {
-	ID uint `form:"id" binding:"required"` // 许可证ID
-}
-
-// GetLicenseByKeyQuery 按密钥查询许可证的查询对象
-// @Description Query by license key
-type GetLicenseByKeyQuery struct {
-	Key string `form:"key" binding:"required"` // 许可证密钥
-}

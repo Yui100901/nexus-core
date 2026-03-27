@@ -133,12 +133,9 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /node/getByDevice [get]
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
-	var q dto.GetNodeByDeviceCodeQuery
-	if err := ctx.ShouldBindQuery(&q); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	n, err := c.ns.GetByDeviceCode(q.DeviceCode)
+	// 获取 query 参数
+	code := ctx.Query("deviceCode")
+	n, err := c.ns.GetByDeviceCode(code)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -234,7 +231,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.DeleteNode(ctx, q.ID); err != nil {
+	if err := c.ns.DeleteNode(q.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
