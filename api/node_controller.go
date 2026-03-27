@@ -102,7 +102,7 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByID(ctx, q.ID)
+	n, err := c.ns.GetNodeDataByID(ctx, q.ID)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return

@@ -69,7 +69,7 @@ func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, db *gorm.DB, no
 }
 
 // GetByID 根据 ID 获取节点信息
-func (r *NodeRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (*entity.Node, error) {
+func (r *NodeRepository) GetByID(ctx context.Context, db *gorm.DB, id uint) (*model.Node, error) {
 	m, err := GetOneByUniqueColumn[model.Node](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (r *NodeRepository) GetByID(ctx *sc.ServiceContext, db *gorm.DB, id uint) (
 		return nil, nil
 	}
 
-	return toEntityNode(m), nil
+	return m, nil
 }
 
 // GetByDeviceCode 根据设备码获取节点信息

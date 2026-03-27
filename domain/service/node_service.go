@@ -100,11 +100,22 @@ func (s *NodeService) BatchCreateNode(nodes []*entity.Node) error {
 	})
 }
 
-// GetByID 根据ID获取节点信息
-// 返回指定ID的完整节点信息，包括所有绑定关系
-func (s *NodeService) GetByID(id uint) (*entity.Node, error) {
-
-	return s.nr.GetByID(ctx, db, id)
+// GetNodeDataByID 根据ID获取节点信息
+func (s *NodeService) GetNodeDataByID(id uint) (*dto.NodeData, error) {
+	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if pNode == nil {
+		return nil, fmt.Errorf("product not found")
+	}
+	metadata := string(pNode.Metadata)
+	return &dto.NodeData{
+		ID:         pNode.ID,
+		DeviceCode: pNode.DeviceCode,
+		Status:     pNode.Status,
+		Metadata:   &metadata,
+	}, nil
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
