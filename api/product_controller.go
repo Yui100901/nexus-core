@@ -52,11 +52,12 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if p, err := c.ps.CreateProduct(cmd); err != nil {
+	p, err := c.ps.CreateProduct(cmd)
+	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "创建成功")
+	Success(ctx, p)
 }
 
 // CreateProductVersion 创建产品版本
@@ -75,7 +76,8 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if v, err := c.ps.CreateProductVersion(cmd); err != nil {
+	v, err := c.ps.CreateProductVersion(cmd)
+	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -91,20 +93,16 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 // @Success 200 {object} entity.Version
 func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	var cmd dto.ReleaseNewVersionCommand
-
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-
-	err := c.ps.ReleaseVersion(ctx, cmd.ProductID, cmd.VersionID, cmd.ReleaseDate)
+	err := c.ps.ReleaseVersion(cmd.VersionID, cmd.ReleaseDate)
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-
 	Success(ctx, cmd.VersionID)
-
 }
 
 // BatchCreate 批量创建产品
