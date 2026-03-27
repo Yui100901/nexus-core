@@ -29,7 +29,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 	{
 		g.POST("/create", c.CreateProduct)               // 创建产品
 		g.POST("/createVersion", c.CreateProductVersion) // 创建产品版本
-		g.POST("/batchCreate", c.BatchCreate)            // 批量创建产品
+		g.POST("/batchCreate", c.BatchCreateProduct)     // 批量创建产品
 		g.GET("/getByID", c.GetByID)                     // 根据ID获取产品
 		g.POST("/setMinVersion", c.SetMinVersion)        // 设置最小支持版本
 		g.POST("/delete", c.DeleteProduct)               // 删除产品
@@ -105,7 +105,7 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	Success(ctx, cmd.VersionID)
 }
 
-// BatchCreate 批量创建产品
+// BatchCreateProduct 批量创建产品
 // @Summary Batch create products
 // @Tags products
 // @Accept json
@@ -115,26 +115,27 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /product/batchCreate [post]
-func (c *ProductController) BatchCreate(ctx *gin.Context) {
+func (c *ProductController) BatchCreateProduct(ctx *gin.Context) {
 	var cmds []dto.CreateProductCommand
 	if err := ctx.ShouldBindJSON(&cmds); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	var products []*entity.Product
-	for _, cmd := range cmds {
-		p, err := dto.ToEntityProduct(cmd)
-		if err != nil {
-			BadRequest(ctx, err.Error())
-			return
-		}
-		products = append(products, p)
-	}
-	if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
-		InternalError(ctx, err.Error())
-		return
-	}
-	Success(ctx, products)
+	//todo to implement batch create product
+	//var products []*entity.Product
+	//for _, cmd := range cmds {
+	//	p, err := dto.ToEntityProduct(cmd)
+	//	if err != nil {
+	//		BadRequest(ctx, err.Error())
+	//		return
+	//	}
+	//	products = append(products, p)
+	//}
+	//if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
+	//	InternalError(ctx, err.Error())
+	//	return
+	//}
+	//Success(ctx, products)
 }
 
 // GetByID 根据 ID 获取产品
@@ -164,7 +165,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetProductDataByID(ctx, id)
+	p, err := c.ps.GetProductDataByID(id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return

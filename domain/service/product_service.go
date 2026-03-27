@@ -220,7 +220,7 @@ func (s *ProductService) ScheduleReleaseTask(versionID uint, releaseDate time.Ti
 func (s *ProductService) doReleaseVersion(versionID uint, releaseDate time.Time) error {
 
 	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
-		"status":       model.VersionStatusUnreleased,
+		"status":       model.VersionStatusAvailable,
 		"release_date": releaseDate,
 	}).Error
 }
