@@ -138,7 +138,7 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.GetByDeviceCode(ctx, q.DeviceCode)
+	n, err := c.ns.GetByDeviceCode(q.DeviceCode)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -162,7 +162,7 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(ctx, cmd.NodeID, cmd.LicenseID, cmd.ProductID); err != nil {
+	if err := c.ns.AddBinding(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

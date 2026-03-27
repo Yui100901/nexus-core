@@ -24,12 +24,6 @@ type NodeData struct {
 type AddBindingCommand struct {
 	NodeID    uint `json:"node_id" binding:"required"`    // 节点ID
 	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
-	ProductID uint `json:"product_id" binding:"required"` // 产品ID
-}
-
-// ToEntityNode 将创建节点命令转换为实体对象
-func ToEntityNode(cmd CreateNodeCommand) *entity.Node {
-	return
 }
 
 // ToEntityBinding 将添加绑定命令转换为实体对象

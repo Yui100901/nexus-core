@@ -99,3 +99,8 @@ func (s *NodeService) DeleteNode(id uint) error {
 		return nil
 	})
 }
+
+// AddBinding 添加节点与授权的绑定关系
+func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
+
+}

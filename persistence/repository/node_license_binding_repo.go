@@ -4,7 +4,6 @@ import (
 	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
-	"nexus-core/sc"
 
 	"gorm.io/gorm"
 )
