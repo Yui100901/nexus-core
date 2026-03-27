@@ -24,7 +24,7 @@ func NewNodeController() *NodeController {
 func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/node")
 	{
-		g.POST("/create", c.CreateNode)                       // 创建节点
+		g.POST("/createNode", c.CreateNode)                   // 创建节点
 		g.POST("/batchCreate", c.BatchCreate)                 // 批量创建节点
 		g.GET("/getByID", c.GetByID)                          // 根据ID获取节点
 		g.GET("/getByDevice", c.GetByDeviceCode)              // 根据设备码获取节点

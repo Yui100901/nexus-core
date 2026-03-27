@@ -20,29 +20,6 @@ type Product struct {
 	VersionList           []Version // 产品版本列表
 }
 
-func CreateProduct(name string, description *string) *Product {
-	return &Product{
-		Name:                  name,
-		Description:           description,
-		MinSupportedVersionID: nil,
-		VersionList:           []Version{},
-	}
-}
-
-// NewProduct 工厂方法
-// 创建一个新的产品对象，默认版本列表为空
-func NewProduct(name string, description *string, minSupportedVersionID *uint) *Product {
-
-	product := &Product{
-		Name:                  name,
-		Description:           description,
-		MinSupportedVersionID: minSupportedVersionID,
-		VersionList:           []Version{},
-	}
-
-	return product
-}
-
 // Version 表示产品的具体版本信息
 type Version struct {
 	ID          uint

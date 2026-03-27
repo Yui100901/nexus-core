@@ -25,7 +25,12 @@ func NewProductService() *ProductService {
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
 func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.ProductData, error) {
-	product := entity.CreateProduct(cmd.Name, cmd.Description)
+	product := &entity.Product{
+		Name:                  cmd.Name,
+		Description:           cmd.Description,
+		MinSupportedVersionID: nil,
+		VersionList:           []entity.Version{},
+	}
 	pProduct := &model.Product{
 		Name:        product.Name,
 		Description: product.Description,

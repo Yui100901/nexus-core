@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"nexus-core/domain/entity"
 	"time"
 )
 
@@ -54,16 +53,6 @@ type ReleaseNewVersionCommand struct {
 type DeprecateVersionCommand struct {
 	ProductID uint `json:"product_id" binding:"required"`
 	VersionID uint `json:"version_id" binding:"required"`
-}
-
-// ToEntityVersion 将创建产品版本命令转换为实体对象
-func ToEntityVersion(cmd CreateProductVersionCommand) (*entity.Version, error) {
-	return entity.NewVersion(cmd.VersionCode, cmd.ReleaseDate, cmd.Description)
-}
-
-// ToEntityProduct 将创建产品命令转换为实体对象
-func ToEntityProduct(cmd CreateProductCommand) *entity.Product {
-	return entity.NewProduct(cmd.Name, cmd.Description, nil)
 }
 
 // Query DTOs
