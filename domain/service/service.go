@@ -11,4 +11,5 @@ var (
 	productRepo        = repository.NewProductRepository()
 	productVersionRepo = repository.NewProductVersionRepository()
 	nodeRepo           = repository.NewNodeRepository()
+	licenseRepo        = repository.NewLicenseRepository()
 )

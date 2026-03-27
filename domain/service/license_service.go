@@ -1,13 +1,21 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"nexus-core/api/dto"
+	"nexus-core/global"
 	"nexus-core/persistence/base"
+	"nexus-core/persistence/model"
 	"nexus-core/sc"
+	"strings"
 	"time"
 
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/repository"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 //
@@ -18,35 +26,43 @@ import (
 // LicenseService 提供许可证相关的业务逻辑服务
 // 包括许可证的创建、更新、查询、激活和验证等功能
 type LicenseService struct {
-	lr  *repository.LicenseRepository // 许可证仓库，用于数据持久化操作
-	pr  *repository.ProductRepository
-	nlr *repository.NodeLicenseBindingRepository
 }
 
 // NewLicenseService 创建新的许可证服务实例
 func NewLicenseService() *LicenseService {
-	return &LicenseService{
-		lr:  repository.NewLicenseRepository(),
-		pr:  repository.NewProductRepository(),
-		nlr: repository.NewNodeLicenseBindingRepository(),
-	}
+	return &LicenseService{}
 }
 
 // CreateLicense 创建单个许可证
-func (s *LicenseService) CreateLicense(ctx *sc.ServiceContext, license *entity.License) error {
-
-	// 检查产品是否都存在
-	db := ctx.MustDefaultDB()
-	exist, err := s.pr.ExistIds(ctx, db, []uint{license.ProductID})
+func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.LicenseData, error) {
+	var product model.Product
+	if err := global.DB.Model(&model.Product{}).Where("id = ?", &cmd.ProductID).First(product).Error; err != nil {
+		return nil, err
+	}
+	license := &model.License{
+		ProductID:     product.ID,
+		LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
+		ValidityHours: cmd.ValidityHours,
+		ActivatedAt:   nil,
+		ExpiredAt:     nil,
+		Status:        int(entity.StatusInactive), //默认未激活
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		FeatureMask:   "",
+		Remark:        cmd.Remark,
+	}
+	err := licenseRepo.Create(context.Background(), global.DB, license)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !exist {
-		return fmt.Errorf("some products in scope do not exist")
-	}
-
-	// 插入 License
-	return s.lr.CreateLicense(ctx, db, license)
+	return &dto.LicenseData{
+		ID:            license.ID,
+		ProductID:     license.ProductID,
+		LicenseKey:    license.LicenseKey,
+		ValidityHours: license.ValidityHours,
+		Status:        license.Status,
+		Remark:        license.Remark,
+	}, nil
 }
 
 // BatchCreateLicense 批量创建许可证

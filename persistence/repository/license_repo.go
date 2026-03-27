@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
 	"nexus-core/sc"
@@ -20,23 +21,11 @@ func NewLicenseRepository() *LicenseRepository {
 	return &LicenseRepository{}
 }
 
-// CreateLicense 创建 License 及其 Scope 列表（回填 ID、时间戳、Scope ID）
-func (r *LicenseRepository) CreateLicense(ctx *sc.ServiceContext, db *gorm.DB, license *entity.License) error {
-	pLicense := &model.License{
-		LicenseKey:    license.LicenseKey,
-		ValidityHours: license.ValidityHours,
-		Status:        0,
-	}
-	if err := gorm.G[model.License](db).Create(ctx, pLicense); err != nil {
+// Create 创建 License
+func (r *LicenseRepository) Create(ctx context.Context, db *gorm.DB, license *model.License) error {
+	if err := gorm.G[model.License](db).Create(ctx, license); err != nil {
 		return err
 	}
-
-	// 回填 License 信息
-	license.ID = pLicense.ID
-	license.ActivatedAt = pLicense.ActivatedAt
-	license.ExpiredAt = pLicense.ExpiredAt
-	license.Status = pLicense.Status
-
 	return nil
 }
 

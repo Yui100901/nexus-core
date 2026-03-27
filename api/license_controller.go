@@ -28,13 +28,13 @@ func NewLicenseController() *LicenseController {
 func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 	licenseGroup := r.Group("/license")
 	{
-		licenseGroup.POST("/create", c.CreateLicense)        // 创建单个许可证
-		licenseGroup.POST("/batchCreate", c.BatchCreate)     // 批量创建许可证
-		licenseGroup.GET("/getByID", c.GetByID)              // 根据ID查询许可证
-		licenseGroup.GET("/getByKey", c.GetByKey)            // 根据许可证密钥查询
-		licenseGroup.POST("/updateStatus", c.UpdateStatus)   // 更新许可证状态
-		licenseGroup.POST("/update", c.UpdateLicense)        // 更新许可证信息
-		licenseGroup.POST("/deleteExpired", c.DeleteExpired) // 删除过期的许可证
+		licenseGroup.POST("/createLicense", c.CreateLicense)           // 创建单个许可证
+		licenseGroup.POST("/batchCreateLicense", c.BatchCreateLicense) // 批量创建许可证
+		licenseGroup.GET("/getByID", c.GetByID)                        // 根据ID查询许可证
+		licenseGroup.GET("/getByKey", c.GetByKey)                      // 根据许可证密钥查询
+		licenseGroup.POST("/updateStatus", c.UpdateStatus)             // 更新许可证状态
+		licenseGroup.POST("/update", c.UpdateLicense)                  // 更新许可证信息
+		licenseGroup.POST("/deleteExpired", c.DeleteExpired)           // 删除过期的许可证
 	}
 }
 
@@ -55,17 +55,15 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-
-	license := entity.NewLicense(cmd.ProductID, cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark)
-
-	if err := c.ls.CreateLicense(ctx, license); err != nil {
+	license, err := c.ls.CreateLicense(cmd)
+	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
 	Success(ctx, license)
 }
 
-// BatchCreate 批量创建 License
+// BatchCreateLicense 批量创建 License
 // @Summary Batch create licenses
 // @Description Create multiple licenses in batch
 // @Tags licenses
@@ -76,7 +74,7 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/batchCreate [post]
-func (c *LicenseController) BatchCreate(ctx *gin.Context) {
+func (c *LicenseController) BatchCreateLicense(ctx *gin.Context) {
 	var cmds []dto.CreateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmds); err != nil {
 		BadRequest(ctx, err.Error())
