@@ -9,6 +9,8 @@ import (
 	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // ProductService 提供产品相关的业务逻辑服务
@@ -145,12 +147,14 @@ func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, pr
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
 func (s *ProductService) DeleteProduct(id uint) error {
-	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		err := s.pr.DeleteProduct(txCtx, txCtx.MustDefaultDB(), id)
-		if err != nil {
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("id = ?", id).Delete(&model.Product{}).Error; err != nil {
 			return err
 		}
-		return s.pr.DeleteVersion(txCtx, txCtx.MustDefaultDB(), id)
+		if err := tx.Where("product_id = ?", id).Delete(&model.ProductVersion{}).Error; err != nil {
+			return err
+		}
+		return nil
 	})
 }
 
