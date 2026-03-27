@@ -4,6 +4,7 @@ import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -97,17 +98,28 @@ func (c *NodeController) BatchCreate(ctx *gin.Context) {
 // @Failure 504 {object} api.CommonResponse
 // @Router /node/getByID [get]
 func (c *NodeController) GetByID(ctx *gin.Context) {
-	var q dto.GetNodeByIDQuery
-	if err := ctx.ShouldBindQuery(&q); err != nil {
-		BadRequest(ctx, err.Error())
+	// 获取 query 参数
+	idStr := ctx.Query("id")
+	if idStr == "" {
+		NotFound(ctx, "id is required")
 		return
 	}
-	n, err := c.ns.GetNodeDataByID(ctx, q.ID)
+
+	// 转换为 uint
+	idUint64, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		NotFound(ctx, "invalid id")
+		return
+	}
+	id := uint(idUint64)
+
+	// 调用服务层
+	data, err := c.ns.GetNodeDataByID(id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, n)
+	Success(ctx, data)
 }
 
 // GetByDeviceCode 根据设备码查询节点

@@ -82,18 +82,16 @@ func (r *NodeRepository) GetByID(ctx context.Context, db *gorm.DB, id uint) (*mo
 }
 
 // GetByDeviceCode 根据设备码获取节点信息
-func (r *NodeRepository) GetByDeviceCode(ctx *sc.ServiceContext, db *gorm.DB, deviceCode string) (*entity.Node, error) {
-	m, err := gorm.G[*model.Node](db).
-		Where("device_code = ?", deviceCode).
-		First(ctx)
+func (r *NodeRepository) GetByDeviceCode(ctx context.Context, db *gorm.DB, deviceCode string) (*model.Node, error) {
+	m, err := GetOneByUniqueColumn[model.Node](ctx, db, "device_code", deviceCode)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
+	if m == nil {
+		return nil, nil
+	}
 
-	return toEntityNode(m), nil
+	return m, nil
 }
 
 // DeleteNode 删除节点

@@ -166,12 +166,12 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	p, err := c.ps.GetProductDataByID(id)
+	data, err := c.ps.GetProductDataByID(id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
 	}
-	Success(ctx, p)
+	Success(ctx, data)
 }
 
 // SetMinVersion 设置最小支持版本
