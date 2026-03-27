@@ -10,4 +10,5 @@ import "nexus-core/persistence/repository"
 var (
 	productRepo        = repository.NewProductRepository()
 	productVersionRepo = repository.NewProductVersionRepository()
+	nodeRepo           = repository.NewNodeRepository()
 )

@@ -1,10 +1,16 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
+	"nexus-core/global"
 	"nexus-core/persistence/base"
+	"nexus-core/persistence/model"
 	"nexus-core/persistence/repository"
+
+	"gorm.io/datatypes"
 )
 
 // NodeService 提供节点相关的业务逻辑服务
@@ -25,8 +31,23 @@ func NewNodeService() *NodeService {
 
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
-func (s *NodeService) CreateNode(n *entity.Node) error {
-	return s.nr.CreateNode(ctx, db, n)
+func (s *NodeService) CreateNode(cmd dto.CreateNodeCommand) (*dto.NodeData, error) {
+	n := &model.Node{
+		DeviceCode: cmd.DeviceCode,
+		Metadata:   datatypes.JSON(*cmd.Metadata),
+		Status:     0, //默认正常
+	}
+	err := nodeRepo.Create(context.Background(), global.DB, n)
+	if err != nil {
+		return nil, err
+	}
+	metadata := string(n.Metadata)
+	return &dto.NodeData{
+		ID:         n.ID,
+		DeviceCode: n.DeviceCode,
+		Status:     n.Status,
+		Metadata:   &metadata,
+	}, nil
 }
 
 // AutoCreateNode 自动创建节点

@@ -9,7 +9,14 @@ import (
 // @Tags Node
 type CreateNodeCommand struct {
 	DeviceCode string  `json:"device_code" binding:"required"` // 设备唯一识别码
-	MetaInfo   *string `json:"meta_info"`                      // 设备元信息
+	Metadata   *string `json:"metadata"`                       // 设备元信息
+}
+
+type NodeData struct {
+	ID         uint    `json:"id"`          // 节点ID
+	DeviceCode string  `json:"device_code"` // 设备唯一识别码
+	Status     int     `json:"status"`      // 状态（0=正常，1=封禁）
+	Metadata   *string `json:"metadata"`    // 设备元信息
 }
 
 // AddBindingCommand 添加绑定的命令对象
@@ -22,10 +29,7 @@ type AddBindingCommand struct {
 
 // ToEntityNode 将创建节点命令转换为实体对象
 func ToEntityNode(cmd CreateNodeCommand) *entity.Node {
-	return &entity.Node{
-		DeviceCode: cmd.DeviceCode,
-		Metadata:   cmd.MetaInfo,
-	}
+	return
 }
 
 // ToEntityBinding 将添加绑定命令转换为实体对象

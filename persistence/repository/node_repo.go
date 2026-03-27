@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
@@ -21,11 +22,19 @@ func NewNodeRepository() *NodeRepository {
 	return &NodeRepository{}
 }
 
+// Create 创建节点
+func (r *NodeRepository) Create(ctx context.Context, db *gorm.DB, node *model.Node) error {
+	if err := gorm.G[model.Node](db).Create(ctx, node); err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateNode 创建节点（回填 ID）
 func (r *NodeRepository) CreateNode(ctx *sc.ServiceContext, db *gorm.DB, node *entity.Node) error {
 	pNode := &model.Node{
 		DeviceCode: node.DeviceCode,
-		MetaData:   node.Metadata,
+		Metadata:   node.Metadata,
 	}
 	if err := gorm.G[model.Node](db).Create(ctx, pNode); err != nil {
 		return err
@@ -42,7 +51,7 @@ func (r *NodeRepository) BatchCreateNode(ctx *sc.ServiceContext, db *gorm.DB, no
 	for _, node := range nodes {
 		pNodes = append(pNodes, model.Node{
 			DeviceCode: node.DeviceCode,
-			MetaData:   node.Metadata,
+			Metadata:   node.Metadata,
 		})
 	}
 
@@ -150,6 +159,6 @@ func toEntityNode(m *model.Node) *entity.Node {
 		ID:         m.ID,
 		DeviceCode: m.DeviceCode,
 		Status:     m.Status,
-		Metadata:   m.MetaData,
+		Metadata:   m.Metadata,
 	}
 }

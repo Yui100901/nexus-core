@@ -51,9 +51,8 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-
-	n := dto.ToEntityNode(cmd)
-	if err := c.ns.CreateNode(ctx, n); err != nil {
+	n, err := c.ns.CreateNode(cmd)
+	if err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -71,20 +70,20 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/batchCreate [post]
 func (c *NodeController) BatchCreate(ctx *gin.Context) {
-	var cmds []dto.CreateNodeCommand
-	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	var nodes []*entity.Node
-	for _, cmd := range cmds {
-		nodes = append(nodes, dto.ToEntityNode(cmd))
-	}
-	if err := c.ns.BatchCreateNode(ctx, nodes); err != nil {
-		InternalError(ctx, err.Error())
-		return
-	}
-	Success(ctx, nodes)
+	//var cmds []dto.CreateNodeCommand
+	//if err := ctx.ShouldBindJSON(&cmds); err != nil {
+	//	BadRequest(ctx, err.Error())
+	//	return
+	//}
+	//var nodes []*entity.Node
+	//for _, cmd := range cmds {
+	//	nodes = append(nodes, dto.ToEntityNode(cmd))
+	//}
+	//if err := c.ns.BatchCreateNode(ctx, nodes); err != nil {
+	//	InternalError(ctx, err.Error())
+	//	return
+	//}
+	//Success(ctx, nodes)
 }
 
 // GetByID 根据 ID 获取节点信息

@@ -12,7 +12,7 @@ type Node struct {
 	BaseModel
 	DeviceCode string         `gorm:"type:varchar(100);uniqueIndex;not null"` // 设备唯一识别码
 	Status     int            `gorm:"type:int;not null;default:0"`            // 状态（0=正常，1=封禁）
-	MetaData   datatypes.JSON `gorm:"type:json"`                              // 其他信息（操作系统、版本等）
+	Metadata   datatypes.JSON `gorm:"type:json"`                              // 其他信息（操作系统、版本等）
 }
 
 func (Node) TableName() string {
