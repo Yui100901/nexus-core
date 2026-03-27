@@ -189,7 +189,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(ctx, cmd.ProductID, cmd.VersionID); err != nil {
+	if err := c.ps.SetMinSupportedVersion(cmd.ProductID, cmd.VersionID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

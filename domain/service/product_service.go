@@ -110,18 +110,19 @@ func (s *ProductService) GetProductEntityByID(id uint) (*entity.Product, error) 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
 func (s *ProductService) SetMinSupportedVersion(productID, versionID uint) error {
-	product, err := s.pr.GetByID(ctx, db, productID)
+	version, err := productVersionRepo.GetByID(context.Background(), global.DB, versionID)
 	if err != nil {
 		return err
 	}
-	if product == nil {
-		return fmt.Errorf("product not found")
+	if version == nil {
+		return fmt.Errorf("unkonwn version id %d", versionID)
 	}
-	err = product.SetMinSupportedVersion(versionID)
-	if err != nil {
-		return err
+	if version.ProductID == productID {
+		return global.DB.Model(&model.Product{}).
+			Where("id = ?", productID).
+			Update("min_supported_version_id", versionID).Error
 	}
-	return s.pr.UpdateMinSupportedVersion(ctx, db, product.ID, *product.MinSupportedVersionID)
+	return fmt.Errorf("version id %d not supported for %d", versionID, productID)
 }
 
 // CheckProductVersionSupported 检查产品和版本是否支持

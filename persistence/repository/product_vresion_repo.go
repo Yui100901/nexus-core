@@ -27,7 +27,7 @@ func (r *ProductVersionRepository) Create(ctx context.Context, db *gorm.DB, prod
 }
 
 func (r *ProductVersionRepository) GetByID(ctx context.Context,
-	db *gorm.DB, id string) (*model.ProductVersion, error) {
+	db *gorm.DB, id uint) (*model.ProductVersion, error) {
 	m, err := GetOneByUniqueColumn[model.ProductVersion](ctx, db, "id", id)
 	if err != nil {
 		return nil, err
