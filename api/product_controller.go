@@ -26,12 +26,14 @@ func NewProductController() *ProductController {
 func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/product")
 	{
-		g.POST("/create", c.CreateProduct)               // 创建产品
-		g.POST("/createVersion", c.CreateProductVersion) // 创建产品版本
-		g.POST("/batchCreate", c.BatchCreateProduct)     // 批量创建产品
-		g.GET("/getByID", c.GetByID)                     // 根据ID获取产品
-		g.POST("/setMinVersion", c.SetMinVersion)        // 设置最小支持版本
-		g.POST("/delete", c.DeleteProduct)               // 删除产品
+		g.POST("/createProduct", c.CreateProduct)               // 创建产品
+		g.POST("/createProductVersion", c.CreateProductVersion) // 创建产品版本
+		g.POST("/releaseNewVersion", c.ReleaseNewVersion)       //手动发布版本
+		g.POST("/batchCreateProduct", c.BatchCreateProduct)     // 批量创建产品
+		g.GET("/getByID", c.GetByID)                            // 根据ID获取产品
+		g.POST("/setMinVersion", c.SetMinVersion)               // 设置最小支持版本
+		g.POST("deprecateVersion", c.DeprecateVersion)          // 废弃版本
+		g.POST("/deleteProduct", c.DeleteProduct)               // 删除产品
 	}
 }
 
