@@ -19,13 +19,23 @@ type ProductData struct {
 	Description *string `json:"description"`
 }
 
+// ReleaseMethod 表示版本发布方式
+type ReleaseMethod int
+
+const (
+	ReleaseImmediate ReleaseMethod = iota // 0 立即发布
+	ReleaseScheduled                      // 1 定时发布
+	ReleaseHold                           // 2 暂不发布
+)
+
 // CreateProductVersionCommand 产品版本的DTO对象
 // @Description Product version DTO
 type CreateProductVersionCommand struct {
-	ProductID   uint       `json:"product_id" binding:"required"`   // 所属产品ID
-	VersionCode string     `json:"version_code" binding:"required"` // 版本号
-	ReleaseDate *time.Time `json:"release_date"`                    // 发布时间
-	Description *string    `json:"description"`                     // 版本描述
+	ProductID   uint          `json:"product_id" binding:"required"`     // 所属产品ID
+	VersionCode string        `json:"version_code" binding:"required"`   // 版本号
+	ReleaseDate *time.Time    `json:"release_date"`                      // 发布时间
+	Description *string       `json:"description"`                       // 版本描述
+	Method      ReleaseMethod `json:"release_method" binding:"required"` // 0立即发布，1定时发布，2暂不发布
 }
 
 type ProductVersionData struct {

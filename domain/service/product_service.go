@@ -178,9 +178,22 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 		return nil, err
 	}
 
-	// 如果设置了发布时间，则注册定时任务
-	if newVersion.ReleaseDate != nil {
-		s.ScheduleReleaseTask(newVersion.ID, *newVersion.ReleaseDate)
+	switch cmd.Method {
+	case dto.ReleaseImmediate:
+		err := s.doReleaseVersion(newVersion.ID, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("failed to release version: %w", err)
+		}
+	case dto.ReleaseScheduled:
+		var releaseDate time.Time
+		if newVersion.ReleaseDate != nil {
+			releaseDate = *newVersion.ReleaseDate
+		} else {
+			releaseDate = time.Now()
+		}
+		s.ScheduleReleaseTask(newVersion.ID, releaseDate)
+	case dto.ReleaseHold:
+
 	}
 
 	return &dto.ProductVersionData{

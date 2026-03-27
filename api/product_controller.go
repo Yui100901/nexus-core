@@ -2,7 +2,6 @@ package api
 
 import (
 	"nexus-core/api/dto"
-	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
 
@@ -237,7 +236,7 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeleteProduct(ctx, q.ID); err != nil {
+	if err := c.ps.DeleteProduct(q.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

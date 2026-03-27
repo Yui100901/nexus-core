@@ -16,7 +16,7 @@ type Product struct {
 	ID                    uint      // 产品唯一标识符
 	Name                  string    // 产品名称，具有唯一性
 	Description           *string   // 产品详细描述
-	MinSupportedVersionID *uint     // 最低支持的版本ID，用于版本兼容性检查
+	MinSupportedVersionID *uint     // 最低支持的版本ID，用于版本兼容性检查，按时间，在此之前发布的版本将无法使用
 	VersionList           []Version // 产品版本列表
 }
 
