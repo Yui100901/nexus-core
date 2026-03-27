@@ -6,7 +6,6 @@ import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
-	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
 	"time"
 
@@ -125,23 +124,6 @@ func (s *ProductService) SetMinSupportedVersion(productID, versionID uint) error
 			Update("min_supported_version_id", versionID).Error
 	}
 	return fmt.Errorf("version id %d not supported for %d", versionID, productID)
-}
-
-// CheckProductVersionSupported 检查产品和版本是否支持
-func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, productID uint,
-	targetVersionId *uint, targetVersionCode *string) (bool, error) {
-	db := ctx.MustDefaultDB()
-	product, err := s.pr.GetByID(ctx, db, productID)
-	if err != nil {
-		return false, err
-	}
-	if targetVersionId != nil {
-		return product.CheckVersionSupportedById(*targetVersionId), nil
-	}
-	if targetVersionCode != nil {
-		return product.CheckVersionSupportedByCode(*targetVersionCode), nil
-	}
-	return false, fmt.Errorf("invalid version target")
 }
 
 // DeleteProduct 删除产品
