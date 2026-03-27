@@ -43,3 +43,8 @@ func (r *ProductVersionRepository) ListByProductID(ctx context.Context,
 	db *gorm.DB, productID uint) ([]model.ProductVersion, error) {
 	return FindByColumn[model.ProductVersion](ctx, db, "product_id", productID)
 }
+
+func (r *ProductVersionRepository) Update(ctx context.Context,
+	db *gorm.DB, id uint, vars map[string]any) error {
+	return db.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", id).Updates(vars).Error
+}

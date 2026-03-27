@@ -7,6 +7,12 @@ import "time"
 // @Date 2026/3/26 15 55
 //
 
+const (
+	VersionStatusUnreleased = 0 // 0 未发布
+	VersionStatusAvailable  = 1 // 1 可用
+	VersionStatusDeprecated = 2 // 2 已经弃用
+)
+
 // ProductVersion 产品版本信息
 type ProductVersion struct {
 	BaseModel

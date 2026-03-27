@@ -7,12 +7,6 @@ import "gorm.io/datatypes"
 // @Date 2026/1/16 10 15
 //
 
-const (
-	VersionStatusUnreleased = 0 // 0 未发布
-	VersionStatusAvailable  = 1 // 1 可用
-	VersionStatusDeprecated = 2 // 2 已经弃用
-)
-
 // Product 产品信息
 type Product struct {
 	BaseModel

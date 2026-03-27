@@ -143,7 +143,7 @@ func (s *ProductService) CheckProductVersionSupported(ctx *sc.ServiceContext, pr
 
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
-func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
+func (s *ProductService) DeleteProduct(id uint) error {
 	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
 		err := s.pr.DeleteProduct(txCtx, txCtx.MustDefaultDB(), id)
 		if err != nil {
@@ -155,16 +155,16 @@ func (s *ProductService) DeleteProduct(ctx *sc.ServiceContext, id uint) error {
 
 // CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
-func (s *ProductService) CreateProductVersion(cmd *dto.CreateProductVersionCommand) error {
+func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionCommand) (*dto.ProductVersionData, error) {
 	product, err := s.GetProductEntityByID(cmd.ProductID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if product == nil {
-		return fmt.Errorf("product not found")
+		return nil, fmt.Errorf("product not found")
 	}
 	if product.ExistsVersionCode(cmd.VersionCode) {
-		return fmt.Errorf("version code already exists")
+		return nil, fmt.Errorf("version code already exists")
 	}
 	newVersion := &model.ProductVersion{
 		ProductID:   cmd.ProductID,
@@ -174,61 +174,59 @@ func (s *ProductService) CreateProductVersion(cmd *dto.CreateProductVersionComma
 		Status:      model.VersionStatusUnreleased, //默认未发布
 	}
 	if err := productVersionRepo.Create(context.Background(), global.DB, newVersion); err != nil {
-		return err
+		return nil, err
 	}
 
 	// 如果设置了发布时间，则注册定时任务
 	if newVersion.ReleaseDate != nil {
-		s.ScheduleReleaseTask(product.ID, newVersion.ID, *newVersion.ReleaseDate)
+		s.ScheduleReleaseTask(newVersion.ID, *newVersion.ReleaseDate)
 	}
 
-	return nil
+	return &dto.ProductVersionData{
+		ID:          newVersion.ID,
+		ProductID:   newVersion.ProductID,
+		VersionCode: newVersion.VersionCode,
+	}, nil
 }
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(productID, versionID uint, releaseDate *time.Time) error {
+func (s *ProductService) ReleaseVersion(versionID uint, releaseDate *time.Time) error {
 	if releaseDate == nil {
-		return s.doReleaseVersion(ctx, productID, versionID, time.Now())
+		return s.doReleaseVersion(versionID, time.Now())
 	} else {
 		//创建定时任务
-		s.ScheduleReleaseTask(ctx, productID, versionID, *releaseDate)
+		s.ScheduleReleaseTask(versionID, *releaseDate)
 		return nil
 	}
 }
 
 // ScheduleReleaseTask 简易定时发布
 // todo 后续考虑如何管理定时任务
-func (s *ProductService) ScheduleReleaseTask(productID, versionID uint, releaseDate time.Time) {
+func (s *ProductService) ScheduleReleaseTask(versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
-		_ = s.doReleaseVersion(productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(versionID, releaseDate)
 		return
 	}
 	go func() {
 		<-time.After(delay)
-		_ = s.doReleaseVersion(productID, versionID, releaseDate)
+		_ = s.doReleaseVersion(versionID, releaseDate)
 	}()
 }
 
 // 内部方法执行版本发布
-func (s *ProductService) doReleaseVersion(productID, versionID uint, releaseDate time.Time) error {
-	product, err := s.pr.GetByID(ctx, db, productID)
-	if err != nil {
-		return err
-	}
-	if product == nil {
-		return fmt.Errorf("product not found")
-	}
-	err = product.ReleaseVersion(versionID, releaseDate)
-	if err != nil {
-		return err
-	}
-	return s.pr.ReleaseVersion(ctx, db, versionID, releaseDate)
+func (s *ProductService) doReleaseVersion(versionID uint, releaseDate time.Time) error {
+
+	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
+		"status":       model.VersionStatusUnreleased,
+		"release_date": releaseDate,
+	}).Error
 }
 
-func (s *ProductService) DeprecateVersion(ctx *sc.ServiceContext, productID uint, versionID uint) error {
-	db := ctx.MustDefaultDB()
-	return s.pr.DeprecateVersion(ctx, db, productID, versionID)
+func (s *ProductService) DeprecateVersion(versionID uint) error {
+	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
+		"status": model.VersionStatusDeprecated,
+	}).Error
 }

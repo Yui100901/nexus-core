@@ -90,8 +90,7 @@ func (p *Product) SetMinSupportedVersion(versionID uint) error {
 	return nil
 }
 
-// ExistsVersionCode 创建新版本
-// 为产品添加一个新的版本，默认未启用
+// ExistsVersionCode 检查版本号是否已存在
 func (p *Product) ExistsVersionCode(versionCode string) bool {
 
 	// 检查版本号是否已存在

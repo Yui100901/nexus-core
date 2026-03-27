@@ -28,6 +28,13 @@ type CreateProductVersionCommand struct {
 	Description *string    `json:"description"`                     // 版本描述
 }
 
+type ProductVersionData struct {
+	ID          uint       `json:"id"`
+	ProductID   uint       `json:"product_id"`   // 所属产品ID
+	VersionCode string     `json:"version_code"` // 版本号
+	ReleaseDate *time.Time `json:"release_date"` // 发布时间
+}
+
 type ReleaseNewVersionCommand struct {
 	ProductID   uint       `json:"product_id" binding:"required"` // 所属产品ID
 	VersionID   uint       `json:"version_id" binding:"required"` // 版本ID
