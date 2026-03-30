@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"nexus-core/api/dto"
 	"nexus-core/global"
@@ -96,6 +97,59 @@ func (s *NodeService) DeleteNode(id uint) error {
 		if err := tx.Where("node_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
 			return err
 		}
+		return nil
+	})
+}
+
+func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
+	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
+
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		// 检查 Node 是否存在
+		var node model.Node
+		if err := tx.Where("id = ?", nodeID).First(&node).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("node %d not found", nodeID)
+			}
+			return err
+		}
+
+		// 检查 License 是否存在
+		license, err := GetLicenseEntityByID(licenseID)
+		if err != nil {
+			return err
+		}
+
+		var existsBinding model.NodeLicenseBinding
+		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
+			First(&existsBinding).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if err == nil && existsBinding.IsBound == 1 {
+			return nil // 已绑定，无需重复绑定
+		}
+
+		// 检查当前绑定数量是否超过 MaxNodes
+		var nodeCount int64
+		if err := tx.Model(&model.NodeLicenseBinding{}).
+			Where("license_id = ?", licenseID).
+			Count(&nodeCount).Error; err != nil {
+			return err
+		}
+		if int64(license.MaxNodes) <= nodeCount {
+			return fmt.Errorf("license %d has reached max nodes (%d)", licenseID, license.MaxNodes)
+		}
+
+		// 插入绑定关系
+		binding := model.NodeLicenseBinding{
+			NodeID:    nodeID,
+			LicenseID: licenseID,
+		}
+		if err := tx.Create(&binding).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 }

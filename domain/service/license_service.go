@@ -145,7 +145,7 @@ func (s *LicenseService) UpdateLicense(cmd dto.UpdateLicenseCommand) error {
 // RenewLicense 增加或减少许可证时间
 func (s *LicenseService) RenewLicense(cmd dto.RenewLicenseCommand) error {
 	licenseID, extraHours := cmd.ID, cmd.ExtraHours
-	license, err := GetLicenseEntityById(licenseID)
+	license, err := GetLicenseEntityByID(licenseID)
 	if err != nil {
 		return err
 	}

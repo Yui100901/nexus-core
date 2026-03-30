@@ -143,7 +143,7 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	Success(ctx, n)
 }
 
-// AddBinding 添加节点绑定
+// AddBinding 手动添加节点绑定
 // @Summary Add node binding
 // @Tags nodes
 // @Accept json
@@ -224,14 +224,14 @@ func (c *NodeController) ForceUnbind(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/delete [post]
 func (c *NodeController) DeleteNode(ctx *gin.Context) {
-	var q struct {
+	var cmd struct {
 		ID uint `json:"id" binding:"required"`
 	}
-	if err := ctx.ShouldBindJSON(&q); err != nil {
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.DeleteNode(q.ID); err != nil {
+	if err := c.ns.DeleteNode(cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
