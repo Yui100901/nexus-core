@@ -221,15 +221,37 @@ func (s *LicenseService) GetLicenseEntityById(id uint) (*entity.License, error) 
 	}, nil
 }
 
-// DeleteExpiredLicenses 删除所有过期的许可证
-func (s *LicenseService) DeleteExpiredLicenses(ctx *sc.ServiceContext) error {
-	db := ctx.MustDefaultDB()
-	ids, err := s.lr.GetIdListByStatus(ctx, db, int(entity.StatusExpired))
-	if err != nil {
-		return err
-	}
+// DeleteInvalidLicenses 删除所有过期的许可证，同时删除节点许可证绑定
+func (s *LicenseService) DeleteInvalidLicenses() error {
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		var expiredLicenses []model.License
 
-	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		return s.lr.BatchDeleteByIdList(txCtx, txCtx.MustDefaultDB(), ids)
+		// 查询所有已过期或被吊销的许可证
+		if err := tx.Where("(expired_at IS NOT NULL AND expired_at < ?) OR status IN (?, ?)", time.Now(), model.StatusExpired, model.StatusRevoked).
+			Find(&expiredLicenses).Error; err != nil {
+			return err
+		}
+
+		if len(expiredLicenses) == 0 {
+			return nil // 没有过期的许可证
+		}
+
+		// 提取所有无效许可证的 ID
+		var ids []uint
+		for _, lic := range expiredLicenses {
+			ids = append(ids, lic.ID)
+		}
+
+		// 删除节点绑定关系
+		if err := tx.Where("license_id IN ?", ids).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
+			return err
+		}
+
+		// 删除许可证
+		if err := tx.Where("id IN ?", ids).Delete(&model.License{}).Error; err != nil {
+			return err
+		}
+
+		return nil
 	})
 }

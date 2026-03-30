@@ -35,7 +35,7 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 		licenseGroup.POST("/revokeLicense", c.RevokeLicense)           // 吊销许可证
 		licenseGroup.POST("/renewLicense", c.RenewLicense)             // 续期
 		licenseGroup.POST("/update", c.UpdateLicense)                  // 更新许可证信息
-		licenseGroup.POST("/deleteExpired", c.DeleteExpired)           // 删除过期的许可证
+		licenseGroup.POST("/deleteExpired", c.DeleteInvalidLicense)    // 删除过期的许可证
 	}
 }
 
@@ -222,7 +222,7 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 	Success(ctx, "renew success")
 }
 
-// DeleteExpired 删除过期 License（POST）
+// DeleteInvalidLicense 删除过期 License（POST）
 // @Summary Delete expired licenses
 // @Tags licenses
 // @Accept json
@@ -230,8 +230,8 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
-func (c *LicenseController) DeleteExpired(ctx *gin.Context) {
-	if err := c.ls.DeleteExpiredLicenses(ctx); err != nil {
+func (c *LicenseController) DeleteInvalidLicense(ctx *gin.Context) {
+	if err := c.ls.DeleteInvalidLicenses(); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
