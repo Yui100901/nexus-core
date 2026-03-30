@@ -100,6 +100,8 @@ func (l *License) Activate(now time.Time) bool {
 
 // Renew 续期或缩短许可证
 // 根据 extraHours 参数增加或减少许可证的有效期
+// 修改字段ValidityHours
+// 可能修改字段ExpiredAt，Status
 func (l *License) Renew(now time.Time, extraHours int) {
 	l.ValidityHours += extraHours
 	if l.ValidityHours < 0 {

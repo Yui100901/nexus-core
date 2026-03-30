@@ -197,6 +197,30 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 	Success(ctx, "update success")
 }
 
+// RenewLicense 增加或减少许可证时间
+// @Summary renew license
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Param body body dto.UpdateLicenseCommand true "renew License"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /license/update [post]
+func (c *LicenseController) RenewLicense(ctx *gin.Context) {
+	var cmd dto.RenewLicenseCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	if err := c.ls.RenewLicense(cmd); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	Success(ctx, "renew success")
+}
+
 // DeleteExpired 删除过期 License（POST）
 // @Summary Delete expired licenses
 // @Tags licenses

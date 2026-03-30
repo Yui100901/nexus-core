@@ -61,3 +61,8 @@ type UpdateLicenseCommand struct {
 type UpdateLicenseStatusCommand struct {
 	ID uint `json:"id" binding:"required"` // 许可证ID
 }
+
+type RenewLicenseCommand struct {
+	ID         uint `json:"id" binding:"required"`
+	ExtraHours int  `json:"extra_hours" binding:"required"`
+}
