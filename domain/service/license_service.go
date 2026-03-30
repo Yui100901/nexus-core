@@ -233,7 +233,7 @@ func (s *LicenseService) DeleteInvalidLicenses() error {
 		}
 
 		if len(expiredLicenses) == 0 {
-			return nil // 没有过期的许可证
+			return nil // 没有无效的许可证
 		}
 
 		// 提取所有无效许可证的 ID
