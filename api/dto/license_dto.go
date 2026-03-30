@@ -59,6 +59,5 @@ type UpdateLicenseCommand struct {
 
 // UpdateLicenseStatusCommand 更新许可证状态的命令对象
 type UpdateLicenseStatusCommand struct {
-	ID     uint `json:"id" binding:"required"`     // 许可证ID
-	Status int  `json:"status" binding:"required"` // 新状态
+	ID uint `json:"id" binding:"required"` // 许可证ID
 }

@@ -128,10 +128,10 @@ func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID ui
 	return s.nlr.GetBindingsByLicenseID(ctx, db, licenseID)
 }
 
-// UpdateLicenseStatus 更新许可证状态
-func (s *LicenseService) UpdateLicenseStatus(cmd dto.UpdateLicenseStatusCommand) error {
-	licenseID, status := cmd.ID, cmd.Status
-	return global.DB.Model(&model.License{}).Where("id = ?", licenseID).Update("status", status).Error
+// RevokeLicense 吊销许可证
+// todo 后续可能需要强制下线？
+func (s *LicenseService) RevokeLicense(licenseID uint) error {
+	return global.DB.Model(&model.License{}).Where("id = ?", licenseID).Update("status", entity.StatusRevoked).Error
 }
 
 // UpdateLicense 更新许可证信息

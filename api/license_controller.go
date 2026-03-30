@@ -32,7 +32,7 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 		licenseGroup.POST("/batchCreateLicense", c.BatchCreateLicense) // 批量创建许可证
 		licenseGroup.GET("/getByID", c.GetByID)                        // 根据ID查询许可证
 		licenseGroup.GET("/getByKey", c.GetByKey)                      // 根据许可证密钥查询
-		licenseGroup.POST("/updateStatus", c.UpdateStatus)             // 更新许可证状态
+		licenseGroup.POST("/updateStatus", c.RevokeLicense)            // 更新许可证状态
 		licenseGroup.POST("/update", c.UpdateLicense)                  // 更新许可证信息
 		licenseGroup.POST("/deleteExpired", c.DeleteExpired)           // 删除过期的许可证
 	}
@@ -150,7 +150,7 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	Success(ctx, license)
 }
 
-// UpdateStatus 更新 License 状态（POST Body）
+// RevokeLicense 更新 License 状态（POST Body）
 // @Summary Update license status
 // @Tags licenses
 // @Accept json
@@ -160,13 +160,13 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/updateStatus [post]
-func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
+func (c *LicenseController) RevokeLicense(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseStatusCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ls.UpdateLicenseStatus(cmd); err != nil {
+	if err := c.ls.RevokeLicense(cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
