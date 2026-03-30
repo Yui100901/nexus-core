@@ -121,7 +121,7 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 	}
 	id := uint(idUint64)
 
-	license, err := c.ls.GetLicenseByID(id)
+	license, err := c.ls.GetLicenseDataByID(id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -143,7 +143,7 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	// 获取 query 参数
 	key := ctx.Query("deviceCode")
 
-	license, err := c.ls.GetLicenseByKey(key)
+	license, err := c.ls.GetLicenseDataByKey(key)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -167,8 +167,7 @@ func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-
-	if err := c.ls.UpdateLicenseStatus(ctx, cmd.ID, cmd.Status); err != nil {
+	if err := c.ls.UpdateLicenseStatus(cmd.ID, cmd.Status); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

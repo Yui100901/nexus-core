@@ -129,9 +129,8 @@ func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID ui
 }
 
 // UpdateLicenseStatus 更新许可证状态
-func (s *LicenseService) UpdateLicenseStatus(ctx *sc.ServiceContext, licenseID uint, status int) error {
-	db := ctx.MustDefaultDB()
-	return s.lr.UpdateLicenseStatus(ctx, db, licenseID, status)
+func (s *LicenseService) UpdateLicenseStatus(licenseID uint, status int) error {
+	return global.DB.Model(&model.License{}).Where("id = ?", licenseID).Update("status", status).Error
 }
 
 // UpdateLicense 更新许可证信息
@@ -140,8 +139,8 @@ func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.L
 	return s.lr.UpdateLicense(ctx, db, license)
 }
 
-// GetLicenseByID 根据ID获取许可证
-func (s *LicenseService) GetLicenseByID(id uint) (*dto.LicenseData, error) {
+// GetLicenseDataByID 根据ID获取许可证
+func (s *LicenseService) GetLicenseDataByID(id uint) (*dto.LicenseData, error) {
 	license, err := licenseRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
@@ -159,8 +158,8 @@ func (s *LicenseService) GetLicenseByID(id uint) (*dto.LicenseData, error) {
 	}, nil
 }
 
-// GetLicenseByKey 根据许可证密钥获取许可证
-func (s *LicenseService) GetLicenseByKey(key string) (*dto.LicenseData, error) {
+// GetLicenseDataByKey 根据许可证密钥获取许可证
+func (s *LicenseService) GetLicenseDataByKey(key string) (*dto.LicenseData, error) {
 	license, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
 	if err != nil {
 		return nil, err

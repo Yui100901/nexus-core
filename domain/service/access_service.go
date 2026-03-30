@@ -57,7 +57,7 @@ func (s *AccessService) AutoBind(ctx context.Context, deviceCode string, product
 	}
 
 	// 找到 license
-	license, err := s.ls.GetLicenseByKey(ctx, licenseKey)
+	license, err := s.ls.GetLicenseDataByKey(ctx, licenseKey)
 	if err != nil || license == nil {
 		return nil, NewServiceError(400, "invalid license")
 	}
@@ -141,7 +141,7 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, NewServiceError(400, "product version not supported")
 	}
 
-	license, err := s.ls.GetLicenseByKey(ctx, licenseKey)
+	license, err := s.ls.GetLicenseDataByKey(ctx, licenseKey)
 	if err != nil || license == nil {
 		return nil, NewServiceError(400, "invalid license")
 	}
