@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -81,12 +80,12 @@ func (l *License) IsActive() bool {
 
 // Activate 激活许可证
 // 将许可证从未激活状态转为激活状态，并设置激活时间和过期时间
-func (l *License) Activate(now time.Time) error {
+func (l *License) Activate(now time.Time) bool {
 	if l.Status != StatusInactive {
-		return fmt.Errorf("license cannot be activated from status %d", l.Status)
+		return false
 	}
 	if l.ValidityHours <= 0 {
-		return fmt.Errorf("validity hours must be positive")
+		return false
 	}
 
 	if l.ActivatedAt == nil {
@@ -96,7 +95,7 @@ func (l *License) Activate(now time.Time) error {
 	expired := now.Add(time.Duration(l.ValidityHours) * time.Hour)
 	l.ExpiredAt = &expired
 	l.Status = StatusActive
-	return nil
+	return true
 }
 
 // Renew 续期或缩短许可证
@@ -107,12 +106,13 @@ func (l *License) Renew(now time.Time, extraHours int) {
 		l.ValidityHours = 0
 	}
 
+	//如果未激活则状态不变
 	if l.Status == StatusInactive {
 		return
 	}
 
 	if l.ExpiredAt == nil || now.After(*l.ExpiredAt) {
-		expired := now.Add(time.Duration(l.ValidityHours) * time.Hour)
+		expired := now.Add(time.Duration(extraHours) * time.Hour)
 		l.ExpiredAt = &expired
 	} else {
 		expired := l.ExpiredAt.Add(time.Duration(extraHours) * time.Hour)
