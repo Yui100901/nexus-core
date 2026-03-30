@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"nexus-core/api/dto"
-	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 	"time"
@@ -75,38 +74,6 @@ func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
 	}, nil
 }
 
-func (s *ProductService) GetProductEntityByID(id uint) (*entity.Product, error) {
-	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	if pProduct == nil {
-		return nil, fmt.Errorf("pProduct not found")
-	}
-	pVersionList, err := productVersionRepo.ListByProductID(context.Background(), global.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	var versionList []entity.Version
-	for _, v := range pVersionList {
-		version := entity.Version{
-			ID:          v.ID,
-			VersionCode: v.VersionCode,
-			ReleaseDate: v.ReleaseDate,
-			Description: v.Description,
-			Status:      v.Status,
-		}
-		versionList = append(versionList, version)
-	}
-	return &entity.Product{
-		ID:                    pProduct.ID,
-		Name:                  pProduct.Name,
-		Description:           pProduct.Description,
-		MinSupportedVersionID: pProduct.MinSupportedVersionID,
-		VersionList:           versionList,
-	}, nil
-}
-
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
 func (s *ProductService) SetMinSupportedVersion(cmd dto.UpdateMinVersionCommand) error {
@@ -143,7 +110,7 @@ func (s *ProductService) DeleteProduct(id uint) error {
 // CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
 func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionCommand) (*dto.ProductVersionData, error) {
-	product, err := s.GetProductEntityByID(cmd.ProductID)
+	product, err := GetProductEntityByID(cmd.ProductID)
 	if err != nil {
 		return nil, err
 	}

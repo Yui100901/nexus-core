@@ -145,7 +145,7 @@ func (s *LicenseService) UpdateLicense(cmd dto.UpdateLicenseCommand) error {
 // RenewLicense 增加或减少许可证时间
 func (s *LicenseService) RenewLicense(cmd dto.RenewLicenseCommand) error {
 	licenseID, extraHours := cmd.ID, cmd.ExtraHours
-	license, err := s.GetLicenseEntityById(licenseID)
+	license, err := GetLicenseEntityById(licenseID)
 	if err != nil {
 		return err
 	}
@@ -211,27 +211,6 @@ func (s *LicenseService) GetLicenseDataByKey(key string) (*dto.LicenseData, erro
 		ValidityHours: license.ValidityHours,
 		Status:        license.Status,
 		Remark:        license.Remark,
-	}, nil
-}
-
-func (s *LicenseService) GetLicenseEntityById(id uint) (*entity.License, error) {
-	pLicense, err := licenseRepo.GetByID(context.Background(), global.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	return &entity.License{
-		ID:            pLicense.ID,
-		ProductID:     pLicense.ProductID,
-		LicenseKey:    pLicense.LicenseKey,
-		ValidityHours: pLicense.ValidityHours,
-		IssuedAt:      pLicense.CreatedAt,
-		ActivatedAt:   pLicense.ActivatedAt,
-		ExpiredAt:     pLicense.ExpiredAt,
-		Status:        entity.LicenseStatus(pLicense.Status),
-		Remark:        pLicense.Remark,
-		MaxNodes:      pLicense.MaxNodes,
-		MaxConcurrent: pLicense.MaxConcurrent,
-		FeatureMask:   pLicense.FeatureMask,
 	}, nil
 }
 

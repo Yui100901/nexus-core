@@ -1,6 +1,12 @@
 package service
 
-import "nexus-core/persistence/repository"
+import (
+	"context"
+	"fmt"
+	"nexus-core/domain/entity"
+	"nexus-core/global"
+	"nexus-core/persistence/repository"
+)
 
 //
 // @Author yfy2001
@@ -13,3 +19,58 @@ var (
 	nodeRepo           = repository.NewNodeRepository()
 	licenseRepo        = repository.NewLicenseRepository()
 )
+
+// GetLicenseEntityByID 获取license实体
+func GetLicenseEntityByID(id uint) (*entity.License, error) {
+	pLicense, err := licenseRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.License{
+		ID:            pLicense.ID,
+		ProductID:     pLicense.ProductID,
+		LicenseKey:    pLicense.LicenseKey,
+		ValidityHours: pLicense.ValidityHours,
+		IssuedAt:      pLicense.CreatedAt,
+		ActivatedAt:   pLicense.ActivatedAt,
+		ExpiredAt:     pLicense.ExpiredAt,
+		Status:        entity.LicenseStatus(pLicense.Status),
+		Remark:        pLicense.Remark,
+		MaxNodes:      pLicense.MaxNodes,
+		MaxConcurrent: pLicense.MaxConcurrent,
+		FeatureMask:   pLicense.FeatureMask,
+	}, nil
+}
+
+// GetProductEntityByID 获取产品实体
+func GetProductEntityByID(id uint) (*entity.Product, error) {
+	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if pProduct == nil {
+		return nil, fmt.Errorf("pProduct not found")
+	}
+	pVersionList, err := productVersionRepo.ListByProductID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	var versionList []entity.Version
+	for _, v := range pVersionList {
+		version := entity.Version{
+			ID:          v.ID,
+			VersionCode: v.VersionCode,
+			ReleaseDate: v.ReleaseDate,
+			Description: v.Description,
+			Status:      v.Status,
+		}
+		versionList = append(versionList, version)
+	}
+	return &entity.Product{
+		ID:                    pProduct.ID,
+		Name:                  pProduct.Name,
+		Description:           pProduct.Description,
+		MinSupportedVersionID: pProduct.MinSupportedVersionID,
+		VersionList:           versionList,
+	}, nil
+}
