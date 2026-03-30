@@ -116,12 +116,20 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 			return err
 		}
 
+		toUpdate := false
 		// 查找是否已有绑定关系
 		var binding model.NodeLicenseBinding
 		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 			First(&binding).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
+		}
+		// 已存在绑定记录
+		if err == nil {
+			if binding.Status == 1 {
+				return nil // 已绑定，无需重复绑定
+			}
+			toUpdate = true //未绑定，需要更新
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
@@ -134,22 +142,17 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 		if int64(license.MaxNodes) <= nodeCount {
 			return fmt.Errorf("license %d has reached max nodes (%d)", licenseID, license.MaxNodes)
 		}
-
-		// 已存在绑定记录
-		if err == nil {
-			if binding.Status == 1 {
-				return nil // 已绑定，无需重复绑定
-			}
+		if toUpdate {
 			return tx.Model(&binding).Update("is_bound", 1).Error
+		} else {
+			// 插入新绑定
+			newBinding := model.NodeLicenseBinding{
+				NodeID:    nodeID,
+				LicenseID: licenseID,
+				Status:    1,
+			}
+			return tx.Create(&newBinding).Error
 		}
-
-		// 插入新绑定
-		newBinding := model.NodeLicenseBinding{
-			NodeID:    nodeID,
-			LicenseID: licenseID,
-			Status:    1,
-		}
-		return tx.Create(&newBinding).Error
 	})
 }
 
