@@ -34,48 +34,36 @@ func NewAccessController() *AccessController {
 func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/access")
 	{
-		g.POST("/auto-bind", c.AutoBind)
+		g.POST("/register", c.Register)
 		g.POST("/heartbeat", c.Heartbeat)
 	}
 }
 
-// AutoBind 自动绑定接口处理（现在非常薄）
-// 客户端启动时，会自动绑定节点和许可证
+// Register 自动注册
+// 客户端启动时，会自动注册，进行绑定
 // @Summary Client auto bind
 // @Tags access
 // @Accept json
 // @Produce json
-// @Param body body dto.AutoBindCommand true "Auto Bind"
+// @Param body body dto.RegisterCommand true "Register"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /access/auto-bind [post]
-func (c *AccessController) AutoBind(ctx *gin.Context) {
-	var cmd dto.AutoBindCommand
+func (c *AccessController) Register(ctx *gin.Context) {
+	var cmd dto.RegisterCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
 
-	res, err := as.AutoBind(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
+	err := c.as.Register(cmd)
 	if err != nil {
-		if se, ok := err.(*service.ServiceError); ok {
-			// map service-defined HTTP status
-			switch se.HTTPStatus {
-			case 400:
-				BadRequest(ctx, se.Error())
-			case 500:
-				InternalError(ctx, se.Error())
-			default:
-				InternalError(ctx, se.Error())
-			}
-			return
-		}
 		InternalError(ctx, err.Error())
 		return
 	}
 
-	Success(ctx, res)
+	Success(ctx, "")
 }
 
 // Heartbeat 现在也很薄
