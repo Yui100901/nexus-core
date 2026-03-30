@@ -2,7 +2,6 @@ package api
 
 import (
 	"nexus-core/api/dto"
-	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
 
@@ -167,14 +166,14 @@ func (c *LicenseController) UpdateStatus(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ls.UpdateLicenseStatus(cmd.ID, cmd.Status); err != nil {
+	if err := c.ls.UpdateLicenseStatus(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
 	SuccessMsg(ctx, "status updated")
 }
 
-// UpdateLicense 更新 License（POST Body）
+// UpdateLicense 通用的更新 License（POST Body）
 // @Summary Update license
 // @Tags licenses
 // @Accept json
@@ -191,19 +190,11 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 		return
 	}
 
-	license := &entity.License{
-		ID:            cmd.ID,
-		LicenseKey:    cmd.LicenseKey,
-		ValidityHours: cmd.ValidityHours,
-		Status:        entity.LicenseStatus(cmd.Status),
-		Remark:        cmd.Remark,
-	}
-
-	if err := c.ls.UpdateLicense(ctx, license); err != nil {
+	if err := c.ls.UpdateLicense(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
-	Success(ctx, license)
+	Success(ctx, "update success")
 }
 
 // DeleteExpired 删除过期 License（POST）

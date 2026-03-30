@@ -129,14 +129,21 @@ func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID ui
 }
 
 // UpdateLicenseStatus 更新许可证状态
-func (s *LicenseService) UpdateLicenseStatus(licenseID uint, status int) error {
+func (s *LicenseService) UpdateLicenseStatus(cmd dto.UpdateLicenseStatusCommand) error {
+	licenseID, status := cmd.ID, cmd.Status
 	return global.DB.Model(&model.License{}).Where("id = ?", licenseID).Update("status", status).Error
 }
 
 // UpdateLicense 更新许可证信息
-func (s *LicenseService) UpdateLicense(ctx *sc.ServiceContext, license *entity.License) error {
-	db := ctx.MustDefaultDB()
-	return s.lr.UpdateLicense(ctx, db, license)
+func (s *LicenseService) UpdateLicense(cmd dto.UpdateLicenseCommand) error {
+	id := cmd.ID
+	updates := model.License{
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		FeatureMask:   cmd.FeatureMask,
+		Remark:        cmd.Remark,
+	}
+	return global.DB.Model(&model.License{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // GetLicenseDataByID 根据ID获取许可证
