@@ -42,9 +42,46 @@ func GetLicenseEntityByID(id uint) (*entity.License, error) {
 	}, nil
 }
 
+// GetLicenseEntityByKey 获取license实体
+func GetLicenseEntityByKey(key string) (*entity.License, error) {
+	pLicense, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.License{
+		ID:            pLicense.ID,
+		ProductID:     pLicense.ProductID,
+		LicenseKey:    pLicense.LicenseKey,
+		ValidityHours: pLicense.ValidityHours,
+		IssuedAt:      pLicense.CreatedAt,
+		ActivatedAt:   pLicense.ActivatedAt,
+		ExpiredAt:     pLicense.ExpiredAt,
+		Status:        entity.LicenseStatus(pLicense.Status),
+		Remark:        pLicense.Remark,
+		MaxNodes:      pLicense.MaxNodes,
+		MaxConcurrent: pLicense.MaxConcurrent,
+		FeatureMask:   pLicense.FeatureMask,
+	}, nil
+}
+
 // GetNodeEntityByID 获取node实体
 func GetNodeEntityByID(id uint) (*entity.Node, error) {
 	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	metadata := string(pNode.Metadata)
+	return &entity.Node{
+		ID:         pNode.ID,
+		DeviceCode: pNode.DeviceCode,
+		Status:     pNode.Status,
+		Metadata:   &metadata,
+	}, nil
+}
+
+// GetNodeEntityByCode 获取node实体
+func GetNodeEntityByCode(code string) (*entity.Node, error) {
+	pNode, err := nodeRepo.GetByDeviceCode(context.Background(), global.DB, code)
 	if err != nil {
 		return nil, err
 	}
