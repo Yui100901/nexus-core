@@ -5,16 +5,12 @@ import (
 	"fmt"
 	"nexus-core/api/dto"
 	"nexus-core/global"
-	"nexus-core/persistence/base"
 	"nexus-core/persistence/model"
-	"nexus-core/sc"
 	"strings"
 	"time"
 
 	"nexus-core/domain/entity"
-	"nexus-core/persistence/repository"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -107,26 +103,26 @@ func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.Licen
 //	})
 //}
 
-// ActivateLicenseIfNeededWithCtx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
-// 使用 ServiceContext 来获取当前活跃的 DB（可能是 tx）
-func (s *LicenseService) ActivateLicenseIfNeededWithCtx(ctx *sc.ServiceContext, license *entity.License) error {
-	if license.IsActive() {
-		return nil
-	}
-
-	if err := license.Activate(time.Now()); err != nil {
-		return err
-	}
-
-	// use ctx.MustDefaultDB() so callers don't need to pass tx explicitly
-	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, int(entity.StatusActive))
-}
-
-// GetLicenseBindList 获取许可证绑定列表
-func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
-	db := ctx.MustDefaultDB()
-	return s.nlr.GetBindingsByLicenseID(ctx, db, licenseID)
-}
+//// ActivateLicenseIfNeededWithCtx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
+//// 使用 ServiceContext 来获取当前活跃的 DB（可能是 tx）
+//func (s *LicenseService) ActivateLicenseIfNeededWithCtx(ctx *sc.ServiceContext, license *entity.License) error {
+//	if license.IsActive() {
+//		return nil
+//	}
+//
+//	if err := license.Activate(time.Now()); err != nil {
+//		return err
+//	}
+//
+//	// use ctx.MustDefaultDB() so callers don't need to pass tx explicitly
+//	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, int(entity.StatusActive))
+//}
+//
+//// GetLicenseBindList 获取许可证绑定列表
+//func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
+//	db := ctx.MustDefaultDB()
+//	return s.nlr.GetBindingsByLicenseID(ctx, db, licenseID)
+//}
 
 // RevokeLicense 吊销许可证
 // todo 后续可能需要强制下线？
