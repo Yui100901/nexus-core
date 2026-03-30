@@ -109,7 +109,8 @@ func (s *ProductService) GetProductEntityByID(id uint) (*entity.Product, error) 
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
-func (s *ProductService) SetMinSupportedVersion(productID, versionID uint) error {
+func (s *ProductService) SetMinSupportedVersion(cmd dto.UpdateMinVersionCommand) error {
+	versionID, productID := cmd.VersionID, cmd.ProductID
 	version, err := productVersionRepo.GetByID(context.Background(), global.DB, versionID)
 	if err != nil {
 		return err
@@ -190,7 +191,8 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(versionID uint, releaseDate *time.Time) error {
+func (s *ProductService) ReleaseVersion(cmd dto.ReleaseNewVersionCommand) error {
+	versionID, releaseDate := cmd.VersionID, cmd.ReleaseDate
 	if releaseDate == nil {
 		return s.doReleaseVersion(versionID, time.Now())
 	} else {

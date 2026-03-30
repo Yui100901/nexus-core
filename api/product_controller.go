@@ -98,7 +98,7 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	err := c.ps.ReleaseVersion(cmd.VersionID, cmd.ReleaseDate)
+	err := c.ps.ReleaseVersion(cmd)
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -190,7 +190,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(cmd.ProductID, cmd.VersionID); err != nil {
+	if err := c.ps.SetMinSupportedVersion(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

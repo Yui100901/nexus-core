@@ -66,46 +66,46 @@ func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.Licen
 	}, nil
 }
 
-// BatchCreateLicense 批量创建许可证
-func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*entity.License) error {
-	if len(licenses) == 0 {
-		return fmt.Errorf("licenses list cannot be empty")
-	}
+//// BatchCreateLicense 批量创建许可证
+//func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*entity.License) error {
+//	if len(licenses) == 0 {
+//		return fmt.Errorf("licenses list cannot be empty")
+//	}
+//
+//	// 收集所有需要的产品 ID
+//	allIDs := make(map[uint]struct{})
+//	for _, license := range licenses {
+//		id := license.ProductID
+//		allIDs[id] = struct{}{}
+//	}
+//
+//	var allIDList []uint
+//	for k := range allIDs {
+//		allIDList = append(allIDList, k)
+//	}
+//
+//	db := ctx.MustDefaultDB()
+//	exists, err := s.pr.ExistIds(ctx, db, allIDList)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if !exists {
+//		return fmt.Errorf("some products in scope do not exist")
+//	}
+//
+//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
+//		return s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
+//	})
+//}
 
-	// 收集所有需要的产品 ID
-	allIDs := make(map[uint]struct{})
-	for _, license := range licenses {
-		id := license.ProductID
-		allIDs[id] = struct{}{}
-	}
-
-	var allIDList []uint
-	for k := range allIDs {
-		allIDList = append(allIDList, k)
-	}
-
-	db := ctx.MustDefaultDB()
-	exists, err := s.pr.ExistIds(ctx, db, allIDList)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return fmt.Errorf("some products in scope do not exist")
-	}
-
-	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		return s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
-	})
-}
-
-// ActivateLicenseIfNeeded 激活许可证
-func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
-	// Use transaction wrapper for consistency
-	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-		return s.ActivateLicenseIfNeededWithCtx(txCtx, license)
-	})
-}
+//// ActivateLicenseIfNeeded 激活许可证
+//func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
+//	// Use transaction wrapper for consistency
+//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
+//		return s.ActivateLicenseIfNeededWithCtx(txCtx, license)
+//	})
+//}
 
 // ActivateLicenseIfNeededWithCtx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
 // 使用 ServiceContext 来获取当前活跃的 DB（可能是 tx）
