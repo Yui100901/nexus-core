@@ -137,7 +137,7 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 
 		// 已存在绑定记录
 		if err == nil {
-			if binding.IsBound == 1 {
+			if binding.Status == 1 {
 				return nil // 已绑定，无需重复绑定
 			}
 			return tx.Model(&binding).Update("is_bound", 1).Error
@@ -147,8 +147,25 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 		newBinding := model.NodeLicenseBinding{
 			NodeID:    nodeID,
 			LicenseID: licenseID,
-			IsBound:   1,
+			Status:    1,
 		}
 		return tx.Create(&newBinding).Error
+	})
+}
+
+func (s *NodeService) Unbind(cmd dto.UnbindCommand) error {
+	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		// 查找是否已有绑定关系
+		var binding model.NodeLicenseBinding
+		err := tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
+			First(&binding).Error
+		if err != nil {
+			return err
+		}
+		if binding.Status == 0 {
+			return nil
+		}
+		return tx.Model(&binding).Update("is_bound", 0).Error
 	})
 }

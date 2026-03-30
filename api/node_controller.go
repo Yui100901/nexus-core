@@ -2,7 +2,6 @@ package api
 
 import (
 	"nexus-core/api/dto"
-	"nexus-core/domain/entity"
 	"nexus-core/domain/service"
 	"strconv"
 
@@ -25,14 +24,13 @@ func NewNodeController() *NodeController {
 func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 	g := r.Group("/node")
 	{
-		g.POST("/createNode", c.CreateNode)                   // 创建节点
-		g.POST("/batchCreate", c.BatchCreate)                 // 批量创建节点
-		g.GET("/getByID", c.GetByID)                          // 根据ID获取节点
-		g.GET("/getByDevice", c.GetByDeviceCode)              // 根据设备码获取节点
-		g.POST("/addBinding", c.AddBinding)                   // 添加节点绑定
-		g.POST("/updateBindingStatus", c.UpdateBindingStatus) // 更新绑定状态
-		g.POST("/unbind", c.ForceUnbind)                      // 强制解绑节点
-		g.POST("/delete", c.DeleteNode)                       // 删除节点
+		g.POST("/createNode", c.CreateNode)      // 创建节点
+		g.POST("/batchCreate", c.BatchCreate)    // 批量创建节点
+		g.GET("/getByID", c.GetByID)             // 根据ID获取节点
+		g.GET("/getByDevice", c.GetByDeviceCode) // 根据设备码获取节点
+		g.POST("/addBinding", c.AddBinding)      // 添加节点绑定
+		g.POST("/unbind", c.Unbind)              // 解绑
+		g.POST("/delete", c.DeleteNode)          // 删除节点
 	}
 }
 
@@ -166,51 +164,27 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 	Success(ctx, "")
 }
 
-// UpdateBindingStatus 更新绑定状态
+// Unbind 解除绑定状态
 // @Summary Update binding status
 // @Tags nodes
 // @Accept json
 // @Produce json
-// @Param body body dto.UpdateBindingStatusCommand true "Update binding status"
+// @Param body body dto.UnbindCommand true "Update binding status"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/updateBindingStatus [post]
-func (c *NodeController) UpdateBindingStatus(ctx *gin.Context) {
-	var cmd dto.UpdateBindingStatusCommand
+func (c *NodeController) Unbind(ctx *gin.Context) {
+	var cmd dto.UnbindCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.UpdateBindingStatus(ctx, cmd.ID, cmd.Status); err != nil {
+	if err := c.ns.Unbind(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
 	SuccessMsg(ctx, "binding status updated")
-}
-
-// ForceUnbind 强制解绑节点
-// @Summary Force unbind a node binding using node and license IDs
-// @Tags nodes
-// @Accept json
-// @Produce json
-// @Param body body dto.ForceUnbindCommand true "Force unbind command"
-// @Success 200 {object} api.CommonResponse
-// @Failure 400 {object} api.CommonResponse
-// @Failure 500 {object} api.CommonResponse
-// @Router /node/unbind [post]
-func (c *NodeController) ForceUnbind(ctx *gin.Context) {
-	var cmd dto.ForceUnbindCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	// todo: implement force unbind logic
-	//if err := c.ns.ForceUnbindByNodeAndLicense(ctx, cmd.NodeID, cmd.LicenseID); err != nil {
-	//	InternalError(ctx, err.Error())
-	//	return
-	//}
-	SuccessMsg(ctx, "node binding forced to unbind")
 }
 
 // DeleteNode 删除节点

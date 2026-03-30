@@ -25,7 +25,7 @@ func (r *NodeLicenseBindingRepository) AddBinding(ctx *sc.ServiceContext, db *go
 	pBinding := &model.NodeLicenseBinding{
 		NodeID:    binding.NodeID,
 		LicenseID: binding.LicenseID,
-		IsBound:   binding.IsBound,
+		Status:    binding.IsBound,
 	}
 	if err := gorm.G[model.NodeLicenseBinding](db).Create(ctx, pBinding); err != nil {
 		return err
@@ -94,7 +94,7 @@ func (r *NodeLicenseBindingRepository) GetBindingByNodeAndLicense(
 	return toEntityNodeLicenseBinding(m), nil
 }
 
-// CountActiveBindingsByLicense 统计某许可已绑定的节点数量（IsBound = 1）
+// CountActiveBindingsByLicense 统计某许可已绑定的节点数量（Status = 1）
 func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx *sc.ServiceContext, db *gorm.DB, licenseID uint) (int64, error) {
 	var cnt int64
 	if err := db.WithContext(ctx).
@@ -106,7 +106,7 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx *sc.Serv
 	return cnt, nil
 }
 
-// CountActiveBindingsByLicenseForProduct 统计某许可下某个产品已绑定的节点数量（IsBound = 1）
+// CountActiveBindingsByLicenseForProduct 统计某许可下某个产品已绑定的节点数量（Status = 1）
 func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(
 	ctx *sc.ServiceContext,
 	db *gorm.DB,
@@ -147,6 +147,6 @@ func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicense
 		ID:        b.ID,
 		NodeID:    b.NodeID,
 		LicenseID: b.LicenseID,
-		IsBound:   b.IsBound,
+		IsBound:   b.Status,
 	}
 }

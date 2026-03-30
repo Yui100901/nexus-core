@@ -10,7 +10,7 @@ type NodeLicenseBinding struct {
 	BaseModel
 	NodeID    uint `gorm:"index;not null"`          // 节点唯一标识 Node.ID
 	LicenseID uint `gorm:"index;not null"`          // 对应 License.ID
-	IsBound   int  `gorm:"type:int;index;not null"` // 是否绑定
+	Status    int  `gorm:"type:int;index;not null"` // 0未绑定，1已绑定
 }
 
 func (NodeLicenseBinding) TableName() string {

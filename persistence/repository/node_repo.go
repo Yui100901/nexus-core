@@ -110,7 +110,7 @@ func (r *NodeRepository) ForceUnbind(ctx *sc.ServiceContext, db *gorm.DB, bindin
 	_, err := gorm.G[model.NodeLicenseBinding](db).
 		Where("id = ?", bindingID).
 		Updates(ctx, model.NodeLicenseBinding{
-			IsBound: 0,
+			Status: 0,
 		})
 	return err
 }
@@ -127,7 +127,7 @@ func (r *NodeRepository) GetBindingByID(ctx *sc.ServiceContext, db *gorm.DB, id 
 	return &entity.NodeLicenseBinding{
 		ID:        m.ID,
 		LicenseID: m.LicenseID,
-		IsBound:   m.IsBound,
+		IsBound:   m.Status,
 	}, nil
 }
 
@@ -145,7 +145,7 @@ func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx *sc.ServiceContext, 
 		bindings = append(bindings, entity.NodeLicenseBinding{
 			ID:        mb.ID,
 			LicenseID: mb.LicenseID,
-			IsBound:   mb.IsBound,
+			IsBound:   mb.Status,
 		})
 	}
 	return bindings, nil
