@@ -42,6 +42,21 @@ func GetLicenseEntityByID(id uint) (*entity.License, error) {
 	}, nil
 }
 
+// GetNodeEntityByID 获取node实体
+func GetNodeEntityByID(id uint) (*entity.Node, error) {
+	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	metadata := string(pNode.Metadata)
+	return &entity.Node{
+		ID:         pNode.ID,
+		DeviceCode: pNode.DeviceCode,
+		Status:     pNode.Status,
+		Metadata:   &metadata,
+	}, nil
+}
+
 // GetProductEntityByID 获取产品实体
 func GetProductEntityByID(id uint) (*entity.Product, error) {
 	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)

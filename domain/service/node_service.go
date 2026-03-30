@@ -106,11 +106,8 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查 Node 是否存在
-		var node model.Node
-		if err := tx.Where("id = ?", nodeID).First(&node).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("node %d not found", nodeID)
-			}
+		_, err := GetNodeEntityByID(nodeID)
+		if err != nil {
 			return err
 		}
 
