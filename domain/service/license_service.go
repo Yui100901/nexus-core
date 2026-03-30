@@ -158,6 +158,24 @@ func (s *LicenseService) RenewLicense(cmd dto.RenewLicenseCommand) error {
 		}).Error
 }
 
+// RemoveBindings 移除许可证的所有绑定关系
+func (s *LicenseService) RemoveBindings(id uint) error {
+	return global.DB.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error
+}
+
+// DeleteLicense 删除许可证
+func (s *LicenseService) DeleteLicense(id uint) error {
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("id = ?", id).Delete(&model.License{}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // GetLicenseDataByID 根据ID获取许可证
 func (s *LicenseService) GetLicenseDataByID(id uint) (*dto.LicenseData, error) {
 	license, err := licenseRepo.GetByID(context.Background(), global.DB, id)

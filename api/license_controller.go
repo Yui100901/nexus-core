@@ -34,6 +34,8 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 		licenseGroup.GET("/getByKey", c.GetByKey)                      // 根据许可证密钥查询
 		licenseGroup.POST("/revokeLicense", c.RevokeLicense)           // 吊销许可证
 		licenseGroup.POST("/renewLicense", c.RenewLicense)             // 续期
+		licenseGroup.POST("/deleteLicense", c.DeleteLicense)           // 删除许可证
+		licenseGroup.POST("/removeBindings", c.RemoveLicenseBindings)  // 移除许可证绑定
 		licenseGroup.POST("/update", c.UpdateLicense)                  // 更新许可证信息
 		licenseGroup.POST("/deleteExpired", c.DeleteInvalidLicense)    // 删除过期的许可证
 	}
@@ -222,7 +224,33 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 	Success(ctx, "renew success")
 }
 
-// DeleteInvalidLicense 删除过期 License（POST）
+// RemoveLicenseBindings 移除所有该许可证相关的绑定
+// @Summary Remove all node bindings of a license
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Param body body dto.UpdateLicenseCommand true "RemoveLicenseBindings"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /license/update [post]
+func (c *LicenseController) RemoveLicenseBindings(ctx *gin.Context) {
+	var cmd struct {
+		ID uint `json:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	if err := c.ls.RemoveBindings(cmd.ID); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	Success(ctx, "renew success")
+}
+
+// DeleteInvalidLicense 删除无效的 License 包括过期，和已经被吊销
 // @Summary Delete expired licenses
 // @Tags licenses
 // @Accept json
@@ -236,4 +264,28 @@ func (c *LicenseController) DeleteInvalidLicense(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "expired licenses deleted")
+}
+
+// DeleteLicense 删除单个license
+// @Summary Delete expired licenses
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Success 200 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /license/deleteExpired [post]
+func (c *LicenseController) DeleteLicense(ctx *gin.Context) {
+	var cmd struct {
+		ID uint `json:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	if err := c.ls.DeleteLicense(cmd.ID); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	Success(ctx, "renew success")
 }
