@@ -126,7 +126,7 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 		VersionCode: cmd.VersionCode,
 		ReleaseDate: cmd.ReleaseDate,
 		Description: cmd.Description,
-		Status:      entity.VersionStatusUnreleased, //默认未发布
+		Status:      int(entity.VersionStatusUnreleased), //默认未发布
 	}
 	if err := productVersionRepo.Create(context.Background(), global.DB, newVersion); err != nil {
 		return nil, err

@@ -29,10 +29,12 @@ type Version struct {
 	Status      int        // 版本状态，用于标识版本是否可用
 }
 
+type VersionStatus int
+
 const (
-	VersionStatusUnreleased = 0 // 0 未发布
-	VersionStatusAvailable  = 1 // 1 可用
-	VersionStatusDeprecated = 2 // 2 已经弃用
+	VersionStatusUnreleased VersionStatus = iota // 0 未发布
+	VersionStatusAvailable                       // 1 可用
+	VersionStatusDeprecated                      // 2 已经弃用
 )
 
 // NewVersion 工厂方法
