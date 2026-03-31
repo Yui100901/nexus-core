@@ -220,7 +220,8 @@ func (s *LicenseService) DeleteInvalidLicenses() error {
 		var expiredLicenses []model.License
 
 		// 查询所有已过期或被吊销的许可证
-		if err := tx.Where("(expired_at IS NOT NULL AND expired_at < ?) OR status IN (?, ?)", time.Now(), model.StatusExpired, model.StatusRevoked).
+		if err := tx.Where("(expired_at IS NOT NULL AND expired_at < ?) OR status IN (?, ?)",
+			time.Now(), entity.StatusExpired, entity.StatusRevoked).
 			Find(&expiredLicenses).Error; err != nil {
 			return err
 		}
