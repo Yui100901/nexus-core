@@ -175,7 +175,26 @@ func (s *NodeService) UnbindByID(cmd dto.UnbindCommand) error {
 }
 
 func (s *NodeService) CleanUnboundNode() error {
-	//var bindings []model.NodeLicenseBinding
-	//global.DB.Model(&model.NodeLicenseBinding{}).Find(&)
+	// 1. 查出所有已绑定的节点 ID（status=1）
+	var boundNodeIDs []uint
+	if err := global.DB.Model(&model.NodeLicenseBinding{}).
+		Where("status = ?", entity.BindingStatusBound).
+		Pluck("node_id", &boundNodeIDs).Error; err != nil {
+		return err
+	}
+
+	// 2. 如果没有任何绑定，则删除所有节点
+	if len(boundNodeIDs) == 0 {
+		if err := global.DB.Delete(&model.Node{}).Error; err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// 3. 删除未绑定的节点
+	if err := global.DB.Where("id NOT IN ?", boundNodeIDs).Delete(&model.Node{}).Error; err != nil {
+		return err
+	}
+
 	return nil
 }

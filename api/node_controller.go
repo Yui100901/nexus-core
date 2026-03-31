@@ -31,6 +31,7 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		g.POST("/addBinding", c.AddBinding)      // 添加节点绑定
 		g.POST("/unbind", c.Unbind)              // 解绑
 		g.POST("/delete", c.DeleteNode)          // 删除节点
+		g.POST("/cleanUnboundNode", c.CleanUnboundNode)
 	}
 }
 
@@ -180,7 +181,7 @@ func (c *NodeController) Unbind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.Unbind(cmd); err != nil {
+	if err := c.ns.UnbindByID(cmd); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -206,6 +207,24 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		return
 	}
 	if err := c.ns.DeleteNode(cmd.ID); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	SuccessMsg(ctx, "node deleted")
+}
+
+// CleanUnboundNode 清理无任何绑定的节点
+// @Summary Delete a node
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param body body object true "{\"id\": <node id>}"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /node/delete [post]
+func (c *NodeController) CleanUnboundNode(ctx *gin.Context) {
+	if err := c.ns.CleanUnboundNode(); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
