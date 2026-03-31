@@ -28,16 +28,16 @@ func NewLicenseController() *LicenseController {
 func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 	licenseGroup := r.Group("/license")
 	{
-		licenseGroup.POST("/createLicense", c.CreateLicense)           // 创建单个许可证
-		licenseGroup.POST("/batchCreateLicense", c.BatchCreateLicense) // 批量创建许可证
-		licenseGroup.GET("/getByID", c.GetByID)                        // 根据ID查询许可证
-		licenseGroup.GET("/getByKey", c.GetByKey)                      // 根据许可证密钥查询
-		licenseGroup.POST("/revokeLicense", c.RevokeLicense)           // 吊销许可证
-		licenseGroup.POST("/renewLicense", c.RenewLicense)             // 续期
-		licenseGroup.POST("/deleteLicense", c.DeleteLicense)           // 删除许可证
-		licenseGroup.POST("/removeBindings", c.RemoveLicenseBindings)  // 移除许可证绑定
-		licenseGroup.POST("/update", c.UpdateLicense)                  // 更新许可证信息
-		licenseGroup.POST("/deleteExpired", c.DeleteInvalidLicense)    // 删除过期的许可证
+		licenseGroup.POST("/createLicense", c.CreateLicense)               // 创建单个许可证
+		licenseGroup.POST("/batchCreateLicense", c.BatchCreateLicense)     // 批量创建许可证
+		licenseGroup.GET("/getByID", c.GetByID)                            // 根据ID查询许可证
+		licenseGroup.GET("/getByKey", c.GetByKey)                          // 根据许可证密钥查询
+		licenseGroup.POST("/revokeLicense", c.RevokeLicense)               // 吊销许可证
+		licenseGroup.POST("/renewLicense", c.RenewLicense)                 // 续期
+		licenseGroup.POST("/deleteLicense", c.DeleteLicense)               // 删除许可证
+		licenseGroup.POST("/cleanLicenseBindings", c.CleanLicenseBindings) // 清理许可证绑定
+		licenseGroup.POST("/update", c.UpdateLicense)                      // 更新许可证信息
+		licenseGroup.POST("/cleanInvalidLicense", c.CleanInvalidLicense)   // 清理过期的许可证
 	}
 }
 
@@ -224,17 +224,17 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 	Success(ctx, "renew success")
 }
 
-// RemoveLicenseBindings 移除所有该许可证相关的绑定
+// CleanLicenseBindings 清理该许可证相关的绑定
 // @Summary Remove all node bindings of a license
 // @Tags licenses
 // @Accept json
 // @Produce json
-// @Param body body dto.UpdateLicenseCommand true "RemoveLicenseBindings"
+// @Param body body dto.UpdateLicenseCommand true "CleanLicenseBindings"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/update [post]
-func (c *LicenseController) RemoveLicenseBindings(ctx *gin.Context) {
+func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 	var cmd struct {
 		ID uint `json:"id" binding:"required"`
 	}
@@ -250,7 +250,7 @@ func (c *LicenseController) RemoveLicenseBindings(ctx *gin.Context) {
 	Success(ctx, "renew success")
 }
 
-// DeleteInvalidLicense 删除无效的 License 包括过期，和已经被吊销
+// CleanInvalidLicense 清理无效的 License 包括过期，和已经被吊销
 // @Summary Delete expired licenses
 // @Tags licenses
 // @Accept json
@@ -258,7 +258,7 @@ func (c *LicenseController) RemoveLicenseBindings(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
-func (c *LicenseController) DeleteInvalidLicense(ctx *gin.Context) {
+func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
 	if err := c.ls.DeleteInvalidLicenses(); err != nil {
 		InternalError(ctx, err.Error())
 		return
