@@ -263,7 +263,7 @@ func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
 		InternalError(ctx, err.Error())
 		return
 	}
-	SuccessMsg(ctx, "expired licenses deleted")
+	SuccessMsg(ctx, "invalid licenses deleted")
 }
 
 // DeleteLicense 删除单个license
