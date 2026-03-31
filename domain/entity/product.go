@@ -29,6 +29,12 @@ type Version struct {
 	Status      int        // 版本状态，用于标识版本是否可用
 }
 
+const (
+	VersionStatusUnreleased = 0 // 0 未发布
+	VersionStatusAvailable  = 1 // 1 可用
+	VersionStatusDeprecated = 2 // 2 已经弃用
+)
+
 // NewVersion 工厂方法
 // 创建一个新的版本对象，默认状态为启用
 func NewVersion(versionCode string, releaseDate *time.Time, description *string) (*Version, error) {

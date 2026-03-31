@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"nexus-core/api/dto"
+	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 	"time"
@@ -125,7 +126,7 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 		VersionCode: cmd.VersionCode,
 		ReleaseDate: cmd.ReleaseDate,
 		Description: cmd.Description,
-		Status:      model.VersionStatusUnreleased, //默认未发布
+		Status:      entity.VersionStatusUnreleased, //默认未发布
 	}
 	if err := productVersionRepo.Create(context.Background(), global.DB, newVersion); err != nil {
 		return nil, err
@@ -188,13 +189,13 @@ func (s *ProductService) ScheduleReleaseTask(versionID uint, releaseDate time.Ti
 func (s *ProductService) doReleaseVersion(versionID uint, releaseDate time.Time) error {
 
 	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
-		"status":       model.VersionStatusAvailable,
+		"status":       entity.VersionStatusAvailable,
 		"release_date": releaseDate,
 	}).Error
 }
 
 func (s *ProductService) DeprecateVersion(versionID uint) error {
 	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
-		"status": model.VersionStatusDeprecated,
+		"status": entity.VersionStatusDeprecated,
 	}).Error
 }
