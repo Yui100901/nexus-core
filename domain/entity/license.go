@@ -80,6 +80,7 @@ func (l *License) IsActive() bool {
 
 // Activate 激活许可证
 // 将许可证从未激活状态转为激活状态，并设置激活时间和过期时间
+// 修改ActivatedAt、ExpiredAt、Status字段
 func (l *License) Activate(now time.Time) bool {
 	if l.Status != StatusInactive {
 		return false

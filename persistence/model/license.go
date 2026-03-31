@@ -7,14 +7,6 @@ import "time"
 // @Date 2026/1/16 10 16
 //
 
-// 状态枚举
-const (
-	StatusInactive = iota // 0 未激活
-	StatusActive          // 1 已激活
-	StatusExpired         // 2 已过期
-	StatusRevoked         // 3 已吊销
-)
-
 // License 许可
 type License struct {
 	BaseModel
