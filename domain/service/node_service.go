@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"nexus-core/api/dto"
+	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 
@@ -149,14 +150,14 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 			newBinding := model.NodeLicenseBinding{
 				NodeID:    nodeID,
 				LicenseID: licenseID,
-				Status:    1,
+				Status:    int(entity.BindingStatusBound),
 			}
 			return tx.Create(&newBinding).Error
 		}
 	})
 }
 
-func (s *NodeService) Unbind(cmd dto.UnbindCommand) error {
+func (s *NodeService) UnbindByID(cmd dto.UnbindCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 查找是否已有绑定关系
@@ -169,6 +170,12 @@ func (s *NodeService) Unbind(cmd dto.UnbindCommand) error {
 		if binding.Status == 0 {
 			return nil
 		}
-		return tx.Model(&binding).Update("is_bound", 0).Error
+		return tx.Model(&binding).Update("is_bound", entity.BindingStatusUnbound).Error
 	})
+}
+
+func (s *NodeService) CleanUnboundNode() error {
+	//var bindings []model.NodeLicenseBinding
+	//global.DB.Model(&model.NodeLicenseBinding{}).Find(&)
+	return nil
 }

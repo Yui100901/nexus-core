@@ -25,7 +25,7 @@ func (r *NodeLicenseBindingRepository) AddBinding(ctx *sc.ServiceContext, db *go
 	pBinding := &model.NodeLicenseBinding{
 		NodeID:    binding.NodeID,
 		LicenseID: binding.LicenseID,
-		Status:    binding.IsBound,
+		Status:    int(binding.Status),
 	}
 	if err := gorm.G[model.NodeLicenseBinding](db).Create(ctx, pBinding); err != nil {
 		return err
@@ -147,6 +147,6 @@ func toEntityNodeLicenseBinding(b *model.NodeLicenseBinding) *entity.NodeLicense
 		ID:        b.ID,
 		NodeID:    b.NodeID,
 		LicenseID: b.LicenseID,
-		IsBound:   b.Status,
+		Status:    entity.VersionStatus(b.Status),
 	}
 }
