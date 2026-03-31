@@ -214,8 +214,8 @@ func (s *LicenseService) GetLicenseDataByKey(key string) (*dto.LicenseData, erro
 	}, nil
 }
 
-// DeleteInvalidLicenses 删除所有过期的许可证，同时删除节点许可证绑定
-func (s *LicenseService) DeleteInvalidLicenses() error {
+// CleanInvalidLicense 删除所有过期的许可证，同时删除节点许可证绑定
+func (s *LicenseService) CleanInvalidLicense() error {
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		var expiredLicenses []model.License
 

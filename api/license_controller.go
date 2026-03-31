@@ -259,7 +259,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
-	if err := c.ls.DeleteInvalidLicenses(); err != nil {
+	if err := c.ls.CleanInvalidLicense(); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
