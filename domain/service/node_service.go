@@ -107,8 +107,12 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查 Node 是否存在
-		if _, err := GetNodeEntityByID(nodeID); err != nil {
+		n, err := GetNodeEntityByID(nodeID)
+		if err != nil {
 			return err
+		}
+		if n == nil {
+			return fmt.Errorf("node not found")
 		}
 
 		// 检查 License 是否存在
@@ -141,7 +145,7 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 			return err
 		}
 		if int64(license.MaxNodes) <= nodeCount {
-			return fmt.Errorf("license %d has reached max nodes (%d)", licenseID, license.MaxNodes)
+			return fmt.Errorf("license has reached max nodes ")
 		}
 		if toUpdate {
 			return tx.Model(&binding).Update("is_bound", 1).Error
