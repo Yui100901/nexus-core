@@ -108,56 +108,52 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查 Node 是否存在
 		n, err := GetNodeEntityByID(nodeID)
-		if err != nil {
-			return err
-		}
-		if n == nil {
-			return fmt.Errorf("node not found")
+		if err != nil || n == nil {
+			return fmt.Errorf("invalid node")
 		}
 
 		// 检查 License 是否存在
 		license, err := GetLicenseEntityByID(licenseID)
-		if err != nil {
-			return err
-		}
-
-		toUpdate := false
-		// 查找是否已有绑定关系
-		var binding model.NodeLicenseBinding
-		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
-			First(&binding).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		// 已存在绑定记录
-		if err == nil {
-			if binding.Status == 1 {
-				return nil // 已绑定，无需重复绑定
-			}
-			toUpdate = true //未绑定，需要更新
+		if err != nil || license == nil {
+			return fmt.Errorf("invalid license")
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
 		var nodeCount int64
 		if err := tx.Model(&model.NodeLicenseBinding{}).
-			Where("license_id = ? AND is_bound = ?", licenseID, 1).
+			Where("license_id = ? AND status = ?", licenseID, entity.BindingStatusBound).
 			Count(&nodeCount).Error; err != nil {
 			return err
 		}
-		if int64(license.MaxNodes) <= nodeCount {
-			return fmt.Errorf("license has reached max nodes ")
+		if nodeCount >= int64(license.MaxNodes) {
+			return fmt.Errorf("license has reached max nodes")
 		}
-		if toUpdate {
-			return tx.Model(&binding).Update("is_bound", 1).Error
-		} else {
-			// 插入新绑定
-			newBinding := model.NodeLicenseBinding{
-				NodeID:    nodeID,
-				LicenseID: licenseID,
-				Status:    int(entity.BindingStatusBound),
+
+		// 查找是否已有绑定关系
+		var binding model.NodeLicenseBinding
+		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
+			First(&binding).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		// 已存在绑定记录
+		if err == nil {
+			if binding.Status == int(entity.BindingStatusBound) {
+				return nil // 已绑定，无需重复绑定
 			}
-			return tx.Create(&newBinding).Error
+			// 更新绑定状态
+			return tx.Model(&binding).Update("status", entity.BindingStatusBound).Error
 		}
+
+		// 插入新绑定
+		newBinding := model.NodeLicenseBinding{
+			NodeID:    nodeID,
+			LicenseID: licenseID,
+			Status:    int(entity.BindingStatusBound),
+		}
+		return tx.Create(&newBinding).Error
 	})
 }
 
