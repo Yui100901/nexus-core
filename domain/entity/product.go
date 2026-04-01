@@ -131,7 +131,7 @@ func (p *Product) CheckVersionSupportedById(versionID uint) bool {
 	return p.IsVersionSupported(*targetVersion)
 }
 
-// CheckVersionSupportedByCode 根据id判断某个产品是否支持某个版本
+// CheckVersionSupportedByCode 根据versionCode判断某个产品是否支持某个版本
 func (p *Product) CheckVersionSupportedByCode(code string) bool {
 	targetVersion, err := p.GetVersionByCode(code)
 	if err != nil {
