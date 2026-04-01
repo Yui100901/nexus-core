@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/repository"
@@ -26,6 +25,9 @@ func GetLicenseEntityByID(id uint) (*entity.License, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pLicense == nil {
+		return nil, nil
+	}
 	return &entity.License{
 		ID:            pLicense.ID,
 		ProductID:     pLicense.ProductID,
@@ -47,6 +49,9 @@ func GetLicenseEntityByKey(key string) (*entity.License, error) {
 	pLicense, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
 	if err != nil {
 		return nil, err
+	}
+	if pLicense == nil {
+		return nil, nil
 	}
 	return &entity.License{
 		ID:            pLicense.ID,
@@ -70,6 +75,9 @@ func GetNodeEntityByID(id uint) (*entity.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pNode == nil {
+		return nil, nil
+	}
 	metadata := string(pNode.Metadata)
 	return &entity.Node{
 		ID:         pNode.ID,
@@ -84,6 +92,9 @@ func GetNodeEntityByCode(code string) (*entity.Node, error) {
 	pNode, err := nodeRepo.GetByDeviceCode(context.Background(), global.DB, code)
 	if err != nil {
 		return nil, err
+	}
+	if pNode == nil {
+		return nil, nil
 	}
 	metadata := string(pNode.Metadata)
 	return &entity.Node{
@@ -101,7 +112,7 @@ func GetProductEntityByID(id uint) (*entity.Product, error) {
 		return nil, err
 	}
 	if pProduct == nil {
-		return nil, fmt.Errorf("pProduct not found")
+		return nil, nil
 	}
 	pVersionList, err := productVersionRepo.ListByProductID(context.Background(), global.DB, id)
 	if err != nil {
