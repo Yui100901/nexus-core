@@ -165,6 +165,29 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 	Success(ctx, "")
 }
 
+// AutoBind 手动添加节点绑定
+// @Summary Add node binding
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param body body dto.AddBindingCommand true "Add Binding"
+// @Success 200 {object} entity.NodeLicenseBinding
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /node/addBinding [post]
+func (c *NodeController) AutoBind(ctx *gin.Context) {
+	var cmd dto.AutoBindCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := c.ns.AutoBind(cmd); err != nil {
+		InternalError(ctx, err.Error())
+		return
+	}
+	Success(ctx, "")
+}
+
 // Unbind 解除绑定状态
 // @Summary Update binding status
 // @Tags nodes

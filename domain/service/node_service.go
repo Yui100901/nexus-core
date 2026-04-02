@@ -106,16 +106,16 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 
 	return global.DB.Transaction(func(tx *gorm.DB) error {
-		// 检查 Node 是否存在
-		n, err := GetNodeEntityByID(nodeID)
-		if err != nil || n == nil {
-			return fmt.Errorf("invalid node")
-		}
-
 		// 检查 License 是否存在
 		license, err := GetLicenseEntityByID(licenseID)
 		if err != nil || license == nil {
 			return fmt.Errorf("invalid license")
+		}
+
+		// 检查 Node 是否存在
+		n, err := GetNodeEntityByID(nodeID)
+		if err != nil || n == nil {
+			return fmt.Errorf("invalid node")
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
@@ -155,6 +155,69 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 		}
 		return tx.Create(&newBinding).Error
 	})
+}
+
+func (s *NodeService) AutoBind(cmd dto.AutoBindCommand) error {
+	deviceCode, licenseID := cmd.DeviceCode, cmd.LicenseID
+	return global.DB.Transaction(func(tx *gorm.DB) error {
+		// 检查 License 是否存在
+		license, err := GetLicenseEntityByID(licenseID)
+		if err != nil || license == nil {
+			return fmt.Errorf("invalid license")
+		}
+
+		// 检查 Node 是否存在
+		node, err := GetNodeEntityByCode(deviceCode)
+		if err != nil {
+			return fmt.Errorf("failed to get node")
+		}
+		if node == nil {
+			//创建节点
+			newNode := &model.Node{
+				DeviceCode: cmd.DeviceCode,
+				Status:     0, //默认正常
+			}
+			err = nodeRepo.Create(context.Background(), tx, newNode)
+			if err != nil {
+				return err
+			}
+			metadata := string(newNode.Metadata)
+			node = &entity.Node{
+				ID:         newNode.ID,
+				DeviceCode: newNode.DeviceCode,
+				Status:     0,
+				Metadata:   &metadata,
+			}
+			// 插入新绑定
+			newBinding := model.NodeLicenseBinding{
+				NodeID:    node.ID,
+				LicenseID: license.ID,
+				Status:    int(entity.BindingStatusBound),
+			}
+			if err := tx.Create(&newBinding).Error; err != nil {
+				return fmt.Errorf("create binding failed")
+			}
+		} else {
+			// 查找是否已有绑定关系
+			var binding model.NodeLicenseBinding
+			err = tx.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
+				First(&binding).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+			// 已存在绑定记录
+			if err == nil {
+				if binding.Status == 1 {
+					return nil // 已绑定，无需重复绑定
+				}
+				if err := tx.Model(&binding).Update("is_bound", entity.BindingStatusBound).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
 }
 
 func (s *NodeService) UnbindByID(cmd dto.UnbindCommand) error {
