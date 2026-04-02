@@ -4,6 +4,7 @@ import (
 	"context"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
+	"nexus-core/persistence/model"
 	"nexus-core/persistence/repository"
 )
 
@@ -54,6 +55,10 @@ func GetLicenseEntityByKey(key string) (*entity.License, error) {
 	if pLicense == nil {
 		return nil, nil
 	}
+	return ToEntityLicense(pLicense), nil
+}
+
+func ToEntityLicense(pLicense *model.License) *entity.License {
 	return &entity.License{
 		ID:               pLicense.ID,
 		ProductID:        pLicense.ProductID,
@@ -68,7 +73,7 @@ func GetLicenseEntityByKey(key string) (*entity.License, error) {
 		CurrentNodeCount: pLicense.CurrentNodeCount,
 		MaxConcurrent:    pLicense.MaxConcurrent,
 		FeatureMask:      pLicense.FeatureMask,
-	}, nil
+	}
 }
 
 // GetNodeEntityByID 获取node实体
@@ -80,13 +85,7 @@ func GetNodeEntityByID(id uint) (*entity.Node, error) {
 	if pNode == nil {
 		return nil, nil
 	}
-	metadata := string(pNode.Metadata)
-	return &entity.Node{
-		ID:         pNode.ID,
-		DeviceCode: pNode.DeviceCode,
-		Status:     pNode.Status,
-		Metadata:   &metadata,
-	}, nil
+	return ToEntityNode(pNode), nil
 }
 
 // GetNodeEntityByCode 获取node实体
@@ -98,13 +97,17 @@ func GetNodeEntityByCode(code string) (*entity.Node, error) {
 	if pNode == nil {
 		return nil, nil
 	}
+	return ToEntityNode(pNode), nil
+}
+
+func ToEntityNode(pNode *model.Node) *entity.Node {
 	metadata := string(pNode.Metadata)
 	return &entity.Node{
 		ID:         pNode.ID,
 		DeviceCode: pNode.DeviceCode,
 		Status:     pNode.Status,
 		Metadata:   &metadata,
-	}, nil
+	}
 }
 
 // GetProductEntityByID 获取产品实体
@@ -120,15 +123,13 @@ func GetProductEntityByID(id uint) (*entity.Product, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ToEntityProduct(pProduct, pVersionList), nil
+}
+
+func ToEntityProduct(pProduct *model.Product, pVersionList []model.ProductVersion) *entity.Product {
 	var versionList []entity.Version
 	for _, v := range pVersionList {
-		version := entity.Version{
-			ID:          v.ID,
-			VersionCode: v.VersionCode,
-			ReleaseDate: v.ReleaseDate,
-			Description: v.Description,
-			Status:      v.Status,
-		}
+		version := *ToEntityVersion(&v)
 		versionList = append(versionList, version)
 	}
 	return &entity.Product{
@@ -137,5 +138,15 @@ func GetProductEntityByID(id uint) (*entity.Product, error) {
 		Description:           pProduct.Description,
 		MinSupportedVersionID: pProduct.MinSupportedVersionID,
 		VersionList:           versionList,
-	}, nil
+	}
+}
+
+func ToEntityVersion(pVersion *model.ProductVersion) *entity.Version {
+	return &entity.Version{
+		ID:          pVersion.ID,
+		VersionCode: pVersion.VersionCode,
+		ReleaseDate: pVersion.ReleaseDate,
+		Description: pVersion.Description,
+		Status:      pVersion.Status,
+	}
 }
