@@ -119,13 +119,7 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
-		var nodeCount int64
-		if err := tx.Model(&model.NodeLicenseBinding{}).
-			Where("license_id = ? AND status = ?", licenseID, entity.BindingStatusBound).
-			Count(&nodeCount).Error; err != nil {
-			return err
-		}
-		if nodeCount >= int64(license.MaxNodes) {
+		if !license.ValidateNodeLimit() {
 			return fmt.Errorf("license has reached max nodes")
 		}
 

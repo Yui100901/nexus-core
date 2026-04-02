@@ -29,18 +29,19 @@ func GetLicenseEntityByID(id uint) (*entity.License, error) {
 		return nil, nil
 	}
 	return &entity.License{
-		ID:            pLicense.ID,
-		ProductID:     pLicense.ProductID,
-		LicenseKey:    pLicense.LicenseKey,
-		ValidityHours: pLicense.ValidityHours,
-		IssuedAt:      pLicense.CreatedAt,
-		ActivatedAt:   pLicense.ActivatedAt,
-		ExpiredAt:     pLicense.ExpiredAt,
-		Status:        entity.LicenseStatus(pLicense.Status),
-		Remark:        pLicense.Remark,
-		MaxNodes:      pLicense.MaxNodes,
-		MaxConcurrent: pLicense.MaxConcurrent,
-		FeatureMask:   pLicense.FeatureMask,
+		ID:               pLicense.ID,
+		ProductID:        pLicense.ProductID,
+		LicenseKey:       pLicense.LicenseKey,
+		ValidityHours:    pLicense.ValidityHours,
+		IssuedAt:         pLicense.CreatedAt,
+		ActivatedAt:      pLicense.ActivatedAt,
+		ExpiredAt:        pLicense.ExpiredAt,
+		Status:           entity.LicenseStatus(pLicense.Status),
+		Remark:           pLicense.Remark,
+		MaxNodes:         pLicense.MaxNodes,
+		CurrentNodeCount: pLicense.CurrentNodeCount,
+		MaxConcurrent:    pLicense.MaxConcurrent,
+		FeatureMask:      pLicense.FeatureMask,
 	}, nil
 }
 
@@ -54,18 +55,19 @@ func GetLicenseEntityByKey(key string) (*entity.License, error) {
 		return nil, nil
 	}
 	return &entity.License{
-		ID:            pLicense.ID,
-		ProductID:     pLicense.ProductID,
-		LicenseKey:    pLicense.LicenseKey,
-		ValidityHours: pLicense.ValidityHours,
-		IssuedAt:      pLicense.CreatedAt,
-		ActivatedAt:   pLicense.ActivatedAt,
-		ExpiredAt:     pLicense.ExpiredAt,
-		Status:        entity.LicenseStatus(pLicense.Status),
-		Remark:        pLicense.Remark,
-		MaxNodes:      pLicense.MaxNodes,
-		MaxConcurrent: pLicense.MaxConcurrent,
-		FeatureMask:   pLicense.FeatureMask,
+		ID:               pLicense.ID,
+		ProductID:        pLicense.ProductID,
+		LicenseKey:       pLicense.LicenseKey,
+		ValidityHours:    pLicense.ValidityHours,
+		IssuedAt:         pLicense.CreatedAt,
+		ActivatedAt:      pLicense.ActivatedAt,
+		ExpiredAt:        pLicense.ExpiredAt,
+		Status:           entity.LicenseStatus(pLicense.Status),
+		Remark:           pLicense.Remark,
+		MaxNodes:         pLicense.MaxNodes,
+		CurrentNodeCount: pLicense.CurrentNodeCount,
+		MaxConcurrent:    pLicense.MaxConcurrent,
+		FeatureMask:      pLicense.FeatureMask,
 	}, nil
 }
 
