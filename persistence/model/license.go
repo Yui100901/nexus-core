@@ -10,16 +10,17 @@ import "time"
 // License 许可
 type License struct {
 	BaseModel
-	ProductID     uint       `gorm:"index;not null"`                         // 产品id
-	LicenseKey    string     `gorm:"uniqueIndex;type:varchar(255);not null"` // 注册码
-	ValidityHours int        `gorm:"type:int;not null"`                      // 有效时长（小时）
-	ActivatedAt   *time.Time `gorm:"type:datetime"`                          // 激活时间
-	ExpiredAt     *time.Time `gorm:"type:datetime"`                          // 过期时间
-	Status        int        `gorm:"type:int;index;not null"`                // 状态枚举
-	MaxNodes      int        `gorm:"type:int;not null;default:0"`            // 最大节点数 (0 = 不限制)
-	MaxConcurrent int        `gorm:"type:int;not null;default:0"`            // 并发限制 (0 = 不限制)
-	FeatureMask   string     `gorm:"type:varchar(255)"`                      // 功能模块掩码
-	Remark        *string    `gorm:"type:text"`                              // 备注
+	ProductID        uint       `gorm:"index;not null"`                         // 产品id
+	LicenseKey       string     `gorm:"uniqueIndex;type:varchar(255);not null"` // 注册码
+	ValidityHours    int        `gorm:"type:int;not null"`                      // 有效时长（小时）
+	ActivatedAt      *time.Time `gorm:"type:datetime"`                          // 激活时间
+	ExpiredAt        *time.Time `gorm:"type:datetime"`                          // 过期时间
+	Status           int        `gorm:"type:int;index;not null"`                // 状态枚举
+	MaxNodes         int        `gorm:"type:int;not null;default:0"`            // 最大节点数 (0 = 不限制)
+	CurrentNodeCount int        `gorm:"type:int;not null;default:0"`            // 当前绑定数量
+	MaxConcurrent    int        `gorm:"type:int;not null;default:0"`            // 并发限制 (0 = 不限制)
+	FeatureMask      string     `gorm:"type:varchar(255)"`                      // 功能模块掩码
+	Remark           *string    `gorm:"type:text"`                              // 备注
 }
 
 func (License) TableName() string {

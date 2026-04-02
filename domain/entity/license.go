@@ -1,10 +1,7 @@
 package entity
 
 import (
-	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 //
@@ -25,37 +22,19 @@ const (
 // License 表示许可证领域的核心实体
 // 包含许可证的基本信息、激活状态、有效期和授权范围
 type License struct {
-	ID            uint
-	ProductID     uint       // 产品id
-	LicenseKey    string     // 许可证密钥，用于客户端验证
-	ValidityHours int        // 有效时长（小时），从激活时刻开始计算
-	IssuedAt      time.Time  // 颁发时间，许可证创建时设置
-	ActivatedAt   *time.Time // 激活时间，首次激活时设置
-	ExpiredAt     *time.Time // 过期时间，基于激活时间和有效时长计算
-	Status        LicenseStatus
-	Remark        *string // 备注信息
-	MaxNodes      int     // 最大节点数 (0 = 不限制)
-	MaxConcurrent int     // 并发限制 (0 = 不限制)
-	FeatureMask   string  // 功能模块掩码
-}
-
-// NewLicense 工厂方法
-// 创建一个新的许可证对象，默认状态为未激活
-func NewLicense(productID uint, validityHours, maxNodes, concurrentLimit int, remark *string) *License {
-	if validityHours <= 0 {
-		validityHours = 0
-	}
-
-	return &License{
-		ProductID:     productID,
-		LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
-		ValidityHours: validityHours,
-		IssuedAt:      time.Now(),
-		Status:        StatusInactive,
-		MaxNodes:      maxNodes,
-		MaxConcurrent: concurrentLimit,
-		Remark:        remark,
-	}
+	ID               uint
+	ProductID        uint          // 产品id
+	LicenseKey       string        // 许可证密钥，用于客户端验证
+	ValidityHours    int           // 有效时长（小时），从激活时刻开始计算
+	IssuedAt         time.Time     // 颁发时间，许可证创建时设置
+	ActivatedAt      *time.Time    // 激活时间，首次激活时设置
+	ExpiredAt        *time.Time    // 过期时间，基于激活时间和有效时长计算
+	Status           LicenseStatus // 许可证状态
+	Remark           *string       // 备注信息
+	MaxNodes         int           // 最大节点数 (0 = 不限制)
+	CurrentNodeCount int           // 当前绑定数量
+	MaxConcurrent    int           // 并发限制 (0 = 不限制)
+	FeatureMask      string        // 功能模块掩码
 }
 
 // CalculateStatus 根据当前时间返回状态
@@ -143,13 +122,13 @@ func (l *License) IsValid() bool {
 	return l.CalculateStatus(time.Now()) == StatusActive
 }
 
-// ValidateMaxNodes 验证最大节点数限制
-func (l *License) ValidateMaxNodes(currentBindings int) bool {
-	return validateLimit(l.MaxNodes, currentBindings)
+// ValidateNodeLimit 验证最大节点数限制
+func (l *License) ValidateNodeLimit() bool {
+	return validateLimit(l.MaxNodes, l.CurrentNodeCount)
 }
 
-// ValidateMaxConcurrent 验证最大并发数限制
-func (l *License) ValidateMaxConcurrent(currentConcurrent int) bool {
+// ValidateConcurrentLimit 验证最大并发数限制
+func (l *License) ValidateConcurrentLimit(currentConcurrent int) bool {
 	return validateLimit(l.MaxConcurrent, currentConcurrent)
 }
 

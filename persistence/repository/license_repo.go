@@ -141,20 +141,3 @@ func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, db *gorm
 
 	return nil
 }
-
-func toEntityLicense(m *model.License) *entity.License {
-
-	return &entity.License{
-		ID:            m.ID,
-		ProductID:     m.ProductID,
-		LicenseKey:    m.LicenseKey,
-		ValidityHours: m.ValidityHours,
-		ActivatedAt:   m.ActivatedAt,
-		ExpiredAt:     m.ExpiredAt,
-		Status:        m.Status,
-		Remark:        m.Remark,
-		MaxNodes:      m.MaxNodes,
-		MaxConcurrent: m.MaxConcurrent,
-		FeatureMask:   m.FeatureMask,
-	}
-}
