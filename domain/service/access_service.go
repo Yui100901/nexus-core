@@ -38,9 +38,10 @@ type HeartbeatResult struct {
 // Register 执行自动节点绑定注册逻辑
 // 检查许可证，产品，版本之前的支持情况
 // 绑定成功后激活许可证
-func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
+func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) (*RegisterResult, error) {
 	deviceCode, licenseKey, productID, versionCode := cmd.DeviceCode, cmd.LicenseKey, cmd.ProductID, cmd.VersionCode
-	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var result *RegisterResult
+	if err := global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		//验证许可证产品支持
 		license, err := GetLicenseEntityByKey(ctx, tx, licenseKey)
 		if err != nil {
@@ -94,7 +95,7 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 			//创建节点
 			newNode := &model.Node{
 				DeviceCode: cmd.DeviceCode,
-				Status:     0, //默认正常
+				Status:     entity.NodeStatusNormal,
 			}
 			err = nodeRepo.Create(ctx, tx, newNode)
 			if err != nil {
@@ -107,62 +108,43 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 				Status:     0,
 				Metadata:   &metadata,
 			}
-			// 插入新绑定
-			now := time.Now()
-			newBinding := model.NodeLicenseBinding{
-				NodeID:    node.ID,
-				LicenseID: license.ID,
-				ProductID: productID,
-				Status:    int(entity.BindingStatusBound),
-				BoundAt:   &now,
-			}
-			if err := tx.Create(&newBinding).Error; err != nil {
-				return WrapInternal("create binding failed", err)
-			}
-		} else {
-			// 查找是否已有绑定关系
-			var binding model.NodeLicenseBinding
-			err = tx.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
-				First(&binding).Error
-			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-				return WrapInternal("get binding failed", err)
-			}
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				now := time.Now()
-				newBinding := model.NodeLicenseBinding{
-					NodeID:    node.ID,
-					LicenseID: license.ID,
-					ProductID: productID,
-					Status:    int(entity.BindingStatusBound),
-					BoundAt:   &now,
-				}
-				if err := tx.Create(&newBinding).Error; err != nil {
-					return WrapInternal("create binding failed", err)
-				}
-			} else if binding.Status != int(entity.BindingStatusBound) {
-				now := time.Now()
-				if err := tx.Model(&binding).Updates(map[string]interface{}{
-					"status":     entity.BindingStatusBound,
-					"bound_at":   &now,
-					"unbound_at": nil,
-				}).Error; err != nil {
-					return WrapInternal("update binding failed", err)
-				}
-			}
 		}
+
+		bound, err := bindNodeToLicense(ctx, tx, node.ID, license, productID)
+		if err != nil {
+			return err
+		}
+
 		if toActivate {
-			if err := tx.Model(model.License{}).Where("id = ?", license.ID).
-				Updates(model.License{
-					ActivatedAt: license.ActivatedAt,
-					ExpiredAt:   license.ExpiredAt,
-					Status:      int(license.Status),
+			if err := tx.Model(&model.License{}).Where("id = ?", license.ID).
+				Updates(map[string]interface{}{
+					"activated_at": license.ActivatedAt,
+					"expired_at":   license.ExpiredAt,
+					"status":       int(license.Status),
 				}).Error; err != nil {
 				return WrapInternal("update license activation failed", err)
 			}
 		}
 
+		result = &RegisterResult{
+			NodeID:             node.ID,
+			LicenseID:          license.ID,
+			ProductID:          productID,
+			LicenseKey:         license.LicenseKey,
+			LicenseStatus:      int(license.Status),
+			FeatureMask:        license.FeatureMask,
+			MaxNodes:           license.MaxNodes,
+			CurrentNodeCount:   license.CurrentNodeCount,
+			MaxConcurrent:      license.MaxConcurrent,
+			HeartbeatInterval:  60,
+			BindingEstablished: bound,
+		}
+
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Heartbeat 处理心跳逻辑

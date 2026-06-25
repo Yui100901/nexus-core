@@ -12,8 +12,8 @@ import (
 type CreateLicenseCommand struct {
 	ProductID     uint    `json:"product_id" binding:"required"`     // 授权范围列表
 	ValidityHours int     `json:"validity_hours" binding:"required"` // 有效时长（小时）
-	MaxNodes      int     `json:"max_nodes" binding:"required"`      // 最大节点数
-	MaxConcurrent int     `json:"max_concurrent" binding:"required"` // 并发限制
+	MaxNodes      int     `json:"max_nodes"`                         // 最大节点数
+	MaxConcurrent int     `json:"max_concurrent"`                    // 并发限制
 	Remark        *string `json:"remark"`                            // 备注
 }
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
@@ -172,11 +173,28 @@ func (s *ProductService) scheduleReleaseTask(versionID uint, releaseDate time.Ti
 
 // 内部方法执行版本发布
 func (s *ProductService) doReleaseVersion(ctx context.Context, db *gorm.DB, versionID uint, releaseDate time.Time) error {
+	var version model.ProductVersion
+	if err := db.WithContext(ctx).Where("id = ?", versionID).First(&version).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotFound("version not found")
+		}
+		return WrapInternal("get version failed", err)
+	}
 
-	return db.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
+	if err := db.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
 		"status":       entity.VersionStatusAvailable,
 		"release_date": releaseDate,
-	}).Error
+	}).Error; err != nil {
+		return WrapInternal("release version failed", err)
+	}
+
+	if err := db.WithContext(ctx).Model(&model.Product{}).
+		Where("id = ? AND min_supported_version_id IS NULL", version.ProductID).
+		Update("min_supported_version_id", versionID).Error; err != nil {
+		return WrapInternal("update min supported version failed", err)
+	}
+
+	return nil
 }
 
 func (s *ProductService) DeprecateVersion(ctx context.Context, versionID uint) error {

@@ -5,6 +5,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
 	"nexus-core/persistence/repository"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -30,21 +31,7 @@ func GetLicenseEntityByID(ctx context.Context, db *gorm.DB, id uint) (*entity.Li
 	if pLicense == nil {
 		return nil, nil
 	}
-	return &entity.License{
-		ID:               pLicense.ID,
-		ProductID:        pLicense.ProductID,
-		LicenseKey:       pLicense.LicenseKey,
-		ValidityHours:    pLicense.ValidityHours,
-		IssuedAt:         pLicense.CreatedAt,
-		ActivatedAt:      pLicense.ActivatedAt,
-		ExpiredAt:        pLicense.ExpiredAt,
-		Status:           entity.LicenseStatus(pLicense.Status),
-		Remark:           pLicense.Remark,
-		MaxNodes:         pLicense.MaxNodes,
-		CurrentNodeCount: pLicense.CurrentNodeCount,
-		MaxConcurrent:    pLicense.MaxConcurrent,
-		FeatureMask:      pLicense.FeatureMask,
-	}, nil
+	return hydrateLicenseEntity(ctx, db, pLicense)
 }
 
 // GetLicenseEntityByKey 获取license实体
@@ -56,7 +43,7 @@ func GetLicenseEntityByKey(ctx context.Context, db *gorm.DB, key string) (*entit
 	if pLicense == nil {
 		return nil, nil
 	}
-	return ToEntityLicense(pLicense), nil
+	return hydrateLicenseEntity(ctx, db, pLicense)
 }
 
 func ToEntityLicense(pLicense *model.License) *entity.License {
@@ -75,6 +62,20 @@ func ToEntityLicense(pLicense *model.License) *entity.License {
 		MaxConcurrent:    pLicense.MaxConcurrent,
 		FeatureMask:      pLicense.FeatureMask,
 	}
+}
+
+func hydrateLicenseEntity(ctx context.Context, db *gorm.DB, pLicense *model.License) (*entity.License, error) {
+	license := ToEntityLicense(pLicense)
+	currentStatus := license.CalculateStatus(time.Now())
+	if currentStatus != license.Status {
+		license.Status = currentStatus
+		if err := db.WithContext(ctx).Model(&model.License{}).
+			Where("id = ?", license.ID).
+			Update("status", int(currentStatus)).Error; err != nil {
+			return nil, err
+		}
+	}
+	return license, nil
 }
 
 // GetNodeEntityByID 获取node实体

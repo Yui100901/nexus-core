@@ -57,7 +57,7 @@ func (c *AccessController) Register(ctx *gin.Context) {
 		return
 	}
 
-	err := c.as.Register(ctx.Request.Context(), service.AccessCommand{
+	res, err := c.as.Register(ctx.Request.Context(), service.AccessCommand{
 		DeviceCode:  cmd.DeviceCode,
 		LicenseKey:  cmd.LicenseKey,
 		ProductID:   cmd.ProductID,
@@ -68,7 +68,7 @@ func (c *AccessController) Register(ctx *gin.Context) {
 		return
 	}
 
-	Success(ctx, "")
+	Success(ctx, res)
 }
 
 // Heartbeat 现在也很薄

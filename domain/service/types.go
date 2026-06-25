@@ -9,6 +9,20 @@ type AccessCommand struct {
 	VersionCode string
 }
 
+type RegisterResult struct {
+	NodeID             uint   `json:"node_id"`
+	LicenseID          uint   `json:"license_id"`
+	ProductID          uint   `json:"product_id"`
+	LicenseKey         string `json:"license_key"`
+	LicenseStatus      int    `json:"license_status"`
+	FeatureMask        string `json:"feature_mask"`
+	MaxNodes           int    `json:"max_nodes"`
+	CurrentNodeCount   int    `json:"current_node_count"`
+	MaxConcurrent      int    `json:"max_concurrent"`
+	HeartbeatInterval  int    `json:"heartbeat_interval"`
+	BindingEstablished bool   `json:"binding_established"`
+}
+
 type CreateLicenseCommand struct {
 	ProductID     uint
 	ValidityHours int
