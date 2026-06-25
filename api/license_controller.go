@@ -66,7 +66,7 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 		Remark:        cmd.Remark,
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, license)
@@ -117,21 +117,21 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
 	idStr := ctx.Query("id")
 	if idStr == "" {
-		NotFound(ctx, "id is required")
+		BadRequest(ctx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		NotFound(ctx, "invalid id")
+		BadRequest(ctx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
 
 	license, err := c.ls.GetLicenseDataByID(ctx.Request.Context(), id)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, license)
@@ -149,11 +149,18 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 // @Router /license/getByKey [get]
 func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	// 获取 query 参数
-	key := ctx.Query("deviceCode")
+	key := ctx.Query("key")
+	if key == "" {
+		key = ctx.Query("deviceCode")
+	}
+	if key == "" {
+		BadRequest(ctx, "key is required")
+		return
+	}
 
 	license, err := c.ls.GetLicenseDataByKey(ctx.Request.Context(), key)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, license)
@@ -176,7 +183,7 @@ func (c *LicenseController) RevokeLicense(ctx *gin.Context) {
 		return
 	}
 	if err := c.ls.RevokeLicense(ctx.Request.Context(), cmd.ID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "status updated")
@@ -206,7 +213,7 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 		FeatureMask:   cmd.FeatureMask,
 		Remark:        cmd.Remark,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "update success")
@@ -233,7 +240,7 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 		ID:         cmd.ID,
 		ExtraHours: cmd.ExtraHours,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "renew success")
@@ -259,7 +266,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 	}
 
 	if err := c.ls.RemoveBindings(ctx.Request.Context(), cmd.ID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "renew success")
@@ -275,7 +282,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
 	if err := c.ls.CleanInvalidLicense(ctx.Request.Context()); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "invalid licenses deleted")
@@ -299,7 +306,7 @@ func (c *LicenseController) DeleteLicense(ctx *gin.Context) {
 	}
 
 	if err := c.ls.DeleteLicense(ctx.Request.Context(), cmd.ID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "renew success")

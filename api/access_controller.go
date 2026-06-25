@@ -64,7 +64,7 @@ func (c *AccessController) Register(ctx *gin.Context) {
 		VersionCode: cmd.VersionCode,
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 
@@ -90,20 +90,9 @@ func (c *AccessController) Heartbeat(ctx *gin.Context) {
 		return
 	}
 
-	res, err := c.as.Heartbeat(ctx, cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
+	res, err := c.as.Heartbeat(ctx.Request.Context(), cmd.DeviceCode, cmd.ProductID, cmd.VersionCode, cmd.LicenseKey)
 	if err != nil {
-		if se, ok := err.(*service.ServiceError); ok {
-			switch se.HTTPStatus {
-			case 400:
-				BadRequest(ctx, se.Error())
-			case 500:
-				InternalError(ctx, se.Error())
-			default:
-				InternalError(ctx, se.Error())
-			}
-			return
-		}
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"nexus-core/domain/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,7 +27,9 @@ type APIResponse = CommonResponse
 const (
 	CodeOK         = 200 // 成功状态码
 	CodeBadRequest = 400 // 请求错误状态码
+	CodeForbidden  = 403 // 权限不足状态码
 	CodeNotFound   = 404 // 未找到状态码
+	CodeConflict   = 409 // 状态冲突状态码
 	CodeInternal   = 500 // 内部错误状态码
 )
 
@@ -55,12 +58,41 @@ func BadRequest(ctx *gin.Context, message string) {
 	JSON(ctx, http.StatusBadRequest, CodeBadRequest, message, nil)
 }
 
+// Forbidden 返回403错误响应
+func Forbidden(ctx *gin.Context, message string) {
+	JSON(ctx, http.StatusForbidden, CodeForbidden, message, nil)
+}
+
 // NotFound 返回404错误响应
 func NotFound(ctx *gin.Context, message string) {
 	JSON(ctx, http.StatusNotFound, CodeNotFound, message, nil)
 }
 
+// Conflict 返回409错误响应
+func Conflict(ctx *gin.Context, message string) {
+	JSON(ctx, http.StatusConflict, CodeConflict, message, nil)
+}
+
 // InternalError 返回500错误响应
 func InternalError(ctx *gin.Context, message string) {
 	JSON(ctx, http.StatusInternalServerError, CodeInternal, message, nil)
+}
+
+// HandleError 将 service 层业务错误统一映射为 HTTP 响应。
+func HandleError(ctx *gin.Context, err error) {
+	if err == nil {
+		return
+	}
+	switch service.ErrorKindOf(err) {
+	case service.ErrorKindBadRequest:
+		BadRequest(ctx, err.Error())
+	case service.ErrorKindNotFound:
+		NotFound(ctx, err.Error())
+	case service.ErrorKindForbidden:
+		Forbidden(ctx, err.Error())
+	case service.ErrorKindConflict:
+		Conflict(ctx, err.Error())
+	default:
+		InternalError(ctx, err.Error())
+	}
 }

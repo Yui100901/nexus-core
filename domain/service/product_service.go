@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
@@ -46,7 +45,7 @@ func (s *ProductService) GetProductDataByID(ctx context.Context, id uint) (*Prod
 		return nil, err
 	}
 	if pProduct == nil {
-		return nil, fmt.Errorf("product not found")
+		return nil, ErrNotFound("product not found")
 	}
 	return &ProductData{
 		ID:          pProduct.ID,
@@ -64,14 +63,14 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, cmd UpdateM
 		return err
 	}
 	if version == nil {
-		return fmt.Errorf("unkonwn version id %d", versionID)
+		return ErrNotFound("version not found")
 	}
 	if version.ProductID == productID {
 		return global.DB.WithContext(ctx).Model(&model.Product{}).
 			Where("id = ?", productID).
 			Update("min_supported_version_id", versionID).Error
 	}
-	return fmt.Errorf("version id %d not supported for %d", versionID, productID)
+	return ErrBadRequest("version does not belong to product")
 }
 
 // DeleteProduct 删除产品
@@ -98,10 +97,10 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 			return err
 		}
 		if product == nil {
-			return fmt.Errorf("product not found")
+			return ErrNotFound("product not found")
 		}
 		if product.ExistsVersionCode(cmd.VersionCode) {
-			return fmt.Errorf("version code already exists")
+			return ErrConflict("version code already exists")
 		}
 		newVersion = &model.ProductVersion{
 			ProductID:   cmd.ProductID,
@@ -116,7 +115,7 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 
 		if cmd.Method == ReleaseImmediate {
 			if err := s.doReleaseVersion(ctx, tx, newVersion.ID, time.Now()); err != nil {
-				return fmt.Errorf("failed to release version: %w", err)
+				return WrapInternal("failed to release version", err)
 			}
 		}
 		return nil

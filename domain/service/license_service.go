@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 	"strings"
@@ -33,7 +33,10 @@ func NewLicenseService() *LicenseService {
 func (s *LicenseService) CreateLicense(ctx context.Context, cmd CreateLicenseCommand) (*LicenseData, error) {
 	var product model.Product
 	if err := global.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", cmd.ProductID).First(&product).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound("product not found")
+		}
+		return nil, WrapInternal("get product failed", err)
 	}
 	license := &model.License{
 		ProductID:     product.ID,
@@ -49,7 +52,7 @@ func (s *LicenseService) CreateLicense(ctx context.Context, cmd CreateLicenseCom
 	}
 	err := licenseRepo.Create(ctx, global.DB.WithContext(ctx), license)
 	if err != nil {
-		return nil, err
+		return nil, WrapInternal("create license failed", err)
 	}
 	return &LicenseData{
 		ID:            license.ID,
@@ -86,6 +89,9 @@ func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseComma
 	if err != nil {
 		return err
 	}
+	if license == nil {
+		return ErrNotFound("license not found")
+	}
 	license.Renew(time.Now(), extraHours)
 	return global.DB.WithContext(ctx).Model(model.License{}).Where("id = ?", licenseID).
 		Updates(model.License{
@@ -120,7 +126,7 @@ func (s *LicenseService) GetLicenseDataByID(ctx context.Context, id uint) (*Lice
 		return nil, err
 	}
 	if license == nil {
-		return nil, fmt.Errorf("product not found")
+		return nil, ErrNotFound("license not found")
 	}
 	return &LicenseData{
 		ID:            license.ID,
@@ -139,7 +145,7 @@ func (s *LicenseService) GetLicenseDataByKey(ctx context.Context, key string) (*
 		return nil, err
 	}
 	if license == nil {
-		return nil, fmt.Errorf("product not found")
+		return nil, ErrNotFound("license not found")
 	}
 	return &LicenseData{
 		ID:            license.ID,

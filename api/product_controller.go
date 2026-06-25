@@ -58,7 +58,7 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 		Description: cmd.Description,
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, p)
@@ -88,7 +88,7 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		Method:      service.ReleaseMethod(cmd.Method),
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, v)
@@ -113,7 +113,7 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 		ReleaseDate: cmd.ReleaseDate,
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, cmd.VersionID)
@@ -166,14 +166,14 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
 	idStr := ctx.Query("id")
 	if idStr == "" {
-		NotFound(ctx, "id is required")
+		BadRequest(ctx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		NotFound(ctx, "invalid id")
+		BadRequest(ctx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
@@ -181,7 +181,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	// 调用服务层
 	data, err := c.ps.GetProductDataByID(ctx.Request.Context(), id)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, data)
@@ -207,7 +207,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 		ProductID: cmd.ProductID,
 		VersionID: cmd.VersionID,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "min supported version updated")
@@ -230,7 +230,7 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 		return
 	}
 	if err := c.ps.DeprecateVersion(ctx.Request.Context(), cmd.VersionID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "version deprecated")
@@ -255,7 +255,7 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 		return
 	}
 	if err := c.ps.DeleteProduct(ctx.Request.Context(), q.ID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "product deleted")

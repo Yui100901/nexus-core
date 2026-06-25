@@ -56,7 +56,7 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 		Metadata:   cmd.Metadata,
 	})
 	if err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, n)
@@ -103,14 +103,14 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 	// 获取 query 参数
 	idStr := ctx.Query("id")
 	if idStr == "" {
-		NotFound(ctx, "id is required")
+		BadRequest(ctx, "id is required")
 		return
 	}
 
 	// 转换为 uint
 	idUint64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		NotFound(ctx, "invalid id")
+		BadRequest(ctx, "invalid id")
 		return
 	}
 	id := uint(idUint64)
@@ -118,7 +118,7 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 	// 调用服务层
 	data, err := c.ns.GetNodeDataByID(ctx.Request.Context(), id)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, data)
@@ -137,9 +137,13 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	// 获取 query 参数
 	code := ctx.Query("deviceCode")
+	if code == "" {
+		BadRequest(ctx, "deviceCode is required")
+		return
+	}
 	n, err := c.ns.GetByDeviceCode(ctx.Request.Context(), code)
 	if err != nil {
-		NotFound(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, n)
@@ -165,7 +169,7 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		NodeID:    cmd.NodeID,
 		LicenseID: cmd.LicenseID,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "")
@@ -191,7 +195,7 @@ func (c *NodeController) AutoBind(ctx *gin.Context) {
 		DeviceCode: cmd.DeviceCode,
 		LicenseID:  cmd.LicenseID,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, "")
@@ -217,7 +221,7 @@ func (c *NodeController) Unbind(ctx *gin.Context) {
 		NodeID:    cmd.NodeID,
 		LicenseID: cmd.LicenseID,
 	}); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "binding status updated")
@@ -242,7 +246,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		return
 	}
 	if err := c.ns.DeleteNode(ctx.Request.Context(), cmd.ID); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "node deleted")
@@ -260,7 +264,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 // @Router /node/delete [post]
 func (c *NodeController) CleanUnboundNode(ctx *gin.Context) {
 	if err := c.ns.CleanUnboundNode(ctx.Request.Context()); err != nil {
-		InternalError(ctx, err.Error())
+		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "node deleted")

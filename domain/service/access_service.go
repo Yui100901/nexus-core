@@ -13,20 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ServiceError 用于在 service 层携带 HTTP 状态用于 controller 映射
-type ServiceError struct {
-	HTTPStatus int
-	Err        error
-}
-
-func (e *ServiceError) Error() string {
-	return e.Err.Error()
-}
-
-func NewServiceError(status int, msg string) *ServiceError {
-	return &ServiceError{HTTPStatus: status, Err: errors.New(msg)}
-}
-
 // AccessService 负责 Access 相关的业务逻辑（自动绑定、心跳）
 type AccessService struct {
 	ls *LicenseService
@@ -57,20 +43,26 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		//验证许可证产品支持
 		license, err := GetLicenseEntityByKey(ctx, tx, licenseKey)
-		if err != nil || license == nil {
-			return fmt.Errorf("invalid license")
+		if err != nil {
+			return WrapInternal("get license failed", err)
+		}
+		if license == nil {
+			return ErrBadRequest("invalid license")
 		}
 		if license.ProductID != productID {
-			return fmt.Errorf("license not support for this product id %d", productID)
+			return Forbiddenf("license does not support product id %d", productID)
 		}
 
 		//验证产品版本支持
 		product, err := GetProductEntityByID(ctx, tx, productID)
-		if err != nil || product == nil {
-			return fmt.Errorf("invalid product")
+		if err != nil {
+			return WrapInternal("get product failed", err)
+		}
+		if product == nil {
+			return ErrBadRequest("invalid product")
 		}
 		if !product.CheckVersionSupportedByCode(versionCode) {
-			return fmt.Errorf("version not supported")
+			return ErrBadRequest("version not supported")
 		}
 
 		// 检查许可证状态
@@ -80,23 +72,23 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 		case entity.StatusInactive:
 			//尝试激活许可证
 			if !license.Activate(time.Now()) || !license.IsActive() {
-				return fmt.Errorf("license activation failed")
+				return ErrConflict("license activation failed")
 			}
 			toActivate = true
 		case entity.StatusActive:
 		case entity.StatusExpired, entity.StatusRevoked:
-			return fmt.Errorf("license not avaliable")
+			return ErrConflict("license not available")
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
 		if !license.ValidateNodeLimit() {
-			return fmt.Errorf("license has reached max nodes ")
+			return ErrConflict("license has reached max nodes")
 		}
 
 		// 检查 Node 是否存在
 		node, err := GetNodeEntityByCode(ctx, tx, deviceCode)
 		if err != nil {
-			return err
+			return WrapInternal("get node failed", err)
 		}
 		if node == nil {
 			//创建节点
@@ -106,7 +98,7 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 			}
 			err = nodeRepo.Create(ctx, tx, newNode)
 			if err != nil {
-				return err
+				return WrapInternal("create node failed", err)
 			}
 			metadata := string(newNode.Metadata)
 			node = &entity.Node{
@@ -125,7 +117,7 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 				BoundAt:   &now,
 			}
 			if err := tx.Create(&newBinding).Error; err != nil {
-				return fmt.Errorf("create binding failed")
+				return WrapInternal("create binding failed", err)
 			}
 		} else {
 			// 查找是否已有绑定关系
@@ -133,7 +125,7 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 			err = tx.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
 				First(&binding).Error
 			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
+				return WrapInternal("get binding failed", err)
 			}
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				now := time.Now()
@@ -145,7 +137,7 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 					BoundAt:   &now,
 				}
 				if err := tx.Create(&newBinding).Error; err != nil {
-					return fmt.Errorf("create binding failed")
+					return WrapInternal("create binding failed", err)
 				}
 			} else if binding.Status != int(entity.BindingStatusBound) {
 				now := time.Now()
@@ -154,17 +146,19 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 					"bound_at":   &now,
 					"unbound_at": nil,
 				}).Error; err != nil {
-					return err
+					return WrapInternal("update binding failed", err)
 				}
 			}
 		}
 		if toActivate {
-			tx.Model(model.License{}).Where("id = ?", license.ID).
+			if err := tx.Model(model.License{}).Where("id = ?", license.ID).
 				Updates(model.License{
 					ActivatedAt: license.ActivatedAt,
 					ExpiredAt:   license.ExpiredAt,
 					Status:      int(license.Status),
-				})
+				}).Error; err != nil {
+				return WrapInternal("update license activation failed", err)
+			}
 		}
 
 		return nil
@@ -173,63 +167,67 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 
 // Heartbeat 处理心跳逻辑
 func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, productID uint, versionCode string, licenseKey string) (*HeartbeatResult, error) {
-	_ = ctx
-
 	product, err := GetProductEntityByID(ctx, global.DB.WithContext(ctx), productID)
-	if err != nil || product == nil {
-		return nil, NewServiceError(400, "invalid product")
+	if err != nil {
+		return nil, WrapInternal("get product failed", err)
+	}
+	if product == nil {
+		return nil, ErrBadRequest("invalid product")
 	}
 	if !product.CheckVersionSupportedByCode(versionCode) {
-		return nil, NewServiceError(400, "product version not supported")
+		return nil, ErrBadRequest("product version not supported")
 	}
 
 	license, err := GetLicenseEntityByKey(ctx, global.DB.WithContext(ctx), licenseKey)
-	if err != nil || license == nil {
-		return nil, NewServiceError(400, "invalid license")
+	if err != nil {
+		return nil, WrapInternal("get license failed", err)
+	}
+	if license == nil {
+		return nil, ErrBadRequest("invalid license")
 	}
 
 	if license.ProductID != productID {
-		return nil, NewServiceError(400, "product not supported")
+		return nil, ErrForbidden("product not supported")
 	}
 
 	currentStatus := license.CalculateStatus(time.Now())
 	switch currentStatus {
 	case entity.StatusInactive:
-		return nil, NewServiceError(400, "license not active")
+		return nil, ErrConflict("license not active")
 	case entity.StatusActive:
 	case entity.StatusExpired:
-		return nil, NewServiceError(400, "license expired")
+		return nil, ErrConflict("license expired")
 	case entity.StatusRevoked:
-		return nil, NewServiceError(400, "invalid license")
+		return nil, ErrForbidden("invalid license")
 	}
 
 	node, err := GetNodeEntityByCode(ctx, global.DB.WithContext(ctx), deviceCode)
 	if err != nil {
-		return nil, NewServiceError(500, "get node failed")
+		return nil, WrapInternal("get node failed", err)
 	}
 	if node == nil {
-		return nil, NewServiceError(500, "node not found")
+		return nil, ErrNotFound("node not found")
 	}
 	if !node.IsValid() {
-		return nil, NewServiceError(400, "invalid node")
+		return nil, ErrForbidden("invalid node")
 	}
 
 	var binding model.NodeLicenseBinding
 	err = global.DB.WithContext(ctx).Where("node_id = ? AND license_id = ?", node.ID, license.ID).First(&binding).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, NewServiceError(400, "binding not found")
+		return nil, ErrNotFound("binding not found")
 	}
 	if err != nil {
-		return nil, NewServiceError(500, "check binding failed")
+		return nil, WrapInternal("check binding failed", err)
 	}
 	if binding.Status != int(entity.BindingStatusBound) {
-		return nil, NewServiceError(400, "binding not bound")
+		return nil, ErrConflict("binding not bound")
 	}
 
 	// 并发检查
 	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, productID)
 	if !license.ValidateConcurrentLimit(totalConcurrent) {
-		return nil, NewServiceError(400, "maximum concurrent exceeded")
+		return nil, ErrConflict("maximum concurrent exceeded")
 	}
 
 	monitor.GlobalMonitor.HeartBeat(fmt.Sprintf("%d|%s|%s", productID, node.DeviceCode, license.LicenseKey), time.Second*60)

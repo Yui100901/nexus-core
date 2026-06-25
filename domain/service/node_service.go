@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
@@ -56,7 +55,7 @@ func (s *NodeService) GetNodeDataByID(ctx context.Context, id uint) (*NodeData, 
 		return nil, err
 	}
 	if pNode == nil {
-		return nil, fmt.Errorf("product not found")
+		return nil, ErrNotFound("node not found")
 	}
 	metadata := string(pNode.Metadata)
 	return &NodeData{
@@ -75,7 +74,7 @@ func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*NodeDa
 		return nil, err
 	}
 	if pNode == nil {
-		return nil, fmt.Errorf("product not found")
+		return nil, ErrNotFound("node not found")
 	}
 	metadata := string(pNode.Metadata)
 	return &NodeData{
@@ -108,19 +107,25 @@ func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) err
 		if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 			Where("id = ?", licenseID).
 			First(&pLicense).Error; err != nil {
-			return fmt.Errorf("invalid license %s", err)
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrNotFound("license not found")
+			}
+			return WrapInternal("get license failed", err)
 		}
 		license := ToEntityLicense(&pLicense)
 
 		// 检查 Node 是否存在
 		n, err := GetNodeEntityByID(ctx, tx, nodeID)
-		if err != nil || n == nil {
-			return fmt.Errorf("invalid node")
+		if err != nil {
+			return WrapInternal("get node failed", err)
+		}
+		if n == nil {
+			return ErrNotFound("node not found")
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
 		if !license.ValidateNodeLimit() {
-			return fmt.Errorf("license has reached max nodes")
+			return ErrConflict("license has reached max nodes")
 		}
 
 		// 查找是否已有绑定关系
@@ -128,7 +133,7 @@ func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) err
 		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 			First(&binding).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+			return WrapInternal("get binding failed", err)
 		}
 		toUpdate := false
 		// 已存在绑定记录
@@ -139,11 +144,14 @@ func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) err
 			toUpdate = true
 		}
 
-		err = tx.Model(&model.License{}).
+		result := tx.Model(&model.License{}).
 			Where("id = ? AND (max_nodes = 0 OR current_node_count < max_nodes)", licenseID).
-			Update("current_node_count", gorm.Expr("current_node_count + ?", 1)).Error
-		if err != nil {
-			return fmt.Errorf("license has reached max nodes or update failed: %w", err)
+			Update("current_node_count", gorm.Expr("current_node_count + ?", 1))
+		if result.Error != nil {
+			return WrapInternal("update license node count failed", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return ErrConflict("license has reached max nodes")
 		}
 
 		if toUpdate {
@@ -175,14 +183,17 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 检查 License 是否存在
 		license, err := GetLicenseEntityByID(ctx, tx, licenseID)
-		if err != nil || license == nil {
-			return fmt.Errorf("invalid license")
+		if err != nil {
+			return WrapInternal("get license failed", err)
+		}
+		if license == nil {
+			return ErrNotFound("license not found")
 		}
 
 		// 检查 Node 是否存在
 		node, err := GetNodeEntityByCode(ctx, tx, deviceCode)
 		if err != nil {
-			return fmt.Errorf("failed to get node")
+			return WrapInternal("get node failed", err)
 		}
 		if node == nil {
 			//创建节点
@@ -192,7 +203,7 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 			}
 			err = nodeRepo.Create(ctx, tx, newNode)
 			if err != nil {
-				return err
+				return WrapInternal("create node failed", err)
 			}
 			metadata := string(newNode.Metadata)
 			node = &entity.Node{
@@ -211,7 +222,7 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 				BoundAt:   &now,
 			}
 			if err := tx.Create(&newBinding).Error; err != nil {
-				return fmt.Errorf("create binding failed")
+				return WrapInternal("create binding failed", err)
 			}
 		} else {
 			// 查找是否已有绑定关系
@@ -219,7 +230,7 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 			err = tx.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
 				First(&binding).Error
 			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
+				return WrapInternal("get binding failed", err)
 			}
 			// 已存在绑定记录
 			if err == nil {
@@ -232,7 +243,7 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 					"bound_at":   &now,
 					"unbound_at": nil,
 				}).Error; err != nil {
-					return err
+					return WrapInternal("update binding failed", err)
 				}
 			}
 		}
@@ -249,7 +260,10 @@ func (s *NodeService) UnbindByID(ctx context.Context, cmd UnbindCommand) error {
 		err := tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 			First(&binding).Error
 		if err != nil {
-			return err
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrNotFound("binding not found")
+			}
+			return WrapInternal("get binding failed", err)
 		}
 		if binding.Status == 0 {
 			return nil
