@@ -22,11 +22,6 @@ type AddBindingCommand struct {
 	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
 }
 
-type AutoBindCommand struct {
-	DeviceCode string `json:"device_code" binding:"required"`
-	LicenseID  uint   `json:"license_id" binding:"required"`
-}
-
 // GetNodeByDeviceCodeQuery 根据设备码查询节点的查询对象
 type GetNodeByDeviceCodeQuery struct {
 	DeviceCode string `form:"device_code" binding:"required"` // 设备码

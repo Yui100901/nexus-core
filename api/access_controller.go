@@ -49,7 +49,7 @@ func (c *AccessController) RegisterRoutes(r *gin.Engine) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /access/auto-bind [post]
+// @Router /access/register [post]
 func (c *AccessController) Register(ctx *gin.Context) {
 	var cmd dto.RegisterCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {

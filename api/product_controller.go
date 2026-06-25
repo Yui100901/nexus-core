@@ -3,7 +3,6 @@ package api
 import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,12 +23,22 @@ func NewProductController() *ProductController {
 // RegisterRoutes 注册产品相关的路由
 // 包括产品创建、查询、版本控制等操作的路由
 func (c *ProductController) RegisterRoutes(r *gin.Engine) {
+	products := r.Group("/products")
+	{
+		products.POST("", c.CreateProduct)
+		products.GET("/:id", c.GetByID)
+		products.DELETE("/:id", c.DeleteProduct)
+		products.POST("/versions", c.CreateProductVersion)
+		products.POST("/versions/release", c.ReleaseNewVersion)
+		products.POST("/versions/deprecate", c.DeprecateVersion)
+		products.POST("/min-supported-version", c.SetMinVersion)
+	}
+
 	g := r.Group("/product")
 	{
 		g.POST("/createProduct", c.CreateProduct)               // 创建产品
 		g.POST("/createProductVersion", c.CreateProductVersion) // 创建产品版本
 		g.POST("/releaseNewVersion", c.ReleaseNewVersion)       //手动发布版本
-		g.POST("/batchCreateProduct", c.BatchCreateProduct)     // 批量创建产品
 		g.GET("/getByID", c.GetByID)                            // 根据ID获取产品
 		g.POST("/setMinVersion", c.SetMinVersion)               // 设置最小支持版本
 		g.POST("deprecateVersion", c.DeprecateVersion)          // 废弃版本
@@ -46,7 +55,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 // @Success 200 {object} entity.Product
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /product/create [post]
+// @Router /products [post]
 func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var cmd dto.CreateProductCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -73,7 +82,7 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 // @Success 200 {object} entity.Version
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /product/createVersion [post]
+// @Router /products/versions [post]
 func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 	var cmd dto.CreateProductVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -101,6 +110,7 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 // @Produce json
 // @Param body body dto.ReleaseNewVersionCommand true "Release New Version"
 // @Success 200 {object} entity.Version
+// @Router /products/versions/release [post]
 func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	var cmd dto.ReleaseNewVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -119,66 +129,23 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 	Success(ctx, cmd.VersionID)
 }
 
-// BatchCreateProduct 批量创建产品
-// @Summary Batch create products
-// @Tags products
-// @Accept json
-// @Produce json
-// @Param body body []dto.CreateProductCommand true "Create Products"
-// @Success 200 {array} entity.Product
-// @Failure 400 {object} api.CommonResponse
-// @Failure 500 {object} api.CommonResponse
-// @Router /product/batchCreate [post]
-func (c *ProductController) BatchCreateProduct(ctx *gin.Context) {
-	var cmds []dto.CreateProductCommand
-	if err := ctx.ShouldBindJSON(&cmds); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	//todo to implement batch create product
-	//var products []*entity.Product
-	//for _, cmd := range cmds {
-	//	p, err := dto.ToEntityProduct(cmd)
-	//	if err != nil {
-	//		BadRequest(ctx, err.Error())
-	//		return
-	//	}
-	//	products = append(products, p)
-	//}
-	//if err := c.ps.BatchCreateProduct(ctx, products); err != nil {
-	//	InternalError(ctx, err.Error())
-	//	return
-	//}
-	//Success(ctx, products)
-}
-
 // GetByID 根据 ID 获取产品
 // @Summary Get product by ID
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param id query uint true "Product ID"
+// @Param id path uint true "Product ID"
 // @Success 200 {object} entity.Product
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
-// @Router /product/getByID [get]
+// @Router /products/{id} [get]
 func (c *ProductController) GetByID(ctx *gin.Context) {
-	// 获取 query 参数
-	idStr := ctx.Query("id")
-	if idStr == "" {
-		BadRequest(ctx, "id is required")
-		return
-	}
-
-	// 转换为 uint
-	idUint64, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := UintParamOrQuery(ctx, "id")
 	if err != nil {
-		BadRequest(ctx, "invalid id")
+		BadRequest(ctx, err.Error())
 		return
 	}
-	id := uint(idUint64)
 
-	// 调用服务层
 	data, err := c.ps.GetProductDataByID(ctx.Request.Context(), id)
 	if err != nil {
 		HandleError(ctx, err)
@@ -196,7 +163,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /product/setMinVersion [post]
+// @Router /products/min-supported-version [post]
 func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 	var cmd dto.UpdateMinVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -222,7 +189,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /product/deprecateVersion [post]
+// @Router /products/versions/deprecate [post]
 func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 	var cmd dto.DeprecateVersionCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -245,16 +212,20 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /product/delete [post]
+// @Router /products/{id} [delete]
 func (c *ProductController) DeleteProduct(ctx *gin.Context) {
-	var q struct {
-		ID uint `json:"id" binding:"required"`
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var q struct {
+			ID uint `json:"id" binding:"required"`
+		}
+		if bindErr := ctx.ShouldBindJSON(&q); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = q.ID
 	}
-	if err := ctx.ShouldBindJSON(&q); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	if err := c.ps.DeleteProduct(ctx.Request.Context(), q.ID); err != nil {
+	if err := c.ps.DeleteProduct(ctx.Request.Context(), id); err != nil {
 		HandleError(ctx, err)
 		return
 	}

@@ -3,7 +3,6 @@ package api
 import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +21,20 @@ func NewNodeController() *NodeController {
 // RegisterRoutes 注册节点相关的路由
 // 包括节点创建、查询、绑定等操作的路由
 func (c *NodeController) RegisterRoutes(r *gin.Engine) {
+	nodes := r.Group("/nodes")
+	{
+		nodes.POST("", c.CreateNode)
+		nodes.GET("/:id", c.GetByID)
+		nodes.DELETE("/:id", c.DeleteNode)
+	}
+	r.GET("/node-devices/:device_code", c.GetByDeviceCode)
+	r.POST("/node-bindings", c.AddBinding)
+	r.DELETE("/node-bindings", c.Unbind)
+	r.DELETE("/node-cleanups/unbound", c.CleanUnboundNode)
+
 	g := r.Group("/node")
 	{
 		g.POST("/createNode", c.CreateNode)      // 创建节点
-		g.POST("/batchCreate", c.BatchCreate)    // 批量创建节点
 		g.GET("/getByID", c.GetByID)             // 根据ID获取节点
 		g.GET("/getByDevice", c.GetByDeviceCode) // 根据设备码获取节点
 		g.POST("/addBinding", c.AddBinding)      // 添加节点绑定
@@ -44,7 +53,7 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 // @Success 200 {object} entity.Node
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /node/create [post]
+// @Router /nodes [post]
 func (c *NodeController) CreateNode(ctx *gin.Context) {
 	var cmd dto.CreateNodeCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -62,60 +71,23 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 	Success(ctx, n)
 }
 
-// BatchCreate 批量创建节点
-// @Summary Batch create nodes
-// @Tags nodes
-// @Accept json
-// @Produce json
-// @Param body body []dto.CreateNodeCommand true "Create Nodes"
-// @Success 200 {array} entity.Node
-// @Failure 400 {object} api.CommonResponse
-// @Failure 500 {object} api.CommonResponse
-// @Router /node/batchCreate [post]
-func (c *NodeController) BatchCreate(ctx *gin.Context) {
-	//var cmds []dto.CreateNodeCommand
-	//if err := ctx.ShouldBindJSON(&cmds); err != nil {
-	//	BadRequest(ctx, err.Error())
-	//	return
-	//}
-	//var nodes []*entity.Node
-	//for _, cmd := range cmds {
-	//	nodes = append(nodes, dto.ToEntityNode(cmd))
-	//}
-	//if err := c.ns.BatchCreateNode(ctx, nodes); err != nil {
-	//	InternalError(ctx, err.Error())
-	//	return
-	//}
-	//Success(ctx, nodes)
-}
-
 // GetByID 根据 ID 获取节点信息
 // @Summary Get node by ID
 // @Tags nodes
 // @Accept json
 // @Produce json
-// @Param id query uint true "Node ID"
+// @Param id path uint true "Node ID"
 // @Success 200 {object} entity.Node
 // @Failure 400 {object} api.CommonResponse
-// @Failure 504 {object} api.CommonResponse
-// @Router /node/getByID [get]
+// @Failure 404 {object} api.CommonResponse
+// @Router /nodes/{id} [get]
 func (c *NodeController) GetByID(ctx *gin.Context) {
-	// 获取 query 参数
-	idStr := ctx.Query("id")
-	if idStr == "" {
-		BadRequest(ctx, "id is required")
-		return
-	}
-
-	// 转换为 uint
-	idUint64, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := UintParamOrQuery(ctx, "id")
 	if err != nil {
-		BadRequest(ctx, "invalid id")
+		BadRequest(ctx, err.Error())
 		return
 	}
-	id := uint(idUint64)
 
-	// 调用服务层
 	data, err := c.ns.GetNodeDataByID(ctx.Request.Context(), id)
 	if err != nil {
 		HandleError(ctx, err)
@@ -133,12 +105,18 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 // @Success 200 {object} entity.Node
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
-// @Router /node/getByDevice [get]
+// @Router /node-devices/{device_code} [get]
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	// 获取 query 参数
-	code := ctx.Query("deviceCode")
+	code := ctx.Param("device_code")
 	if code == "" {
-		BadRequest(ctx, "deviceCode is required")
+		code = ctx.Query("device_code")
+	}
+	if code == "" {
+		code = ctx.Query("deviceCode")
+	}
+	if code == "" {
+		BadRequest(ctx, "device_code is required")
 		return
 	}
 	n, err := c.ns.GetByDeviceCode(ctx.Request.Context(), code)
@@ -158,7 +136,7 @@ func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 // @Success 200 {object} entity.NodeLicenseBinding
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /node/addBinding [post]
+// @Router /node-bindings [post]
 func (c *NodeController) AddBinding(ctx *gin.Context) {
 	var cmd dto.AddBindingCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -175,32 +153,6 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 	Success(ctx, "")
 }
 
-// AutoBind 手动添加节点绑定
-// @Summary Add node binding
-// @Tags nodes
-// @Accept json
-// @Produce json
-// @Param body body dto.AddBindingCommand true "Add Binding"
-// @Success 200 {object} entity.NodeLicenseBinding
-// @Failure 400 {object} api.CommonResponse
-// @Failure 500 {object} api.CommonResponse
-// @Router /node/addBinding [post]
-func (c *NodeController) AutoBind(ctx *gin.Context) {
-	var cmd dto.AutoBindCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	if err := c.ns.AutoBind(ctx.Request.Context(), service.AutoBindCommand{
-		DeviceCode: cmd.DeviceCode,
-		LicenseID:  cmd.LicenseID,
-	}); err != nil {
-		HandleError(ctx, err)
-		return
-	}
-	Success(ctx, "")
-}
-
 // Unbind 解除绑定状态
 // @Summary Update binding status
 // @Tags nodes
@@ -210,7 +162,7 @@ func (c *NodeController) AutoBind(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /node/updateBindingStatus [post]
+// @Router /node-bindings [delete]
 func (c *NodeController) Unbind(ctx *gin.Context) {
 	var cmd dto.UnbindCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -236,16 +188,20 @@ func (c *NodeController) Unbind(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /node/delete [post]
+// @Router /nodes/{id} [delete]
 func (c *NodeController) DeleteNode(ctx *gin.Context) {
-	var cmd struct {
-		ID uint `json:"id" binding:"required"`
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var cmd struct {
+			ID uint `json:"id" binding:"required"`
+		}
+		if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = cmd.ID
 	}
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
-	}
-	if err := c.ns.DeleteNode(ctx.Request.Context(), cmd.ID); err != nil {
+	if err := c.ns.DeleteNode(ctx.Request.Context(), id); err != nil {
 		HandleError(ctx, err)
 		return
 	}
@@ -261,7 +217,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /node/delete [post]
+// @Router /node-cleanups/unbound [delete]
 func (c *NodeController) CleanUnboundNode(ctx *gin.Context) {
 	if err := c.ns.CleanUnboundNode(ctx.Request.Context()); err != nil {
 		HandleError(ctx, err)

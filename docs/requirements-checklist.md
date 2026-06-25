@@ -57,15 +57,15 @@
 
 ### 1.4 命名与接口风格
 
-- [ ] 统一 REST 路由命名。
+- [x] 统一 REST 路由命名。
   - 例如 `/license/createLicense` 可整理为 `POST /licenses`。
   - 例如 `/node/getByID` 可整理为 `GET /nodes/:id`。
-- [ ] 统一 JSON 字段命名风格。
+- [x] 统一 JSON 字段命名风格。
   - 建议统一使用 snake_case。
-- [ ] 统一状态字段命名。
+- [x] 统一状态字段命名。
   - 节点绑定状态建议统一为 `status` 或 `binding_status`。
-- [ ] 修复 Swagger 注释和实际路由不一致的问题。
-- [ ] 清理空接口或未实现接口。
+- [x] 修复 Swagger 注释和实际路由不一致的问题。
+- [x] 清理空接口或未实现接口。
 
 ## 2. 数据模型重构
 

@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"nexus-core/domain/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -95,4 +97,19 @@ func HandleError(ctx *gin.Context, err error) {
 	default:
 		InternalError(ctx, err.Error())
 	}
+}
+
+func UintParamOrQuery(ctx *gin.Context, name string) (uint, error) {
+	value := ctx.Param(name)
+	if value == "" {
+		value = ctx.Query(name)
+	}
+	if value == "" {
+		return 0, fmt.Errorf("%s is required", name)
+	}
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s", name)
+	}
+	return uint(parsed), nil
 }

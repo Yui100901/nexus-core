@@ -3,7 +3,6 @@ package api
 import (
 	"nexus-core/api/dto"
 	"nexus-core/domain/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,10 +25,22 @@ func NewLicenseController() *LicenseController {
 // RegisterRoutes 注册许可证相关的路由
 // 包括创建、查询、更新和删除等操作的路由
 func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
+	licenses := r.Group("/licenses")
+	{
+		licenses.POST("", c.CreateLicense)
+		licenses.GET("/:id", c.GetByID)
+		licenses.PATCH("/:id", c.UpdateLicense)
+		licenses.DELETE("/:id", c.DeleteLicense)
+		licenses.POST("/:id/revoke", c.RevokeLicense)
+		licenses.POST("/:id/renew", c.RenewLicense)
+		licenses.DELETE("/:id/bindings", c.CleanLicenseBindings)
+	}
+	r.GET("/license-keys/:key", c.GetByKey)
+	r.DELETE("/license-cleanups/invalid", c.CleanInvalidLicense)
+
 	licenseGroup := r.Group("/license")
 	{
 		licenseGroup.POST("/createLicense", c.CreateLicense)               // 创建单个许可证
-		licenseGroup.POST("/batchCreateLicense", c.BatchCreateLicense)     // 批量创建许可证
 		licenseGroup.GET("/getByID", c.GetByID)                            // 根据ID查询许可证
 		licenseGroup.GET("/getByKey", c.GetByKey)                          // 根据许可证密钥查询
 		licenseGroup.POST("/revokeLicense", c.RevokeLicense)               // 吊销许可证
@@ -51,7 +62,7 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/create [post]
+// @Router /licenses [post]
 func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 	var cmd dto.CreateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
@@ -72,62 +83,22 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 	Success(ctx, license)
 }
 
-// BatchCreateLicense 批量创建 License
-// @Summary Batch create licenses
-// @Description Create multiple licenses in batch
-// @Tags licenses
-// @Accept json
-// @Produce json
-// @Param body body []dto.CreateLicenseCommand true "Create Licenses"
-// @Success 200 {object} api.CommonResponse
-// @Failure 400 {object} api.CommonResponse
-// @Failure 500 {object} api.CommonResponse
-// @Router /license/batchCreate [post]
-func (c *LicenseController) BatchCreateLicense(ctx *gin.Context) {
-	//var cmds []dto.CreateLicenseCommand
-	//if err := ctx.ShouldBindJSON(&cmds); err != nil {
-	//	BadRequest(ctx, err.Error())
-	//	return
-	//}
-	//
-	//var licenses []*entity.License
-	//for _, cmd := range cmds {
-	//	license := entity.NewLicense(cmd.ProductID, cmd.ValidityHours, cmd.MaxNodes, cmd.MaxConcurrent, cmd.Remark)
-	//	licenses = append(licenses, license)
-	//}
-	//
-	//if err := c.ls.BatchCreateLicense(ctx, licenses); err != nil {
-	//	InternalError(ctx, err.Error())
-	//	return
-	//}
-	//Success(ctx, licenses)
-}
-
 // GetByID 根据 ID 获取 License（Query 参数传递）
 // @Summary Get license by ID
 // @Tags licenses
 // @Accept json
 // @Produce json
-// @Param id query uint true "License ID"
+// @Param id path uint true "License ID"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
-// @Router /license/getByID [get]
+// @Router /licenses/{id} [get]
 func (c *LicenseController) GetByID(ctx *gin.Context) {
-	// 获取 query 参数
-	idStr := ctx.Query("id")
-	if idStr == "" {
-		BadRequest(ctx, "id is required")
-		return
-	}
-
-	// 转换为 uint
-	idUint64, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := UintParamOrQuery(ctx, "id")
 	if err != nil {
-		BadRequest(ctx, "invalid id")
+		BadRequest(ctx, err.Error())
 		return
 	}
-	id := uint(idUint64)
 
 	license, err := c.ls.GetLicenseDataByID(ctx.Request.Context(), id)
 	if err != nil {
@@ -146,10 +117,13 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 404 {object} api.CommonResponse
-// @Router /license/getByKey [get]
+// @Router /license-keys/{key} [get]
 func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	// 获取 query 参数
-	key := ctx.Query("key")
+	key := ctx.Param("key")
+	if key == "" {
+		key = ctx.Query("key")
+	}
 	if key == "" {
 		key = ctx.Query("deviceCode")
 	}
@@ -175,14 +149,18 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/updateStatus [post]
+// @Router /licenses/{id}/revoke [post]
 func (c *LicenseController) RevokeLicense(ctx *gin.Context) {
-	var cmd dto.UpdateLicenseStatusCommand
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var cmd dto.UpdateLicenseStatusCommand
+		if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = cmd.ID
 	}
-	if err := c.ls.RevokeLicense(ctx.Request.Context(), cmd.ID); err != nil {
+	if err := c.ls.RevokeLicense(ctx.Request.Context(), id); err != nil {
 		HandleError(ctx, err)
 		return
 	}
@@ -198,11 +176,18 @@ func (c *LicenseController) RevokeLicense(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/update [post]
+// @Router /licenses/{id} [patch]
 func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 	var cmd dto.UpdateLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
+		return
+	}
+	if id, err := UintParamOrQuery(ctx, "id"); err == nil {
+		cmd.ID = id
+	}
+	if cmd.ID == 0 {
+		BadRequest(ctx, "id is required")
 		return
 	}
 
@@ -228,11 +213,18 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/update [post]
+// @Router /licenses/{id}/renew [post]
 func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 	var cmd dto.RenewLicenseCommand
 	if err := ctx.ShouldBindJSON(&cmd); err != nil {
 		BadRequest(ctx, err.Error())
+		return
+	}
+	if id, err := UintParamOrQuery(ctx, "id"); err == nil {
+		cmd.ID = id
+	}
+	if cmd.ID == 0 {
+		BadRequest(ctx, "id is required")
 		return
 	}
 
@@ -255,17 +247,21 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/update [post]
+// @Router /licenses/{id}/bindings [delete]
 func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
-	var cmd struct {
-		ID uint `json:"id" binding:"required"`
-	}
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var cmd struct {
+			ID uint `json:"id" binding:"required"`
+		}
+		if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = cmd.ID
 	}
 
-	if err := c.ls.RemoveBindings(ctx.Request.Context(), cmd.ID); err != nil {
+	if err := c.ls.RemoveBindings(ctx.Request.Context(), id); err != nil {
 		HandleError(ctx, err)
 		return
 	}
@@ -279,7 +275,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 // @Produce json
 // @Success 200 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/deleteExpired [post]
+// @Router /license-cleanups/invalid [delete]
 func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
 	if err := c.ls.CleanInvalidLicense(ctx.Request.Context()); err != nil {
 		HandleError(ctx, err)
@@ -295,17 +291,21 @@ func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
 // @Produce json
 // @Success 200 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
-// @Router /license/deleteExpired [post]
+// @Router /licenses/{id} [delete]
 func (c *LicenseController) DeleteLicense(ctx *gin.Context) {
-	var cmd struct {
-		ID uint `json:"id" binding:"required"`
-	}
-	if err := ctx.ShouldBindJSON(&cmd); err != nil {
-		BadRequest(ctx, err.Error())
-		return
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var cmd struct {
+			ID uint `json:"id" binding:"required"`
+		}
+		if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = cmd.ID
 	}
 
-	if err := c.ls.DeleteLicense(ctx.Request.Context(), cmd.ID); err != nil {
+	if err := c.ls.DeleteLicense(ctx.Request.Context(), id); err != nil {
 		HandleError(ctx, err)
 		return
 	}

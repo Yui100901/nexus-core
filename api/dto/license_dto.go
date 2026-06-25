@@ -50,10 +50,10 @@ type LicenseData struct {
 // UpdateLicenseCommand 更新许可证的命令对象
 // @Description Command to update a license
 type UpdateLicenseCommand struct {
-	ID            uint    `json:"id" binding:"required"` // 许可证ID
-	MaxNodes      int     `json:"maxNodes"`
-	MaxConcurrent int     `json:"maxConcurrent"`
-	FeatureMask   string  `json:"featureMask"`
+	ID            uint    `json:"id"` // 许可证ID
+	MaxNodes      int     `json:"max_nodes"`
+	MaxConcurrent int     `json:"max_concurrent"`
+	FeatureMask   string  `json:"feature_mask"`
 	Remark        *string `json:"remark"` // 备注
 }
 
@@ -63,6 +63,6 @@ type UpdateLicenseStatusCommand struct {
 }
 
 type RenewLicenseCommand struct {
-	ID         uint `json:"id" binding:"required"`
+	ID         uint `json:"id"`
 	ExtraHours int  `json:"extra_hours" binding:"required"`
 }
