@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
+	"strings"
 	"time"
 
 	"gorm.io/datatypes"
@@ -28,7 +30,11 @@ func NewNodeService() *NodeService {
 func (s *NodeService) CreateNode(ctx context.Context, cmd CreateNodeCommand) (*NodeData, error) {
 	var metadata datatypes.JSON
 	if cmd.Metadata != nil {
-		metadata = datatypes.JSON([]byte(*cmd.Metadata))
+		data, err := normalizeNodeMetadata(*cmd.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		metadata = data
 	}
 	n := &model.Node{
 		DeviceCode: cmd.DeviceCode,
@@ -46,6 +52,40 @@ func (s *NodeService) CreateNode(ctx context.Context, cmd CreateNodeCommand) (*N
 		Status:     n.Status,
 		Metadata:   &metadataString,
 	}, nil
+}
+
+func (s *NodeService) UpdateNode(ctx context.Context, cmd UpdateNodeCommand) (*NodeData, error) {
+	if cmd.ID == 0 {
+		return nil, ErrBadRequest("id is required")
+	}
+
+	updates := map[string]interface{}{}
+	if cmd.DeviceCode != nil {
+		deviceCode := strings.TrimSpace(*cmd.DeviceCode)
+		if deviceCode == "" {
+			return nil, ErrBadRequest("device_code is required")
+		}
+		updates["device_code"] = deviceCode
+	}
+	if cmd.Metadata != nil {
+		metadata, err := normalizeNodeMetadata(*cmd.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		updates["metadata"] = metadata
+	}
+	if len(updates) == 0 {
+		return nil, ErrBadRequest("no node fields to update")
+	}
+
+	result := global.DB.WithContext(ctx).Model(&model.Node{}).Where("id = ?", cmd.ID).Updates(updates)
+	if result.Error != nil {
+		return nil, WrapInternal("update node failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound("node not found")
+	}
+	return s.GetNodeDataByID(ctx, cmd.ID)
 }
 
 // GetNodeDataByID 根据ID获取节点信息
@@ -274,4 +314,15 @@ func (s *NodeService) CleanUnboundNode(ctx context.Context) error {
 
 		return nil
 	})
+}
+
+func normalizeNodeMetadata(metadata string) (datatypes.JSON, error) {
+	data := []byte(strings.TrimSpace(metadata))
+	if len(data) == 0 {
+		return datatypes.JSON([]byte("{}")), nil
+	}
+	if !json.Valid(data) {
+		return nil, ErrBadRequest("metadata must be valid json")
+	}
+	return datatypes.JSON(data), nil
 }

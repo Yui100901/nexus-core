@@ -6,6 +6,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -53,6 +54,36 @@ func (s *ProductService) GetProductDataByID(ctx context.Context, id uint) (*Prod
 		Name:        pProduct.Name,
 		Description: pProduct.Description,
 	}, nil
+}
+
+func (s *ProductService) UpdateProduct(ctx context.Context, cmd UpdateProductCommand) (*ProductData, error) {
+	if cmd.ID == 0 {
+		return nil, ErrBadRequest("id is required")
+	}
+
+	updates := map[string]interface{}{}
+	if cmd.Name != nil {
+		name := strings.TrimSpace(*cmd.Name)
+		if name == "" {
+			return nil, ErrBadRequest("name is required")
+		}
+		updates["name"] = name
+	}
+	if cmd.Description != nil {
+		updates["description"] = cmd.Description
+	}
+	if len(updates) == 0 {
+		return nil, ErrBadRequest("no product fields to update")
+	}
+
+	result := global.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", cmd.ID).Updates(updates)
+	if result.Error != nil {
+		return nil, WrapInternal("update product failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound("product not found")
+	}
+	return s.GetProductDataByID(ctx, cmd.ID)
 }
 
 // SetMinSupportedVersion 设置产品的最低支持版本

@@ -4,6 +4,19 @@ import (
 	"errors"
 )
 
+type BatchCreateLicenseCommand struct {
+	ProductID     uint    `json:"product_id" binding:"required"`
+	ValidityHours int     `json:"validity_hours" binding:"required"`
+	MaxNodes      int     `json:"max_nodes"`
+	MaxConcurrent int     `json:"max_concurrent"`
+	Remark        *string `json:"remark"`
+	Count         int     `json:"count" binding:"required"`
+}
+
+type RestoreLicenseCommand struct {
+	ID uint `json:"id" binding:"required"`
+}
+
 // -------------------- Command --------------------
 
 // CreateLicenseCommand 创建许可证的命令对象

@@ -18,6 +18,12 @@ type ProductData struct {
 	Description *string `json:"description"`
 }
 
+type UpdateProductCommand struct {
+	ID          uint    `json:"id"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+}
+
 // ReleaseMethod 表示版本发布方式
 type ReleaseMethod int
 

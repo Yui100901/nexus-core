@@ -34,6 +34,15 @@ type CreateLicenseCommand struct {
 	Remark        *string
 }
 
+type BatchCreateLicenseCommand struct {
+	ProductID     uint
+	ValidityHours int
+	MaxNodes      int
+	MaxConcurrent int
+	Remark        *string
+	Count         int
+}
+
 type LicenseData struct {
 	ID            uint    `json:"id"`
 	ProductID     uint    `json:"product_id"`
@@ -51,6 +60,10 @@ type UpdateLicenseCommand struct {
 	Remark        *string
 }
 
+type RestoreLicenseCommand struct {
+	ID uint
+}
+
 type RenewLicenseCommand struct {
 	ID         uint
 	ExtraHours int
@@ -58,6 +71,12 @@ type RenewLicenseCommand struct {
 
 type CreateNodeCommand struct {
 	DeviceCode string
+	Metadata   *string
+}
+
+type UpdateNodeCommand struct {
+	ID         uint
+	DeviceCode *string
 	Metadata   *string
 }
 
@@ -96,6 +115,12 @@ type ProductData struct {
 	ID          uint    `json:"id"`
 	Name        string  `json:"name"`
 	Description *string `json:"description"`
+}
+
+type UpdateProductCommand struct {
+	ID          uint
+	Name        *string
+	Description *string
 }
 
 type ReleaseMethod int

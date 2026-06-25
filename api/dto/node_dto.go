@@ -1,47 +1,42 @@
 package dto
 
-// CreateNodeCommand 创建节点的命令对象
-// @Description Command to create a node
-// @Tags Node
 type CreateNodeCommand struct {
-	DeviceCode string  `json:"device_code" binding:"required"` // 设备唯一识别码
-	Metadata   *string `json:"metadata"`                       // 设备元信息
+	DeviceCode string  `json:"device_code" binding:"required"`
+	Metadata   *string `json:"metadata"`
+}
+
+type UpdateNodeCommand struct {
+	ID         uint    `json:"id"`
+	DeviceCode *string `json:"device_code"`
+	Metadata   *string `json:"metadata"`
 }
 
 type NodeData struct {
-	ID         uint    `json:"id"`          // 节点ID
-	DeviceCode string  `json:"device_code"` // 设备唯一识别码
-	Status     int     `json:"status"`      // 状态（0=正常，1=封禁）
-	Metadata   *string `json:"metadata"`    // 设备元信息
+	ID         uint    `json:"id"`
+	DeviceCode string  `json:"device_code"`
+	Status     int     `json:"status"`
+	Metadata   *string `json:"metadata"`
 }
 
-// AddBindingCommand 添加绑定的命令对象
-// @Description Command to add a binding to a node
 type AddBindingCommand struct {
-	NodeID    uint `json:"node_id" binding:"required"`    // 节点ID
-	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
+	NodeID    uint `json:"node_id" binding:"required"`
+	LicenseID uint `json:"license_id" binding:"required"`
 }
 
-// GetNodeByDeviceCodeQuery 根据设备码查询节点的查询对象
 type GetNodeByDeviceCodeQuery struct {
-	DeviceCode string `form:"device_code" binding:"required"` // 设备码
+	DeviceCode string `form:"device_code" binding:"required"`
 }
 
-// UnbindCommand 更新绑定状态的命令对象
-// @Description Command to update binding status
 type UnbindCommand struct {
-	NodeID    uint `json:"node_id" binding:"required"`    // 节点ID
-	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
+	NodeID    uint `json:"node_id" binding:"required"`
+	LicenseID uint `json:"license_id" binding:"required"`
 }
 
 type UpdateNodeStatusCommand struct {
-	NodeID uint `json:"node_id" binding:"required"` // 节点ID
+	NodeID uint `json:"node_id" binding:"required"`
 }
 
-// ForceUnbindCommand
-// @Description Command to force unbind a node binding using node and license IDs
-// @Tags Node
 type ForceUnbindCommand struct {
-	NodeID    uint `json:"node_id" binding:"required"`    // 节点ID
-	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
+	NodeID    uint `json:"node_id" binding:"required"`
+	LicenseID uint `json:"license_id" binding:"required"`
 }

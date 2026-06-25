@@ -57,14 +57,45 @@ func (s *LicenseService) CreateLicense(ctx context.Context, cmd CreateLicenseCom
 	if err != nil {
 		return nil, WrapInternal("create license failed", err)
 	}
-	return &LicenseData{
-		ID:            license.ID,
-		ProductID:     license.ProductID,
-		LicenseKey:    license.LicenseKey,
-		ValidityHours: license.ValidityHours,
-		Status:        license.Status,
-		Remark:        license.Remark,
-	}, nil
+	return toLicenseData(license), nil
+}
+
+func (s *LicenseService) BatchCreateLicenses(ctx context.Context, cmd BatchCreateLicenseCommand) ([]LicenseData, error) {
+	if err := validateBatchCreateLicenseCommand(cmd); err != nil {
+		return nil, err
+	}
+
+	var product model.Product
+	if err := global.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", cmd.ProductID).First(&product).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound("product not found")
+		}
+		return nil, WrapInternal("get product failed", err)
+	}
+
+	licenses := make([]model.License, 0, cmd.Count)
+	for i := 0; i < cmd.Count; i++ {
+		licenses = append(licenses, model.License{
+			ProductID:     product.ID,
+			LicenseKey:    strings.ReplaceAll(uuid.New().String(), "-", ""),
+			ValidityHours: cmd.ValidityHours,
+			Status:        int(entity.StatusInactive),
+			MaxNodes:      cmd.MaxNodes,
+			MaxConcurrent: cmd.MaxConcurrent,
+			FeatureMask:   "",
+			Remark:        cmd.Remark,
+		})
+	}
+
+	if err := global.DB.WithContext(ctx).Create(&licenses).Error; err != nil {
+		return nil, WrapInternal("batch create licenses failed", err)
+	}
+
+	data := make([]LicenseData, 0, len(licenses))
+	for i := range licenses {
+		data = append(data, *toLicenseData(&licenses[i]))
+	}
+	return data, nil
 }
 
 // RevokeLicense 吊销许可证
@@ -78,6 +109,38 @@ func (s *LicenseService) RevokeLicense(ctx context.Context, licenseID uint) erro
 		return ErrNotFound("license not found")
 	}
 	return nil
+}
+
+func (s *LicenseService) RestoreLicense(ctx context.Context, cmd RestoreLicenseCommand) (*LicenseData, error) {
+	if cmd.ID == 0 {
+		return nil, ErrBadRequest("id is required")
+	}
+
+	var license model.License
+	err := global.DB.WithContext(ctx).Where("id = ?", cmd.ID).First(&license).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound("license not found")
+	}
+	if err != nil {
+		return nil, WrapInternal("get license failed", err)
+	}
+	if license.Status != int(entity.StatusRevoked) {
+		return toLicenseData(&license), nil
+	}
+
+	status := int(entity.StatusInactive)
+	if license.ActivatedAt != nil {
+		status = int(entity.StatusActive)
+		if license.ExpiredAt != nil && time.Now().After(*license.ExpiredAt) {
+			status = int(entity.StatusExpired)
+		}
+	}
+
+	if err := global.DB.WithContext(ctx).Model(&license).Update("status", status).Error; err != nil {
+		return nil, WrapInternal("restore license failed", err)
+	}
+	license.Status = status
+	return toLicenseData(&license), nil
 }
 
 // UpdateLicense 更新许可证信息
@@ -239,4 +302,34 @@ func validateCreateLicenseCommand(cmd CreateLicenseCommand) error {
 		return ErrBadRequest("max_concurrent must be greater than or equal to 0")
 	}
 	return nil
+}
+
+func validateBatchCreateLicenseCommand(cmd BatchCreateLicenseCommand) error {
+	if err := validateCreateLicenseCommand(CreateLicenseCommand{
+		ProductID:     cmd.ProductID,
+		ValidityHours: cmd.ValidityHours,
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		Remark:        cmd.Remark,
+	}); err != nil {
+		return err
+	}
+	if cmd.Count <= 0 {
+		return ErrBadRequest("count must be greater than 0")
+	}
+	if cmd.Count > 1000 {
+		return ErrBadRequest("count must be less than or equal to 1000")
+	}
+	return nil
+}
+
+func toLicenseData(license *model.License) *LicenseData {
+	return &LicenseData{
+		ID:            license.ID,
+		ProductID:     license.ProductID,
+		LicenseKey:    license.LicenseKey,
+		ValidityHours: license.ValidityHours,
+		Status:        license.Status,
+		Remark:        license.Remark,
+	}
 }

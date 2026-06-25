@@ -28,10 +28,12 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 	licenses := r.Group("/licenses")
 	{
 		licenses.POST("", c.CreateLicense)
+		licenses.POST("/batch", c.BatchCreateLicenses)
 		licenses.GET("/:id", c.GetByID)
 		licenses.PATCH("/:id", c.UpdateLicense)
 		licenses.DELETE("/:id", c.DeleteLicense)
 		licenses.POST("/:id/revoke", c.RevokeLicense)
+		licenses.POST("/:id/restore", c.RestoreLicense)
 		licenses.POST("/:id/renew", c.RenewLicense)
 		licenses.DELETE("/:id/bindings", c.CleanLicenseBindings)
 	}
@@ -310,4 +312,67 @@ func (c *LicenseController) DeleteLicense(ctx *gin.Context) {
 		return
 	}
 	Success(ctx, "renew success")
+}
+
+// BatchCreateLicenses 批量创建 License
+// @Summary Batch create licenses
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Param body body dto.BatchCreateLicenseCommand true "Batch Create Licenses"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /licenses/batch [post]
+func (c *LicenseController) BatchCreateLicenses(ctx *gin.Context) {
+	var cmd dto.BatchCreateLicenseCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.ls.BatchCreateLicenses(ctx.Request.Context(), service.BatchCreateLicenseCommand{
+		ProductID:     cmd.ProductID,
+		ValidityHours: cmd.ValidityHours,
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		Remark:        cmd.Remark,
+		Count:         cmd.Count,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// RestoreLicense 恢复已吊销 License
+// @Summary Restore a revoked license
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Param id path uint true "License ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /licenses/{id}/restore [post]
+func (c *LicenseController) RestoreLicense(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		var cmd dto.RestoreLicenseCommand
+		if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		id = cmd.ID
+	}
+
+	data, err := c.ls.RestoreLicense(ctx.Request.Context(), service.RestoreLicenseCommand{ID: id})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }

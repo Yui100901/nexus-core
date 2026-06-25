@@ -25,6 +25,7 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 	{
 		nodes.POST("", c.CreateNode)
 		nodes.GET("/:id", c.GetByID)
+		nodes.PATCH("/:id", c.UpdateNode)
 		nodes.DELETE("/:id", c.DeleteNode)
 		nodes.POST("/:id/ban", c.BanNode)
 		nodes.POST("/:id/unban", c.UnbanNode)
@@ -285,4 +286,42 @@ func (c *NodeController) CleanUnboundNode(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "node deleted")
+}
+
+// UpdateNode 更新节点基础信息
+// @Summary Update node
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param id path uint true "Node ID"
+// @Param body body dto.UpdateNodeCommand true "Update Node"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /nodes/{id} [patch]
+func (c *NodeController) UpdateNode(ctx *gin.Context) {
+	var cmd dto.UpdateNodeCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if id, err := UintParamOrQuery(ctx, "id"); err == nil {
+		cmd.ID = id
+	}
+	if cmd.ID == 0 {
+		BadRequest(ctx, "id is required")
+		return
+	}
+
+	data, err := c.ns.UpdateNode(ctx.Request.Context(), service.UpdateNodeCommand{
+		ID:         cmd.ID,
+		DeviceCode: cmd.DeviceCode,
+		Metadata:   cmd.Metadata,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }

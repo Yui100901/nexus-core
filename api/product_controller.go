@@ -27,6 +27,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 	{
 		products.POST("", c.CreateProduct)
 		products.GET("/:id", c.GetByID)
+		products.PATCH("/:id", c.UpdateProduct)
 		products.DELETE("/:id", c.DeleteProduct)
 		products.POST("/versions", c.CreateProductVersion)
 		products.POST("/versions/release", c.ReleaseNewVersion)
@@ -230,4 +231,42 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "product deleted")
+}
+
+// UpdateProduct 更新产品基础信息
+// @Summary Update product
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path uint true "Product ID"
+// @Param body body dto.UpdateProductCommand true "Update Product"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /products/{id} [patch]
+func (c *ProductController) UpdateProduct(ctx *gin.Context) {
+	var cmd dto.UpdateProductCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if id, err := UintParamOrQuery(ctx, "id"); err == nil {
+		cmd.ID = id
+	}
+	if cmd.ID == 0 {
+		BadRequest(ctx, "id is required")
+		return
+	}
+
+	data, err := c.ps.UpdateProduct(ctx.Request.Context(), service.UpdateProductCommand{
+		ID:          cmd.ID,
+		Name:        cmd.Name,
+		Description: cmd.Description,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }

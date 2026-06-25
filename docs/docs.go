@@ -474,6 +474,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/licenses/batch": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Batch create licenses",
+                "parameters": [
+                    {
+                        "description": "Batch Create Licenses",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BatchCreateLicenseCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/licenses/{id}": {
             "get": {
                 "consumes": [
@@ -663,6 +714,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/licenses/{id}/restore": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Restore a revoked license",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "License ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.CommonResponse"
                         }
@@ -1161,6 +1261,62 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Update node",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Node",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateNodeCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
             }
         },
         "/nodes/{id}/ban": {
@@ -1546,6 +1702,62 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Update product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Product",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateProductCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
             }
         }
     },
@@ -1567,7 +1779,6 @@ const docTemplate = `{
             }
         },
         "dto.AddBindingCommand": {
-            "description": "Command to add a binding to a node",
             "type": "object",
             "required": [
                 "license_id",
@@ -1575,11 +1786,37 @@ const docTemplate = `{
             ],
             "properties": {
                 "license_id": {
-                    "description": "许可证ID",
                     "type": "integer"
                 },
                 "node_id": {
-                    "description": "节点ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.BatchCreateLicenseCommand": {
+            "type": "object",
+            "required": [
+                "count",
+                "product_id",
+                "validity_hours"
+            ],
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "max_concurrent": {
+                    "type": "integer"
+                },
+                "max_nodes": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "validity_hours": {
                     "type": "integer"
                 }
             }
@@ -1665,18 +1902,15 @@ const docTemplate = `{
             }
         },
         "dto.CreateNodeCommand": {
-            "description": "Command to create a node",
             "type": "object",
             "required": [
                 "device_code"
             ],
             "properties": {
                 "device_code": {
-                    "description": "设备唯一识别码",
                     "type": "string"
                 },
                 "metadata": {
-                    "description": "设备元信息",
                     "type": "string"
                 }
             }
@@ -1873,7 +2107,6 @@ const docTemplate = `{
             }
         },
         "dto.UnbindCommand": {
-            "description": "Command to update binding status",
             "type": "object",
             "required": [
                 "license_id",
@@ -1881,11 +2114,9 @@ const docTemplate = `{
             ],
             "properties": {
                 "license_id": {
-                    "description": "许可证ID",
                     "type": "integer"
                 },
                 "node_id": {
-                    "description": "节点ID",
                     "type": "integer"
                 }
             }
@@ -1940,6 +2171,34 @@ const docTemplate = `{
                 "version_id": {
                     "description": "版本ID",
                     "type": "integer"
+                }
+            }
+        },
+        "dto.UpdateNodeCommand": {
+            "type": "object",
+            "properties": {
+                "device_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "metadata": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdateProductCommand": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

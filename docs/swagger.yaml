@@ -12,17 +12,33 @@ definitions:
         type: string
     type: object
   dto.AddBindingCommand:
-    description: Command to add a binding to a node
     properties:
       license_id:
-        description: 许可证ID
         type: integer
       node_id:
-        description: 节点ID
         type: integer
     required:
     - license_id
     - node_id
+    type: object
+  dto.BatchCreateLicenseCommand:
+    properties:
+      count:
+        type: integer
+      max_concurrent:
+        type: integer
+      max_nodes:
+        type: integer
+      product_id:
+        type: integer
+      remark:
+        type: string
+      validity_hours:
+        type: integer
+    required:
+    - count
+    - product_id
+    - validity_hours
     type: object
   dto.CreateControlCommand:
     properties:
@@ -81,13 +97,10 @@ definitions:
     - validity_hours
     type: object
   dto.CreateNodeCommand:
-    description: Command to create a node
     properties:
       device_code:
-        description: 设备唯一识别码
         type: string
       metadata:
-        description: 设备元信息
         type: string
     required:
     - device_code
@@ -230,13 +243,10 @@ definitions:
     - service_identifier
     type: object
   dto.UnbindCommand:
-    description: Command to update binding status
     properties:
       license_id:
-        description: 许可证ID
         type: integer
       node_id:
-        description: 节点ID
         type: integer
     required:
     - license_id
@@ -278,6 +288,24 @@ definitions:
     required:
     - product_id
     - version_id
+    type: object
+  dto.UpdateNodeCommand:
+    properties:
+      device_code:
+        type: string
+      id:
+        type: integer
+      metadata:
+        type: string
+    type: object
+  dto.UpdateProductCommand:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   entity.BindingStatus:
     enum:
@@ -800,6 +828,38 @@ paths:
       summary: renew license
       tags:
       - licenses
+  /licenses/{id}/restore:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: License ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Restore a revoked license
+      tags:
+      - licenses
   /licenses/{id}/revoke:
     post:
       consumes:
@@ -827,6 +887,39 @@ paths:
           schema:
             $ref: '#/definitions/api.CommonResponse'
       summary: Update license status
+      tags:
+      - licenses
+  /licenses/batch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Batch Create Licenses
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchCreateLicenseCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Batch create licenses
       tags:
       - licenses
   /node-bindings:
@@ -1117,6 +1210,43 @@ paths:
       summary: Get node by ID
       tags:
       - nodes
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Node ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Node
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateNodeCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Update node
+      tags:
+      - nodes
   /nodes/{id}/ban:
     post:
       consumes:
@@ -1256,6 +1386,43 @@ paths:
           schema:
             $ref: '#/definitions/api.CommonResponse'
       summary: Get product by ID
+      tags:
+      - products
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Product
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProductCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Update product
       tags:
       - products
   /products/min-supported-version:
