@@ -41,6 +41,23 @@ curl -X POST http://localhost:8080/products/versions \
   }'
 ```
 
+创建定时发布版本：
+
+```bash
+curl -X POST http://localhost:8080/products/versions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 1,
+    "version_code": "1.1.0",
+    "release_date": "2026-07-01T10:00:00+08:00",
+    "release_method": 1
+  }'
+```
+
+定时发布版本会持久化在数据库中，服务启动后会自动扫描并发布到期版本。
+
+产品删除采用保护策略：存在关联 License 或控制服务定义时会返回冲突错误，需要先处理依赖关系。
+
 ## License 管理
 
 创建 License：
@@ -89,6 +106,8 @@ curl -X POST http://localhost:8080/licenses/1/revoke
 curl -X POST http://localhost:8080/licenses/1/restore
 ```
 
+过期 License 可以通过正向续期恢复；吊销 License 需要先调用恢复接口，再执行续期。
+
 ## 注册与心跳
 
 节点首次接入：
@@ -135,7 +154,10 @@ curl -X PATCH http://localhost:8080/nodes/1 \
 封禁、解封和解绑：
 
 ```bash
-curl -X POST http://localhost:8080/nodes/1/ban
+curl -X POST http://localhost:8080/nodes/1/ban \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "manual review"}'
+
 curl -X POST http://localhost:8080/nodes/1/unban
 
 curl -X DELETE http://localhost:8080/node-bindings \

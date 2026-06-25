@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"nexus-core/api"
 	_ "nexus-core/docs"
+	"nexus-core/domain/service"
 	"nexus-core/global"
 	"nexus-core/monitor"
 	"nexus-core/persistence/base"
@@ -61,6 +62,9 @@ func main() {
 
 	// start monitor (after DB ready)
 	monitor.GlobalMonitor.Start()
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+	service.NewProductService().StartScheduledReleaseWorker(appCtx, time.Minute)
 
 	// construct swagger URL based on config.SwaggerURL
 	var swaggerUrl string
@@ -118,6 +122,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	fmt.Println("Shutting down server...")
+	appCancel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

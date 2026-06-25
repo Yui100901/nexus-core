@@ -33,7 +33,8 @@ type UnbindCommand struct {
 }
 
 type UpdateNodeStatusCommand struct {
-	NodeID uint `json:"node_id" binding:"required"`
+	NodeID uint    `json:"node_id"`
+	Reason *string `json:"reason"`
 }
 
 type ForceUnbindCommand struct {

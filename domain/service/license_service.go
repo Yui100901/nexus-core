@@ -157,11 +157,20 @@ func (s *LicenseService) RestoreLicense(ctx context.Context, cmd RestoreLicenseC
 // UpdateLicense 更新许可证信息
 func (s *LicenseService) UpdateLicense(ctx context.Context, cmd UpdateLicenseCommand) error {
 	id := cmd.ID
-	updates := model.License{
-		MaxNodes:      cmd.MaxNodes,
-		MaxConcurrent: cmd.MaxConcurrent,
-		FeatureMask:   cmd.FeatureMask,
-		Remark:        cmd.Remark,
+	if id == 0 {
+		return ErrBadRequest("id is required")
+	}
+	if cmd.MaxNodes < 0 {
+		return ErrBadRequest("max_nodes must be greater than or equal to 0")
+	}
+	if cmd.MaxConcurrent < 0 {
+		return ErrBadRequest("max_concurrent must be greater than or equal to 0")
+	}
+	updates := map[string]interface{}{
+		"max_nodes":      cmd.MaxNodes,
+		"max_concurrent": cmd.MaxConcurrent,
+		"feature_mask":   cmd.FeatureMask,
+		"remark":         cmd.Remark,
 	}
 	result := global.DB.WithContext(ctx).Model(&model.License{}).Where("id = ?", id).Updates(updates)
 	if result.Error != nil {
@@ -181,6 +190,12 @@ func (s *LicenseService) UpdateLicense(ctx context.Context, cmd UpdateLicenseCom
 // RenewLicense 增加或减少许可证时间
 func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseCommand) error {
 	licenseID, extraHours := cmd.ID, cmd.ExtraHours
+	if licenseID == 0 {
+		return ErrBadRequest("id is required")
+	}
+	if extraHours == 0 {
+		return ErrBadRequest("extra_hours must not be 0")
+	}
 	license, err := GetLicenseEntityByID(ctx, global.DB.WithContext(ctx), licenseID)
 	if err != nil {
 		return err
@@ -188,12 +203,15 @@ func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseComma
 	if license == nil {
 		return ErrNotFound("license not found")
 	}
+	if license.Status == entity.StatusRevoked {
+		return ErrForbidden("revoked license must be restored before renew")
+	}
 	license.Renew(time.Now(), extraHours)
 	if err := global.DB.WithContext(ctx).Model(&model.License{}).Where("id = ?", licenseID).
-		Updates(model.License{
-			ValidityHours: license.ValidityHours,
-			ExpiredAt:     license.ExpiredAt,
-			Status:        int(license.Status),
+		Updates(map[string]interface{}{
+			"validity_hours": license.ValidityHours,
+			"expired_at":     license.ExpiredAt,
+			"status":         int(license.Status),
 		}).Error; err != nil {
 		return WrapInternal("renew license failed", err)
 	}
@@ -207,6 +225,14 @@ func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseComma
 // RemoveBindings 移除许可证的所有绑定关系
 func (s *LicenseService) RemoveBindings(ctx context.Context, id uint) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var license model.License
+		err := tx.Where("id = ?", id).First(&license).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotFound("license not found")
+		}
+		if err != nil {
+			return WrapInternal("get license failed", err)
+		}
 		if err := tx.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
 			return WrapInternal("remove license bindings failed", err)
 		}
@@ -223,6 +249,12 @@ func (s *LicenseService) DeleteLicense(ctx context.Context, id uint) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
 			return WrapInternal("delete license bindings failed", err)
+		}
+		if err := tx.Where("license_id = ?", id).Delete(&model.LicenseProductScope{}).Error; err != nil {
+			return WrapInternal("delete license product scopes failed", err)
+		}
+		if err := tx.Where("license_id = ?", id).Delete(&model.LicenseServiceScope{}).Error; err != nil {
+			return WrapInternal("delete license service scopes failed", err)
 		}
 		result := tx.Where("id = ?", id).Delete(&model.License{})
 		if result.Error != nil {
@@ -298,6 +330,12 @@ func (s *LicenseService) CleanInvalidLicense(ctx context.Context) error {
 
 		// 删除节点绑定关系
 		if err := tx.Where("license_id IN ?", ids).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("license_id IN ?", ids).Delete(&model.LicenseProductScope{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("license_id IN ?", ids).Delete(&model.LicenseServiceScope{}).Error; err != nil {
 			return err
 		}
 

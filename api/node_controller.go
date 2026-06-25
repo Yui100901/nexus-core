@@ -224,11 +224,14 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /nodes/{id}/ban [post]
 func (c *NodeController) BanNode(ctx *gin.Context) {
-	id, ok := c.nodeIDFromParamOrBody(ctx)
+	cmd, ok := c.nodeStatusCommandFromParamOrBody(ctx)
 	if !ok {
 		return
 	}
-	if err := c.ns.BanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{NodeID: id}); err != nil {
+	if err := c.ns.BanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{
+		NodeID: cmd.NodeID,
+		Reason: cmd.Reason,
+	}); err != nil {
 		HandleError(ctx, err)
 		return
 	}
@@ -246,28 +249,40 @@ func (c *NodeController) BanNode(ctx *gin.Context) {
 // @Failure 404 {object} api.CommonResponse
 // @Router /nodes/{id}/unban [post]
 func (c *NodeController) UnbanNode(ctx *gin.Context) {
-	id, ok := c.nodeIDFromParamOrBody(ctx)
+	cmd, ok := c.nodeStatusCommandFromParamOrBody(ctx)
 	if !ok {
 		return
 	}
-	if err := c.ns.UnbanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{NodeID: id}); err != nil {
+	if err := c.ns.UnbanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{
+		NodeID: cmd.NodeID,
+		Reason: cmd.Reason,
+	}); err != nil {
 		HandleError(ctx, err)
 		return
 	}
 	SuccessMsg(ctx, "node unbanned")
 }
 
-func (c *NodeController) nodeIDFromParamOrBody(ctx *gin.Context) (uint, bool) {
+func (c *NodeController) nodeStatusCommandFromParamOrBody(ctx *gin.Context) (dto.UpdateNodeStatusCommand, bool) {
+	var cmd dto.UpdateNodeStatusCommand
 	id, err := UintParamOrQuery(ctx, "id")
 	if err == nil {
-		return id, true
+		cmd.NodeID = id
+		if ctx.Request.ContentLength > 0 {
+			_ = ctx.ShouldBindJSON(&cmd)
+			cmd.NodeID = id
+		}
+		return cmd, true
 	}
-	var cmd dto.UpdateNodeStatusCommand
 	if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
 		BadRequest(ctx, err.Error())
-		return 0, false
+		return cmd, false
 	}
-	return cmd.NodeID, true
+	if cmd.NodeID == 0 {
+		BadRequest(ctx, "node_id is required")
+		return cmd, false
+	}
+	return cmd, true
 }
 
 // CleanUnboundNode 清理无任何绑定的节点

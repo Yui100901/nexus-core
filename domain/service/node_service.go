@@ -138,8 +138,12 @@ func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
 			return WrapInternal("get node bindings failed", err)
 		}
 
-		if err := tx.Where("id = ?", id).Delete(&model.Node{}).Error; err != nil {
-			return WrapInternal("delete node failed", err)
+		result := tx.Where("id = ?", id).Delete(&model.Node{})
+		if result.Error != nil {
+			return WrapInternal("delete node failed", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return ErrNotFound("node not found")
 		}
 		if err := tx.Where("node_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
 			return WrapInternal("delete node bindings failed", err)
@@ -156,17 +160,50 @@ func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
 }
 
 func (s *NodeService) BanNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
-	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusBanned)
+	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusBanned, cmd.Reason)
 }
 
 func (s *NodeService) UnbanNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
-	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusNormal)
+	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusNormal, cmd.Reason)
 }
 
-func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status int) error {
-	result := global.DB.WithContext(ctx).Model(&model.Node{}).
-		Where("id = ?", nodeID).
-		Update("status", status)
+func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status int, reason *string) error {
+	now := time.Now()
+	updates := map[string]interface{}{
+		"status": status,
+	}
+	auditData := map[string]interface{}{
+		"status": status,
+	}
+	if reason != nil {
+		trimmed := strings.TrimSpace(*reason)
+		if trimmed != "" {
+			reason = &trimmed
+			auditData["reason"] = trimmed
+		} else {
+			reason = nil
+		}
+	}
+	if status == entity.NodeStatusNormal {
+		result := global.DB.WithContext(ctx).
+			Exec("UPDATE node SET status = ?, banned_at = NULL, ban_reason = NULL WHERE id = ? AND deleted_at IS NULL", status, nodeID)
+		if result.Error != nil {
+			return WrapInternal("update node status failed", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return ErrNotFound("node not found")
+		}
+		recordAuditLog(ctx, global.DB.WithContext(ctx), "node", nodeID, "unban", auditData)
+		return nil
+	}
+	if status == entity.NodeStatusBanned {
+		updates["banned_at"] = now
+		updates["ban_reason"] = reason
+		updates["offline_at"] = now
+	}
+
+	query := global.DB.WithContext(ctx).Model(&model.Node{}).Where("id = ?", nodeID)
+	result := query.Updates(updates)
 	if result.Error != nil {
 		return WrapInternal("update node status failed", result.Error)
 	}
@@ -179,9 +216,7 @@ func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status 
 	} else if status == entity.NodeStatusNormal {
 		action = "unban"
 	}
-	recordAuditLog(ctx, global.DB.WithContext(ctx), "node", nodeID, action, map[string]interface{}{
-		"status": status,
-	})
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "node", nodeID, action, auditData)
 	return nil
 }
 
@@ -332,16 +367,24 @@ func (s *NodeService) CleanUnboundNode(ctx context.Context) error {
 
 		// 2. 如果没有任何绑定，则删除所有节点
 		if len(boundNodeIDs) == 0 {
-			if err := tx.Delete(&model.Node{}).Error; err != nil {
-				return err
+			result := tx.Delete(&model.Node{})
+			if result.Error != nil {
+				return result.Error
 			}
+			recordAuditLog(ctx, tx, "node", 0, "clean_unbound", map[string]interface{}{
+				"deleted": result.RowsAffected,
+			})
 			return nil
 		}
 
 		// 3. 删除未绑定的节点
-		if err := tx.Where("id NOT IN ?", boundNodeIDs).Delete(&model.Node{}).Error; err != nil {
-			return err
+		result := tx.Where("id NOT IN ?", boundNodeIDs).Delete(&model.Node{})
+		if result.Error != nil {
+			return result.Error
 		}
+		recordAuditLog(ctx, tx, "node", 0, "clean_unbound", map[string]interface{}{
+			"deleted": result.RowsAffected,
+		})
 
 		return nil
 	})

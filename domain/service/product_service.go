@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
@@ -101,23 +102,57 @@ func (s *ProductService) SetMinSupportedVersion(ctx context.Context, cmd UpdateM
 	if version == nil {
 		return ErrNotFound("version not found")
 	}
-	if version.ProductID == productID {
-		return global.DB.WithContext(ctx).Model(&model.Product{}).
-			Where("id = ?", productID).
-			Update("min_supported_version_id", versionID).Error
+	if version.ProductID != productID {
+		return ErrBadRequest("version does not belong to product")
 	}
-	return ErrBadRequest("version does not belong to product")
+	if version.Status != int(entity.VersionStatusAvailable) || version.ReleaseDate == nil {
+		return ErrConflict("min supported version must be available")
+	}
+	if err := global.DB.WithContext(ctx).Model(&model.Product{}).
+		Where("id = ?", productID).
+		Update("min_supported_version_id", versionID).Error; err != nil {
+		return WrapInternal("update min supported version failed", err)
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "product", productID, "set_min_version", map[string]interface{}{
+		"version_id": versionID,
+	})
+	return nil
 }
 
 // DeleteProduct 删除产品
-// 同时删除产品相关的所有版本信息
+// 若产品仍有关联 License 或控制服务定义，则阻断删除，避免破坏授权和控制链路。
 func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id = ?", id).Delete(&model.Product{}).Error; err != nil {
-			return err
+		var product model.Product
+		err := tx.Where("id = ?", id).First(&product).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotFound("product not found")
 		}
+		if err != nil {
+			return WrapInternal("get product failed", err)
+		}
+
+		var licenseCount int64
+		if err := tx.Model(&model.License{}).Where("product_id = ?", id).Count(&licenseCount).Error; err != nil {
+			return WrapInternal("count product licenses failed", err)
+		}
+		if licenseCount > 0 {
+			return ErrConflict("product has licenses")
+		}
+
+		var controlServiceCount int64
+		if err := tx.Model(&model.ControlService{}).Where("product_id = ?", id).Count(&controlServiceCount).Error; err != nil {
+			return WrapInternal("count product control services failed", err)
+		}
+		if controlServiceCount > 0 {
+			return ErrConflict("product has control services")
+		}
+
 		if err := tx.Where("product_id = ?", id).Delete(&model.ProductVersion{}).Error; err != nil {
-			return err
+			return WrapInternal("delete product versions failed", err)
+		}
+		if err := tx.Delete(&product).Error; err != nil {
+			return WrapInternal("delete product failed", err)
 		}
 		recordAuditLog(ctx, tx, "product", id, "delete", nil)
 		return nil
@@ -129,6 +164,9 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreateProductVersionCommand) (*ProductVersionData, error) {
 	var newVersion *model.ProductVersion
 	if err := global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if cmd.Method == ReleaseScheduled && cmd.ReleaseDate == nil {
+			return ErrBadRequest("release_date is required for scheduled release")
+		}
 		product, err := GetProductEntityByID(ctx, tx, cmd.ProductID)
 		if err != nil {
 			return err
@@ -162,13 +200,11 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 	}
 
 	if cmd.Method == ReleaseScheduled {
-		var releaseDate time.Time
-		if newVersion.ReleaseDate != nil {
-			releaseDate = *newVersion.ReleaseDate
-		} else {
-			releaseDate = time.Now()
+		if !newVersion.ReleaseDate.After(time.Now()) {
+			if err := s.ReleaseDueProductVersions(ctx); err != nil {
+				return nil, err
+			}
 		}
-		s.scheduleReleaseTask(newVersion.ID, releaseDate)
 	}
 
 	return &ProductVersionData{
@@ -181,31 +217,17 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
 func (s *ProductService) ReleaseVersion(ctx context.Context, cmd ReleaseNewVersionCommand) error {
+	if cmd.ProductID == 0 {
+		return ErrBadRequest("product_id is required")
+	}
 	versionID, releaseDate := cmd.VersionID, cmd.ReleaseDate
 	if releaseDate == nil {
 		return s.doReleaseVersion(ctx, global.DB.WithContext(ctx), versionID, time.Now())
-	} else {
-		//创建定时任务
-		s.scheduleReleaseTask(versionID, *releaseDate)
-		return nil
 	}
-}
-
-// ScheduleReleaseTask 简易定时发布
-// todo 后续考虑如何管理定时任务
-func (s *ProductService) scheduleReleaseTask(versionID uint, releaseDate time.Time) {
-	delay := time.Until(releaseDate)
-	if delay <= 0 {
-		// 已经过了发布时间，直接发布
-		bg := context.Background()
-		_ = s.doReleaseVersion(bg, global.DB.WithContext(bg), versionID, releaseDate)
-		return
+	if !releaseDate.After(time.Now()) {
+		return s.doReleaseVersion(ctx, global.DB.WithContext(ctx), versionID, *releaseDate)
 	}
-	go func() {
-		<-time.After(delay)
-		bg := context.Background()
-		_ = s.doReleaseVersion(bg, global.DB.WithContext(bg), versionID, releaseDate)
-	}()
+	return s.scheduleVersionRelease(ctx, cmd.ProductID, versionID, *releaseDate)
 }
 
 // 内部方法执行版本发布
@@ -234,8 +256,99 @@ func (s *ProductService) doReleaseVersion(ctx context.Context, db *gorm.DB, vers
 	return nil
 }
 
-func (s *ProductService) DeprecateVersion(ctx context.Context, versionID uint) error {
-	return global.DB.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
-		"status": entity.VersionStatusDeprecated,
-	}).Error
+func (s *ProductService) scheduleVersionRelease(ctx context.Context, productID uint, versionID uint, releaseDate time.Time) error {
+	result := global.DB.WithContext(ctx).Model(&model.ProductVersion{}).
+		Where("id = ? AND product_id = ?", versionID, productID).
+		Updates(map[string]interface{}{
+			"status":       int(entity.VersionStatusUnreleased),
+			"release_date": releaseDate,
+		})
+	if result.Error != nil {
+		return WrapInternal("schedule version release failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound("version not found")
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "product", productID, "schedule_version_release", map[string]interface{}{
+		"version_id":    versionID,
+		"release_date":  releaseDate,
+		"release_after": releaseDate.Format(time.RFC3339),
+	})
+	return nil
+}
+
+func (s *ProductService) ReleaseDueProductVersions(ctx context.Context) error {
+	now := time.Now()
+	var versions []model.ProductVersion
+	if err := global.DB.WithContext(ctx).
+		Where("status = ? AND release_date IS NOT NULL AND release_date <= ?", int(entity.VersionStatusUnreleased), now).
+		Order("release_date ASC, id ASC").
+		Find(&versions).Error; err != nil {
+		return WrapInternal("list due product versions failed", err)
+	}
+
+	for _, version := range versions {
+		if err := s.doReleaseVersion(ctx, global.DB.WithContext(ctx), version.ID, *version.ReleaseDate); err != nil {
+			return err
+		}
+		recordAuditLog(ctx, global.DB.WithContext(ctx), "product", version.ProductID, "release_due_version", map[string]interface{}{
+			"version_id": version.ID,
+		})
+	}
+	return nil
+}
+
+func (s *ProductService) StartScheduledReleaseWorker(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		if err := s.ReleaseDueProductVersions(ctx); err != nil {
+			fmt.Printf("release due product versions failed: %v\n", err)
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := s.ReleaseDueProductVersions(ctx); err != nil {
+					fmt.Printf("release due product versions failed: %v\n", err)
+				}
+			}
+		}
+	}()
+}
+
+func (s *ProductService) DeprecateVersion(ctx context.Context, cmd DeprecateVersionCommand) error {
+	if cmd.ProductID == 0 || cmd.VersionID == 0 {
+		return ErrBadRequest("product_id and version_id are required")
+	}
+	var product model.Product
+	err := global.DB.WithContext(ctx).Where("id = ?", cmd.ProductID).First(&product).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrNotFound("product not found")
+	}
+	if err != nil {
+		return WrapInternal("get product failed", err)
+	}
+	if product.MinSupportedVersionID != nil && *product.MinSupportedVersionID == cmd.VersionID {
+		return ErrConflict("min supported version cannot be deprecated")
+	}
+
+	result := global.DB.WithContext(ctx).Model(&model.ProductVersion{}).
+		Where("id = ? AND product_id = ?", cmd.VersionID, cmd.ProductID).
+		Update("status", entity.VersionStatusDeprecated)
+	if result.Error != nil {
+		return WrapInternal("deprecate version failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound("version not found")
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "product", cmd.ProductID, "deprecate_version", map[string]interface{}{
+		"version_id": cmd.VersionID,
+	})
+	return nil
 }

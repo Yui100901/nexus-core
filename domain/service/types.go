@@ -104,6 +104,7 @@ type UnbindCommand struct {
 
 type UpdateNodeStatusCommand struct {
 	NodeID uint
+	Reason *string
 }
 
 type CreateProductCommand struct {
@@ -153,6 +154,11 @@ type ReleaseNewVersionCommand struct {
 }
 
 type UpdateMinVersionCommand struct {
+	ProductID uint
+	VersionID uint
+}
+
+type DeprecateVersionCommand struct {
 	ProductID uint
 	VersionID uint
 }
