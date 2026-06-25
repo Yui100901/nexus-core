@@ -457,6 +457,45 @@ paths:
       summary: Client auto bind
       tags:
       - access
+  /audit-logs:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Resource Type
+        in: query
+        name: resource_type
+        type: string
+      - description: Resource ID
+        in: query
+        name: resource_id
+        type: integer
+      - description: Action
+        in: query
+        name: action
+        type: string
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: List audit logs
+      tags:
+      - audit
   /control-commands:
     post:
       consumes:
@@ -922,6 +961,47 @@ paths:
       summary: Batch create licenses
       tags:
       - licenses
+  /monitor/nodes/heartbeats:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: List node heartbeat stats
+      tags:
+      - monitor
+  /monitor/online:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get online node summary
+      tags:
+      - monitor
   /node-bindings:
     delete:
       consumes:

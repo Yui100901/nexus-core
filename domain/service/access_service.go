@@ -141,6 +141,10 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) (*Regis
 			HeartbeatInterval:  60,
 			BindingEstablished: bound,
 		}
+		recordAuditLog(ctx, tx, "node", node.ID, "register", map[string]interface{}{
+			"license_id": license.ID,
+			"product_id": productID,
+		})
 
 		return nil
 	}); err != nil {
@@ -221,6 +225,15 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 
 	monitor.GlobalMonitor.HeartBeat(onlineKey, time.Second*60)
 	monitor.GlobalStat.AddOnlineNode(onlineKey)
+	now := time.Now()
+	if err := global.DB.WithContext(ctx).Model(&model.Node{}).
+		Where("id = ?", node.ID).
+		Updates(map[string]interface{}{
+			"last_seen_at": now,
+			"online_at":    gorm.Expr("COALESCE(online_at, ?)", now),
+		}).Error; err != nil {
+		return nil, WrapInternal("update node heartbeat failed", err)
+	}
 
 	return &HeartbeatResult{Online: true}, nil
 }

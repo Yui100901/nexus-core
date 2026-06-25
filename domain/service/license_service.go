@@ -57,6 +57,9 @@ func (s *LicenseService) CreateLicense(ctx context.Context, cmd CreateLicenseCom
 	if err != nil {
 		return nil, WrapInternal("create license failed", err)
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "license", license.ID, "create", map[string]interface{}{
+		"product_id": license.ProductID,
+	})
 	return toLicenseData(license), nil
 }
 
@@ -93,6 +96,10 @@ func (s *LicenseService) BatchCreateLicenses(ctx context.Context, cmd BatchCreat
 
 	data := make([]LicenseData, 0, len(licenses))
 	for i := range licenses {
+		recordAuditLog(ctx, global.DB.WithContext(ctx), "license", licenses[i].ID, "create", map[string]interface{}{
+			"product_id":   licenses[i].ProductID,
+			"batch_create": true,
+		})
 		data = append(data, *toLicenseData(&licenses[i]))
 	}
 	return data, nil
@@ -108,6 +115,7 @@ func (s *LicenseService) RevokeLicense(ctx context.Context, licenseID uint) erro
 	if result.RowsAffected == 0 {
 		return ErrNotFound("license not found")
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "license", licenseID, "revoke", nil)
 	return nil
 }
 
@@ -140,6 +148,9 @@ func (s *LicenseService) RestoreLicense(ctx context.Context, cmd RestoreLicenseC
 		return nil, WrapInternal("restore license failed", err)
 	}
 	license.Status = status
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "license", license.ID, "restore", map[string]interface{}{
+		"status": status,
+	})
 	return toLicenseData(&license), nil
 }
 
@@ -159,6 +170,11 @@ func (s *LicenseService) UpdateLicense(ctx context.Context, cmd UpdateLicenseCom
 	if result.RowsAffected == 0 {
 		return ErrNotFound("license not found")
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "license", id, "update", map[string]interface{}{
+		"max_nodes":      cmd.MaxNodes,
+		"max_concurrent": cmd.MaxConcurrent,
+		"feature_mask":   cmd.FeatureMask,
+	})
 	return nil
 }
 
@@ -181,6 +197,10 @@ func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseComma
 		}).Error; err != nil {
 		return WrapInternal("renew license failed", err)
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "license", licenseID, "renew", map[string]interface{}{
+		"extra_hours":    extraHours,
+		"validity_hours": license.ValidityHours,
+	})
 	return nil
 }
 
@@ -193,6 +213,7 @@ func (s *LicenseService) RemoveBindings(ctx context.Context, id uint) error {
 		if err := resetLicenseNodeCount(ctx, tx, id); err != nil {
 			return WrapInternal("reset license node count failed", err)
 		}
+		recordAuditLog(ctx, tx, "license", id, "remove_bindings", nil)
 		return nil
 	})
 }
@@ -210,6 +231,7 @@ func (s *LicenseService) DeleteLicense(ctx context.Context, id uint) error {
 		if result.RowsAffected == 0 {
 			return ErrNotFound("license not found")
 		}
+		recordAuditLog(ctx, tx, "license", id, "delete", nil)
 		return nil
 	})
 }
@@ -284,6 +306,9 @@ func (s *LicenseService) CleanInvalidLicense(ctx context.Context) error {
 			return err
 		}
 
+		for _, id := range ids {
+			recordAuditLog(ctx, tx, "license", id, "clean_invalid", nil)
+		}
 		return nil
 	})
 }

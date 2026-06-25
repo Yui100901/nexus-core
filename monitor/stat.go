@@ -84,6 +84,38 @@ func (s *OnlineStat) RemoveOnlineNode(id string) {
 	delete(s.OnlineMap, id)
 }
 
+func (s *OnlineStat) Snapshot() []OnlineNodeKey {
+	s.mu.Lock()
+	onlineMapCopy := maps.Clone(s.OnlineMap)
+	s.mu.Unlock()
+
+	nodes := make([]OnlineNodeKey, 0, len(onlineMapCopy))
+	for _, onlineNodeKey := range onlineMapCopy {
+		nodes = append(nodes, *onlineNodeKey)
+	}
+	return nodes
+}
+
+func (s *OnlineStat) CountByProduct(productID uint) int {
+	count := 0
+	for _, onlineNodeKey := range s.Snapshot() {
+		if onlineNodeKey.ProductID == productID {
+			count++
+		}
+	}
+	return count
+}
+
+func (s *OnlineStat) CountByLicense(licenseKey string) int {
+	count := 0
+	for _, onlineNodeKey := range s.Snapshot() {
+		if onlineNodeKey.LicenseKey == licenseKey {
+			count++
+		}
+	}
+	return count
+}
+
 // GetConcurrentByLicenseForProduct 获取许可证下某个产品并发使用情况
 func (s *OnlineStat) GetConcurrentByLicenseForProduct(licenseKey string, productID uint) int {
 	s.mu.Lock()
@@ -102,7 +134,7 @@ func (s *OnlineStat) GetConcurrentByLicenseForProduct(licenseKey string, product
 // GetOnlineLicense 获取所有许可证的在线情况
 func (s *OnlineStat) GetOnlineLicense(licenseKey string) map[string]struct{} {
 	m := map[string]struct{}{}
-	for _, onlineNodeKey := range s.OnlineMap {
+	for _, onlineNodeKey := range s.Snapshot() {
 		if onlineNodeKey.LicenseKey == licenseKey {
 			m[onlineNodeKey.Key()] = struct{}{}
 		}

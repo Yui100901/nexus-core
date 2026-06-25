@@ -33,6 +33,9 @@ func (s *ProductService) CreateProduct(ctx context.Context, cmd CreateProductCom
 	if err != nil {
 		return nil, err
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "product", pProduct.ID, "create", map[string]interface{}{
+		"name": pProduct.Name,
+	})
 	return &ProductData{
 		ID:          pProduct.ID,
 		Name:        pProduct.Name,
@@ -83,6 +86,7 @@ func (s *ProductService) UpdateProduct(ctx context.Context, cmd UpdateProductCom
 	if result.RowsAffected == 0 {
 		return nil, ErrNotFound("product not found")
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "product", cmd.ID, "update", updates)
 	return s.GetProductDataByID(ctx, cmd.ID)
 }
 
@@ -115,6 +119,7 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
 		if err := tx.Where("product_id = ?", id).Delete(&model.ProductVersion{}).Error; err != nil {
 			return err
 		}
+		recordAuditLog(ctx, tx, "product", id, "delete", nil)
 		return nil
 	})
 }

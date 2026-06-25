@@ -45,6 +45,9 @@ func (s *NodeService) CreateNode(ctx context.Context, cmd CreateNodeCommand) (*N
 	if err != nil {
 		return nil, err
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "node", n.ID, "create", map[string]interface{}{
+		"device_code": n.DeviceCode,
+	})
 	metadataString := string(n.Metadata)
 	return &NodeData{
 		ID:         n.ID,
@@ -85,6 +88,7 @@ func (s *NodeService) UpdateNode(ctx context.Context, cmd UpdateNodeCommand) (*N
 	if result.RowsAffected == 0 {
 		return nil, ErrNotFound("node not found")
 	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "node", cmd.ID, "update", updates)
 	return s.GetNodeDataByID(ctx, cmd.ID)
 }
 
@@ -146,6 +150,7 @@ func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
 				return WrapInternal("update license node count failed", err)
 			}
 		}
+		recordAuditLog(ctx, tx, "node", id, "delete", nil)
 		return nil
 	})
 }
@@ -168,6 +173,15 @@ func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status 
 	if result.RowsAffected == 0 {
 		return ErrNotFound("node not found")
 	}
+	action := "status_update"
+	if status == entity.NodeStatusBanned {
+		action = "ban"
+	} else if status == entity.NodeStatusNormal {
+		action = "unban"
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "node", nodeID, action, map[string]interface{}{
+		"status": status,
+	})
 	return nil
 }
 
@@ -209,7 +223,14 @@ func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) err
 		}
 
 		_, err = bindNodeToLicense(ctx, tx, nodeID, license, license.ProductID)
-		return err
+		if err != nil {
+			return err
+		}
+		recordAuditLog(ctx, tx, "node", nodeID, "bind_license", map[string]interface{}{
+			"license_id": licenseID,
+			"product_id": license.ProductID,
+		})
+		return nil
 	})
 }
 
@@ -254,7 +275,14 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 			return ErrForbidden("invalid node")
 		}
 		_, err = bindNodeToLicense(ctx, tx, node.ID, license, license.ProductID)
-		return err
+		if err != nil {
+			return err
+		}
+		recordAuditLog(ctx, tx, "node", node.ID, "auto_bind_license", map[string]interface{}{
+			"license_id": licenseID,
+			"product_id": license.ProductID,
+		})
+		return nil
 	})
 
 }
@@ -285,6 +313,9 @@ func (s *NodeService) UnbindByID(ctx context.Context, cmd UnbindCommand) error {
 		if err := decrementLicenseNodeCount(ctx, tx, licenseID); err != nil {
 			return WrapInternal("update license node count failed", err)
 		}
+		recordAuditLog(ctx, tx, "node", nodeID, "unbind_license", map[string]interface{}{
+			"license_id": licenseID,
+		})
 		return nil
 	})
 }
