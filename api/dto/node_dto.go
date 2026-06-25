@@ -34,6 +34,10 @@ type UnbindCommand struct {
 	LicenseID uint `json:"license_id" binding:"required"` // 许可证ID
 }
 
+type UpdateNodeStatusCommand struct {
+	NodeID uint `json:"node_id" binding:"required"` // 节点ID
+}
+
 // ForceUnbindCommand
 // @Description Command to force unbind a node binding using node and license IDs
 // @Tags Node

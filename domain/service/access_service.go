@@ -108,6 +108,8 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) (*Regis
 				Status:     0,
 				Metadata:   &metadata,
 			}
+		} else if !node.IsValid() {
+			return ErrForbidden("invalid node")
 		}
 
 		bound, err := bindNodeToLicense(ctx, tx, node.ID, license, productID)
@@ -212,7 +214,9 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, ErrConflict("maximum concurrent exceeded")
 	}
 
-	monitor.GlobalMonitor.HeartBeat(fmt.Sprintf("%d|%s|%s", productID, node.DeviceCode, license.LicenseKey), time.Second*60)
+	onlineKey := fmt.Sprintf("%d|%s|%s", productID, node.DeviceCode, license.LicenseKey)
+	monitor.GlobalMonitor.HeartBeat(onlineKey, time.Second*60)
+	monitor.GlobalStat.AddOnlineNode(onlineKey)
 
 	return &HeartbeatResult{Online: true}, nil
 }

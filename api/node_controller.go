@@ -26,6 +26,8 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		nodes.POST("", c.CreateNode)
 		nodes.GET("/:id", c.GetByID)
 		nodes.DELETE("/:id", c.DeleteNode)
+		nodes.POST("/:id/ban", c.BanNode)
+		nodes.POST("/:id/unban", c.UnbanNode)
 	}
 	r.GET("/node-devices/:device_code", c.GetByDeviceCode)
 	r.POST("/node-bindings", c.AddBinding)
@@ -40,6 +42,8 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		g.POST("/addBinding", c.AddBinding)      // 添加节点绑定
 		g.POST("/unbind", c.Unbind)              // 解绑
 		g.POST("/delete", c.DeleteNode)          // 删除节点
+		g.POST("/ban", c.BanNode)                // 封禁节点
+		g.POST("/unban", c.UnbanNode)            // 解封节点
 		g.POST("/cleanUnboundNode", c.CleanUnboundNode)
 	}
 }
@@ -206,6 +210,63 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "node deleted")
+}
+
+// BanNode 封禁节点
+// @Summary Ban a node
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param id path uint true "Node ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Router /nodes/{id}/ban [post]
+func (c *NodeController) BanNode(ctx *gin.Context) {
+	id, ok := c.nodeIDFromParamOrBody(ctx)
+	if !ok {
+		return
+	}
+	if err := c.ns.BanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{NodeID: id}); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "node banned")
+}
+
+// UnbanNode 解封节点
+// @Summary Unban a node
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param id path uint true "Node ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Router /nodes/{id}/unban [post]
+func (c *NodeController) UnbanNode(ctx *gin.Context) {
+	id, ok := c.nodeIDFromParamOrBody(ctx)
+	if !ok {
+		return
+	}
+	if err := c.ns.UnbanNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{NodeID: id}); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "node unbanned")
+}
+
+func (c *NodeController) nodeIDFromParamOrBody(ctx *gin.Context) (uint, bool) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err == nil {
+		return id, true
+	}
+	var cmd dto.UpdateNodeStatusCommand
+	if bindErr := ctx.ShouldBindJSON(&cmd); bindErr != nil {
+		BadRequest(ctx, err.Error())
+		return 0, false
+	}
+	return cmd.NodeID, true
 }
 
 // CleanUnboundNode 清理无任何绑定的节点

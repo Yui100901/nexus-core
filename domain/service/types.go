@@ -80,6 +80,10 @@ type UnbindCommand struct {
 	LicenseID uint
 }
 
+type UpdateNodeStatusCommand struct {
+	NodeID uint
+}
+
 type CreateProductCommand struct {
 	Name        string
 	Description *string

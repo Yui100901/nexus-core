@@ -110,6 +110,27 @@ func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
 	})
 }
 
+func (s *NodeService) BanNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
+	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusBanned)
+}
+
+func (s *NodeService) UnbanNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
+	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusNormal)
+}
+
+func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status int) error {
+	result := global.DB.WithContext(ctx).Model(&model.Node{}).
+		Where("id = ?", nodeID).
+		Update("status", status)
+	if result.Error != nil {
+		return WrapInternal("update node status failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound("node not found")
+	}
+	return nil
+}
+
 func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 
@@ -189,6 +210,8 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 				Status:     0,
 				Metadata:   &metadata,
 			}
+		} else if !node.IsValid() {
+			return ErrForbidden("invalid node")
 		}
 		_, err = bindNodeToLicense(ctx, tx, node.ID, license, license.ProductID)
 		return err
