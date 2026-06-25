@@ -7,6 +7,7 @@ import (
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
+	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -26,21 +27,25 @@ func NewNodeService() *NodeService {
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
 func (s *NodeService) CreateNode(cmd CreateNodeCommand) (*NodeData, error) {
+	var metadata datatypes.JSON
+	if cmd.Metadata != nil {
+		metadata = datatypes.JSON([]byte(*cmd.Metadata))
+	}
 	n := &model.Node{
 		DeviceCode: cmd.DeviceCode,
-		Metadata:   datatypes.JSON(*cmd.Metadata),
-		Status:     0, //默认正常
+		Metadata:   metadata,
+		Status:     entity.NodeStatusNormal,
 	}
 	err := nodeRepo.Create(context.Background(), global.DB, n)
 	if err != nil {
 		return nil, err
 	}
-	metadata := string(n.Metadata)
+	metadataString := string(n.Metadata)
 	return &NodeData{
 		ID:         n.ID,
 		DeviceCode: n.DeviceCode,
 		Status:     n.Status,
-		Metadata:   &metadata,
+		Metadata:   &metadataString,
 	}, nil
 }
 
@@ -143,13 +148,21 @@ func (s *NodeService) AddBinding(cmd AddBindingCommand) error {
 
 		if toUpdate {
 			// 更新绑定状态
-			return tx.Model(&binding).Update("status", entity.BindingStatusBound).Error
+			now := time.Now()
+			return tx.Model(&binding).Updates(map[string]interface{}{
+				"status":     entity.BindingStatusBound,
+				"bound_at":   &now,
+				"unbound_at": nil,
+			}).Error
 		} else {
 			// 插入新绑定
+			now := time.Now()
 			newBinding := model.NodeLicenseBinding{
 				NodeID:    nodeID,
 				LicenseID: licenseID,
+				ProductID: license.ProductID,
 				Status:    int(entity.BindingStatusBound),
+				BoundAt:   &now,
 			}
 			return tx.Create(&newBinding).Error
 		}
@@ -189,10 +202,13 @@ func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
 				Metadata:   &metadata,
 			}
 			// 插入新绑定
+			now := time.Now()
 			newBinding := model.NodeLicenseBinding{
 				NodeID:    node.ID,
 				LicenseID: license.ID,
+				ProductID: license.ProductID,
 				Status:    int(entity.BindingStatusBound),
+				BoundAt:   &now,
 			}
 			if err := tx.Create(&newBinding).Error; err != nil {
 				return fmt.Errorf("create binding failed")
@@ -210,7 +226,12 @@ func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
 				if binding.Status == 1 {
 					return nil // 已绑定，无需重复绑定
 				}
-				if err := tx.Model(&binding).Update("is_bound", entity.BindingStatusBound).Error; err != nil {
+				now := time.Now()
+				if err := tx.Model(&binding).Updates(map[string]interface{}{
+					"status":     entity.BindingStatusBound,
+					"bound_at":   &now,
+					"unbound_at": nil,
+				}).Error; err != nil {
 					return err
 				}
 			}
@@ -233,7 +254,11 @@ func (s *NodeService) UnbindByID(cmd UnbindCommand) error {
 		if binding.Status == 0 {
 			return nil
 		}
-		return tx.Model(&binding).Update("is_bound", entity.BindingStatusUnbound).Error
+		now := time.Now()
+		return tx.Model(&binding).Updates(map[string]interface{}{
+			"status":     entity.BindingStatusUnbound,
+			"unbound_at": &now,
+		}).Error
 	})
 }
 

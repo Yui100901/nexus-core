@@ -82,7 +82,7 @@ func (r *NodeRepository) ForceUnbind(ctx context.Context, db *gorm.DB, bindingID
 // GetBindingsByLicenseAndProduct 根据许可证获取绑定列表
 func (r *NodeRepository) GetBindingsByLicenseAndProduct(ctx context.Context, db *gorm.DB, licenseID, productID uint) ([]model.NodeLicenseBinding, error) {
 	bindings, err := gorm.G[model.NodeLicenseBinding](db).
-		Where("license_id = ?", licenseID).
+		Where("license_id = ? AND product_id = ?", licenseID, productID).
 		Find(ctx)
 	if err != nil {
 		return nil, err

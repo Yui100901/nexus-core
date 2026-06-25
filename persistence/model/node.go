@@ -1,6 +1,10 @@
 package model
 
-import "gorm.io/datatypes"
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
 
 //
 // @Author yfy2001
@@ -11,8 +15,13 @@ import "gorm.io/datatypes"
 type Node struct {
 	BaseModel
 	DeviceCode string         `gorm:"type:varchar(100);uniqueIndex;not null"` // 设备唯一识别码
-	Status     int            `gorm:"type:int;not null;default:0"`            // 状态（0=正常，1=封禁）
+	Status     int            `gorm:"type:int;index;not null;default:0"`      // 状态：0正常，1离线，2封禁
 	Metadata   datatypes.JSON `gorm:"type:json"`                              // 其他信息（操作系统、版本等）
+	LastSeenAt *time.Time     `gorm:"type:datetime;index"`                    // 最近心跳时间
+	OnlineAt   *time.Time     `gorm:"type:datetime"`                          // 最近上线时间
+	OfflineAt  *time.Time     `gorm:"type:datetime"`                          // 最近离线时间
+	BannedAt   *time.Time     `gorm:"type:datetime"`                          // 封禁时间
+	BanReason  *string        `gorm:"type:text"`                              // 封禁原因
 }
 
 func (Node) TableName() string {

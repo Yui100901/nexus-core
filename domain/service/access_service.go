@@ -115,10 +115,13 @@ func (s *AccessService) Register(cmd AccessCommand) error {
 			Metadata:   &metadata,
 		}
 		// 插入新绑定
+		now := time.Now()
 		newBinding := model.NodeLicenseBinding{
 			NodeID:    node.ID,
 			LicenseID: license.ID,
+			ProductID: productID,
 			Status:    int(entity.BindingStatusBound),
+			BoundAt:   &now,
 		}
 		if err := global.DB.Create(&newBinding).Error; err != nil {
 			return fmt.Errorf("create binding failed")
@@ -136,7 +139,12 @@ func (s *AccessService) Register(cmd AccessCommand) error {
 			if binding.Status == 1 {
 				return nil // 已绑定，无需重复绑定
 			}
-			if err := global.DB.Model(&binding).Update("is_bound", entity.BindingStatusBound).Error; err != nil {
+			now := time.Now()
+			if err := global.DB.Model(&binding).Updates(map[string]interface{}{
+				"status":     entity.BindingStatusBound,
+				"bound_at":   &now,
+				"unbound_at": nil,
+			}).Error; err != nil {
 				return err
 			}
 		}

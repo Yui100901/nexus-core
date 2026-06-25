@@ -93,10 +93,18 @@ func AutoMigrate(db *gorm.DB) {
 	// 自动迁移模型，确保表存在
 	if err := db.AutoMigrate(
 		&model.License{},
+		&model.LicenseProductScope{},
+		&model.LicenseServiceScope{},
 		&model.Product{},
 		&model.ProductVersion{},
 		&model.Node{},
 		&model.NodeLicenseBinding{},
+		&model.CommonFeature{},
+		&model.ControlService{},
+		&model.NodeServiceCapability{},
+		&model.ControlCommand{},
+		&model.ControlCommandLog{},
+		&model.AuditLog{},
 	); err != nil {
 		panic(fmt.Sprintf("failed to automigrate database: %v", err))
 	}

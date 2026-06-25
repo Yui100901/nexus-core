@@ -32,7 +32,7 @@ func (r *NodeLicenseBindingRepository) AddBinding(ctx context.Context, db *gorm.
 func (r *NodeLicenseBindingRepository) UpdateBindingStatus(ctx context.Context, db *gorm.DB, id uint, status int) error {
 	_, err := gorm.G[model.NodeLicenseBinding](db).
 		Where("id = ?", id).
-		Update(ctx, "bound_status", status)
+		Update(ctx, "status", status)
 	return err
 }
 
@@ -85,7 +85,7 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicense(ctx context.
 	var cnt int64
 	if err := db.WithContext(ctx).
 		Model(&model.NodeLicenseBinding{}).
-		Where("license_id = ? AND is_bound = ?", licenseID, 1).
+		Where("license_id = ? AND status = ?", licenseID, 1).
 		Count(&cnt).Error; err != nil {
 		return 0, err
 	}
@@ -100,7 +100,7 @@ func (r *NodeLicenseBindingRepository) CountActiveBindingsByLicenseForProduct(
 	var cnt int64
 	if err := db.WithContext(ctx).
 		Model(&model.NodeLicenseBinding{}).
-		Where("license_id = ? AND product_id = ? AND is_bound = ?", licenseID, productID, 1).
+		Where("license_id = ? AND product_id = ? AND status = ?", licenseID, productID, 1).
 		Count(&cnt).Error; err != nil {
 		return 0, err
 	}

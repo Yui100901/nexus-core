@@ -37,6 +37,14 @@ const (
 	VersionStatusDeprecated                      // 2 已经弃用
 )
 
+type ProductStatus int
+
+const (
+	ProductStatusEnabled ProductStatus = iota + 1
+	ProductStatusDisabled
+	ProductStatusDeprecated
+)
+
 // NewVersion 工厂方法
 // 创建一个新的版本对象，默认状态为启用
 func NewVersion(versionCode string, releaseDate *time.Time, description *string) (*Version, error) {

@@ -47,7 +47,7 @@ func FindByColumn[T any](ctx context.Context, db *gorm.DB, column string, value 
 	return results, nil
 }
 
-// CountWhere 在给定条件下计数，query 是 SQL 条件字符串（例如 "license_id = ? AND is_bound = ?")
+// CountWhere 在给定条件下计数，query 是 SQL 条件字符串（例如 "license_id = ? AND status = ?")
 func CountWhere(ctx context.Context, db *gorm.DB, model any, query string, args ...any) (int64, error) {
 	var cnt int64
 	err := db.WithContext(ctx).

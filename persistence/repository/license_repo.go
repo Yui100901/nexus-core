@@ -68,7 +68,7 @@ func (r *LicenseRepository) GetByID(ctx context.Context, db *gorm.DB, id uint) (
 
 // GetByKey 根据 LicenseKey 获取领域对象 License
 func (r *LicenseRepository) GetByKey(ctx context.Context, db *gorm.DB, key string) (*model.License, error) {
-	m, err := GetOneByUniqueColumn[model.License](ctx, db, "id", key)
+	m, err := GetOneByUniqueColumn[model.License](ctx, db, "license_key", key)
 	if err != nil {
 		return nil, err
 	}

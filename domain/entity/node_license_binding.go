@@ -10,7 +10,7 @@ import "fmt"
 type BindingStatus int
 
 const (
-	BindingStatusUnbound VersionStatus = iota // 0 未绑定
+	BindingStatusUnbound BindingStatus = iota // 0 未绑定
 	BindingStatusBound                        // 1 绑定
 )
 
@@ -21,7 +21,7 @@ type NodeLicenseBinding struct {
 	NodeID    uint          // 绑定的节点ID，指向Node实体
 	LicenseID uint          // 关联的许可证ID，指向License实体
 	ProductID uint          // 关联的产品ID，指向Product实体
-	Status    VersionStatus // 绑定状态，表示当前绑定的状态
+	Status    BindingStatus // 绑定状态，表示当前绑定的状态
 }
 
 // NewNodeLicenseBinding 工厂方法

@@ -10,11 +10,11 @@ import "time"
 // ProductVersion 产品版本信息
 type ProductVersion struct {
 	BaseModel
-	ProductID   uint       `gorm:"index;not null"`                    // 所属产品 Product.ID
-	VersionCode string     `gorm:"type:varchar(50);not null"`         // 版本号,产品内唯一
+	ProductID   uint       `gorm:"uniqueIndex:idx_product_version_code;index;not null"` // 所属产品 Product.ID
+	VersionCode string     `gorm:"uniqueIndex:idx_product_version_code;type:varchar(50);not null"`
 	ReleaseDate *time.Time `gorm:"type:datetime"`                     // 发布时间
 	Description *string    `gorm:"type:text"`                         // 版本说明
-	Status      int        `gorm:"type:int;index;not null;default:0"` // 是否启用
+	Status      int        `gorm:"type:int;index;not null;default:0"` // 状态：0未发布，1可用，2废弃
 }
 
 func (ProductVersion) TableName() string {

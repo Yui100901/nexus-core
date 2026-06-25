@@ -71,57 +71,56 @@
 
 ### 2.1 产品模型
 
-- [~] 产品基础表。
-- [~] 产品版本表。
-- [ ] 产品启用、禁用、废弃状态字段。
-- [ ] 产品和功能服务的关联表。
+- [x] 产品基础表。
+- [x] 产品版本表。
+- [x] 产品启用、禁用、废弃状态字段。
+- [x] 产品和功能服务的关联表。
 - [ ] 产品删除时处理关联版本、License、服务定义。
 
 ### 2.2 License 模型
 
-- [~] License 基础表。
-- [ ] 修复 License Key 查询逻辑。
-  - 当前 `GetByKey` 应按 `license_key` 查询，而不是按 `id` 查询。
-- [ ] 补齐 License 授权范围。
-  - 当前更像单产品授权。
-  - 后续需要决定是否支持多产品授权。
-- [ ] 补齐 License 功能范围。
-  - 可使用 `feature_mask` 或独立关联表。
-- [ ] 补齐 License 操作日志。
-- [ ] 明确 `ValidityHours`、`ActivatedAt`、`ExpiredAt` 的计算规则。
+- [x] License 基础表。
+- [x] 修复 License Key 查询逻辑。
+  - `GetByKey` 已按 `license_key` 查询。
+- [x] 补齐 License 授权范围。
+  - 已新增 `license_product_scope`，当前 `license.product_id` 作为兼容主产品字段保留。
+- [x] 补齐 License 功能范围。
+  - 已新增 `license_service_scope`，当前 `feature_mask` 作为兼容字段保留。
+- [x] 补齐 License 操作日志。
+- [x] 明确 `ValidityHours`、`ActivatedAt`、`ExpiredAt` 的计算规则。
 - [ ] 明确续期时是否允许已过期 License 恢复。
 
 ### 2.3 节点模型
 
-- [~] 节点基础表。
-- [ ] 节点状态枚举。
+- [x] 节点基础表。
+- [x] 节点状态枚举。
   - 正常、离线、封禁、删除等状态需要明确。
-- [ ] 节点元数据结构。
+- [x] 节点元数据结构。
   - 操作系统、客户端版本、IP、主机名、硬件信息等。
-- [ ] 节点黑名单或封禁信息。
-- [ ] 节点操作日志。
+- [x] 节点黑名单或封禁信息。
+- [x] 节点操作日志。
 
 ### 2.4 节点绑定模型
 
-- [~] 节点与 License 绑定表。
-- [ ] 修正绑定表字段不一致问题。
-  - 当前模型是 `status`，代码里有 `is_bound`、`bound_status`。
-- [ ] 增加唯一约束。
+- [x] 节点与 License 绑定表。
+- [x] 修正绑定表字段不一致问题。
+  - 绑定状态统一使用 `status`。
+- [x] 增加唯一约束。
   - 建议约束 `node_id + license_id`。
-- [ ] 增加绑定时间、解绑时间。
+- [x] 增加绑定时间、解绑时间。
 - [ ] 绑定和解绑时维护 License 当前绑定数。
 - [ ] 删除节点或 License 时正确处理绑定数量。
 
 ### 2.5 节点控制模型
 
-- [ ] 新增控制服务定义表。
+- [x] 新增控制服务定义表。
   - `identifier`、`name`、`service_type`、`input_schema`、`output_schema`、`enabled`。
-- [ ] 新增节点服务能力表。
+- [x] 新增节点服务能力表。
   - 记录节点支持的服务、Schema、协议、Endpoint。
-- [ ] 新增控制指令表。
+- [x] 新增控制指令表。
   - 记录目标节点、服务、原始 payload、转换 payload、状态、结果。
-- [ ] 新增控制执行日志表。
-- [ ] 为 Schema 字段选择存储格式。
+- [x] 新增控制执行日志表。
+- [x] 为 Schema 字段选择存储格式。
   - 建议优先使用 JSON Schema 子集。
 
 ## 3. 核心业务链路

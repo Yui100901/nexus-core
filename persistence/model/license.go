@@ -15,11 +15,11 @@ type License struct {
 	ValidityHours    int        `gorm:"type:int;not null"`                      // 有效时长（小时）
 	ActivatedAt      *time.Time `gorm:"type:datetime"`                          // 激活时间
 	ExpiredAt        *time.Time `gorm:"type:datetime"`                          // 过期时间
-	Status           int        `gorm:"type:int;index;not null"`                // 状态枚举
+	Status           int        `gorm:"type:int;index;not null;default:0"`      // 状态：0未激活，1激活，2过期，3吊销
 	MaxNodes         int        `gorm:"type:int;not null;default:0"`            // 最大节点数 (0 = 不限制)
 	CurrentNodeCount int        `gorm:"type:int;not null;default:0"`            // 当前绑定数量
 	MaxConcurrent    int        `gorm:"type:int;not null;default:0"`            // 并发限制 (0 = 不限制)
-	FeatureMask      string     `gorm:"type:varchar(255)"`                      // 功能模块掩码
+	FeatureMask      string     `gorm:"type:varchar(255)"`                      // 兼容旧字段，后续迁移至 license_service_scope
 	Remark           *string    `gorm:"type:text"`                              // 备注
 }
 

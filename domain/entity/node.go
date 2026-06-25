@@ -7,7 +7,11 @@ import "fmt"
 // @Date 2026/1/16 16 46
 //
 
-const NodeStatusNormal = 0
+const (
+	NodeStatusNormal = iota
+	NodeStatusOffline
+	NodeStatusBanned
+)
 
 // Node 表示用户环境的抽象节点
 // 代表一台物理设备、虚拟设备或其他运行环境

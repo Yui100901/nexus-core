@@ -24,6 +24,7 @@ type Feature struct {
 type CommonFeature struct {
 	BaseModel
 	Feature
+	Status int `json:"status" gorm:"type:int;index;not null;default:1"` // 状态：1启用，2禁用
 }
 
 func (CommonFeature) TableName() string {
