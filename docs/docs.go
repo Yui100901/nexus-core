@@ -138,6 +138,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
                         "description": "Limit",
                         "name": "limit",
                         "in": "query"
@@ -346,6 +358,24 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Product ID",
                         "name": "product_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit, compatible with page_size",
+                        "name": "limit",
                         "in": "query"
                     }
                 ],
@@ -1121,6 +1151,18 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
                         "description": "Limit",
                         "name": "limit",
                         "in": "query"
@@ -1275,6 +1317,24 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Node ID",
                         "name": "node_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page Size",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit, compatible with page_size",
+                        "name": "limit",
                         "in": "query"
                     }
                 ],

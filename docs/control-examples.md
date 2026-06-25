@@ -137,7 +137,40 @@ WebSocket 节点执行后返回：
 
 `status` 可取 `success`、`running`、`failed`、`timeout`。
 
-## 5. 查询指令结果
+## 5. 异步回执
+
+MQTT 节点或无法保持 WebSocket 响应等待的节点，可以在执行完成后通过 HTTP 回执更新指令状态：
+
+```bash
+curl -X POST http://localhost:8080/control-commands/10/complete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "success",
+    "result": {
+      "ok": true
+    }
+  }'
+```
+
+服务端会根据控制服务的 `output_schema` 转换并记录返回结果。
+
+## 6. 心跳待执行摘要
+
+节点心跳响应会包含待处理控制任务摘要：
+
+```json
+{
+  "online": true,
+  "pending_control": {
+    "count": 1,
+    "command_ids": [10]
+  }
+}
+```
+
+节点可据此决定是否主动查询或等待 MQTT/WebSocket 控制消息。
+
+## 7. 查询指令结果
 
 ```bash
 curl http://localhost:8080/control-commands/10

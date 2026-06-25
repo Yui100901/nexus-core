@@ -2,7 +2,6 @@ package api
 
 import (
 	"nexus-core/domain/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,17 +49,19 @@ func (c *MonitorController) GetOnlineSummary(ctx *gin.Context) {
 // @Tags monitor
 // @Accept json
 // @Produce json
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
 // @Param limit query int false "Limit"
 // @Success 200 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /monitor/nodes/heartbeats [get]
 func (c *MonitorController) ListNodeHeartbeats(ctx *gin.Context) {
-	limit, err := intQuery(ctx, "limit")
+	page, err := PaginationQuery(ctx)
 	if err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	data, err := c.ms.ListNodeHeartbeats(ctx.Request.Context(), limit)
+	data, err := c.ms.ListNodeHeartbeatsPage(ctx.Request.Context(), page.Limit, page.Offset)
 	if err != nil {
 		HandleError(ctx, err)
 		return
@@ -76,58 +77,36 @@ func (c *MonitorController) ListNodeHeartbeats(ctx *gin.Context) {
 // @Param resource_type query string false "Resource Type"
 // @Param resource_id query uint false "Resource ID"
 // @Param action query string false "Action"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
 // @Param limit query int false "Limit"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /audit-logs [get]
 func (c *MonitorController) ListAuditLogs(ctx *gin.Context) {
-	limit, err := intQuery(ctx, "limit")
+	page, err := PaginationQuery(ctx)
 	if err != nil {
 		BadRequest(ctx, err.Error())
 		return
 	}
 
-	var resourceType *string
-	if value := ctx.Query("resource_type"); value != "" {
-		resourceType = &value
-	}
-	var action *string
-	if value := ctx.Query("action"); value != "" {
-		action = &value
-	}
-	var resourceID *uint
-	if value := ctx.Query("resource_id"); value != "" {
-		parsed, err := strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			BadRequest(ctx, "invalid resource_id")
-			return
-		}
-		id := uint(parsed)
-		resourceID = &id
+	resourceID, err := UintQuery(ctx, "resource_id")
+	if err != nil {
+		BadRequest(ctx, "invalid resource_id")
+		return
 	}
 
 	data, err := c.as.ListAuditLogs(ctx.Request.Context(), service.ListAuditLogsCommand{
-		ResourceType: resourceType,
+		ResourceType: StringQuery(ctx, "resource_type"),
 		ResourceID:   resourceID,
-		Action:       action,
-		Limit:        limit,
+		Action:       StringQuery(ctx, "action"),
+		Limit:        page.Limit,
+		Offset:       page.Offset,
 	})
 	if err != nil {
 		HandleError(ctx, err)
 		return
 	}
 	Success(ctx, data)
-}
-
-func intQuery(ctx *gin.Context, name string) (int, error) {
-	value := ctx.Query(name)
-	if value == "" {
-		return 0, nil
-	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0, err
-	}
-	return parsed, nil
 }

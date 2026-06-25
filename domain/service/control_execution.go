@@ -75,10 +75,20 @@ func (s *ControlService) ReportNodeCapability(ctx context.Context, cmd ReportNod
 }
 
 func (s *ControlService) ListNodeCapabilities(ctx context.Context, nodeID uint) ([]NodeCapabilityData, error) {
+	return s.ListNodeCapabilitiesPage(ctx, ListNodeCapabilitiesCommand{NodeID: nodeID})
+}
+
+func (s *ControlService) ListNodeCapabilitiesPage(ctx context.Context, cmd ListNodeCapabilitiesCommand) ([]NodeCapabilityData, error) {
 	var capabilities []model.NodeServiceCapability
 	query := global.DB.WithContext(ctx).Order("id DESC")
-	if nodeID != 0 {
-		query = query.Where("node_id = ?", nodeID)
+	if cmd.NodeID != 0 {
+		query = query.Where("node_id = ?", cmd.NodeID)
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
 	}
 	if err := query.Find(&capabilities).Error; err != nil {
 		return nil, WrapInternal("list node capabilities failed", err)

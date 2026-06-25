@@ -111,22 +111,30 @@ func (c *ControlController) GetControlServiceByID(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param product_id query uint false "Product ID"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit, compatible with page_size"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /control-services [get]
 func (c *ControlController) ListControlServices(ctx *gin.Context) {
-	var productID *uint
-	if ctx.Query("product_id") != "" {
-		id, err := UintParamOrQuery(ctx, "product_id")
-		if err != nil {
-			BadRequest(ctx, err.Error())
-			return
-		}
-		productID = &id
+	productID, err := UintQuery(ctx, "product_id")
+	if err != nil {
+		BadRequest(ctx, "invalid product_id")
+		return
+	}
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
 	}
 
-	data, err := c.cs.ListControlServices(ctx.Request.Context(), productID)
+	data, err := c.cs.ListControlServicesPage(ctx.Request.Context(), service.ListControlServicesCommand{
+		ProductID: productID,
+		Limit:     page.Limit,
+		Offset:    page.Offset,
+	})
 	if err != nil {
 		HandleError(ctx, err)
 		return
@@ -172,22 +180,34 @@ func (c *ControlController) ReportNodeCapability(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param node_id query uint false "Node ID"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit, compatible with page_size"
 // @Success 200 {object} api.CommonResponse
 // @Failure 400 {object} api.CommonResponse
 // @Failure 500 {object} api.CommonResponse
 // @Router /node-capabilities [get]
 func (c *ControlController) ListNodeCapabilities(ctx *gin.Context) {
-	var nodeID uint
-	if ctx.Query("node_id") != "" {
-		id, err := UintParamOrQuery(ctx, "node_id")
-		if err != nil {
-			BadRequest(ctx, err.Error())
-			return
-		}
-		nodeID = id
+	nodeID, err := UintQuery(ctx, "node_id")
+	if err != nil {
+		BadRequest(ctx, "invalid node_id")
+		return
+	}
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
 	}
 
-	data, err := c.cs.ListNodeCapabilities(ctx.Request.Context(), nodeID)
+	var nodeIDValue uint
+	if nodeID != nil {
+		nodeIDValue = *nodeID
+	}
+	data, err := c.cs.ListNodeCapabilitiesPage(ctx.Request.Context(), service.ListNodeCapabilitiesCommand{
+		NodeID: nodeIDValue,
+		Limit:  page.Limit,
+		Offset: page.Offset,
+	})
 	if err != nil {
 		HandleError(ctx, err)
 		return

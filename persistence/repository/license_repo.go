@@ -34,19 +34,19 @@ func (r *LicenseRepository) BatchCreateLicense(ctx context.Context, db *gorm.DB,
 
 // UpdateLicenseStatus 更新 License 状态
 func (r *LicenseRepository) UpdateLicenseStatus(ctx context.Context, db *gorm.DB, id uint, status int) error {
-	_, err := gorm.G[model.License](db).
+	return db.WithContext(ctx).
+		Model(&model.License{}).
 		Where("id = ?", id).
-		Update(ctx, "status", status)
-	return err
+		Update("status", status).Error
 }
 
 // UpdateLicense 更新 License
 func (r *LicenseRepository) UpdateLicense(ctx context.Context, db *gorm.DB, license *model.License) error {
-	_, err := gorm.G[model.License](db).
+	if err := db.WithContext(ctx).
+		Model(&model.License{}).
 		Where("id = ?", license.ID).
 		Where("license_key = ?", license.LicenseKey).
-		Updates(ctx, *license)
-	if err != nil {
+		Updates(*license).Error; err != nil {
 		return err
 	}
 

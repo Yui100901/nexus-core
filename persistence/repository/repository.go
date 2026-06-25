@@ -62,12 +62,12 @@ func CountWhere(ctx context.Context, db *gorm.DB, model any, query string, args 
 
 // UpdateByColumn 通用按列更新记录的函数，updates 可以是 struct 或 map[string]interface{}
 func UpdateByColumn[T any](ctx context.Context, db *gorm.DB, column string, value any, updates any) (int, error) {
-	updatesT := updates.(T)
-	rows, err := gorm.G[T](db).
+	result := db.WithContext(ctx).
+		Model(new(T)).
 		Where(fmt.Sprintf("%s = ?", column), value).
-		Updates(ctx, updatesT)
-	if err != nil {
-		return 0, err
+		Updates(updates)
+	if result.Error != nil {
+		return 0, result.Error
 	}
-	return rows, nil
+	return int(result.RowsAffected), nil
 }

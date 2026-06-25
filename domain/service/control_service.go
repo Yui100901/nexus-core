@@ -64,10 +64,20 @@ func (s *ControlService) GetControlServiceByID(ctx context.Context, id uint) (*C
 }
 
 func (s *ControlService) ListControlServices(ctx context.Context, productID *uint) ([]ControlServiceData, error) {
+	return s.ListControlServicesPage(ctx, ListControlServicesCommand{ProductID: productID})
+}
+
+func (s *ControlService) ListControlServicesPage(ctx context.Context, cmd ListControlServicesCommand) ([]ControlServiceData, error) {
 	var controls []model.ControlService
 	query := global.DB.WithContext(ctx).Order("id DESC")
-	if productID != nil {
-		query = query.Where("product_id = ? OR product_id IS NULL", *productID)
+	if cmd.ProductID != nil {
+		query = query.Where("product_id = ? OR product_id IS NULL", *cmd.ProductID)
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
 	}
 	if err := query.Find(&controls).Error; err != nil {
 		return nil, WrapInternal("list control services failed", err)

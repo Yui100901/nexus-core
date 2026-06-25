@@ -27,6 +27,7 @@ type ListAuditLogsCommand struct {
 	ResourceID   *uint
 	Action       *string
 	Limit        int
+	Offset       int
 }
 
 type AuditService struct{}
@@ -42,6 +43,9 @@ func (s *AuditService) ListAuditLogs(ctx context.Context, cmd ListAuditLogsComma
 	}
 
 	query := global.DB.WithContext(ctx).Model(&model.AuditLog{}).Order("id DESC").Limit(limit)
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
+	}
 	if cmd.ResourceType != nil && *cmd.ResourceType != "" {
 		query = query.Where("resource_type = ?", *cmd.ResourceType)
 	}

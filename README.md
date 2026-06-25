@@ -348,3 +348,15 @@ go run ./cmd/demo-product \
 ## 节点控制接口示例
 
 控制服务、节点能力上报、HTTP/MQTT/WebSocket 下发和结果查询的最小调用顺序见 [docs/control-examples.md](docs/control-examples.md)。
+
+## API 示例与查询参数
+
+License、节点、注册心跳、监控和审计的常用调用示例见 [docs/api-examples.md](docs/api-examples.md)。
+
+列表类接口统一支持以下查询参数：
+
+- `page`：页码，默认 `1`。
+- `page_size`：每页数量，默认 `50`，最大 `200`。
+- `limit`：兼容旧调用，传入后等同于 `page_size`。
+
+已接入统一参数的接口包括控制服务列表、节点能力列表、节点心跳列表和审计日志列表。

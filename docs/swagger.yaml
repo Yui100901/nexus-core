@@ -509,6 +509,14 @@ paths:
         in: query
         name: action
         type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: page_size
+        type: integer
       - description: Limit
         in: query
         name: limit
@@ -646,6 +654,18 @@ paths:
       - description: Product ID
         in: query
         name: product_id
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: page_size
+        type: integer
+      - description: Limit, compatible with page_size
+        in: query
+        name: limit
         type: integer
       produces:
       - application/json
@@ -1149,6 +1169,14 @@ paths:
       consumes:
       - application/json
       parameters:
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: page_size
+        type: integer
       - description: Limit
         in: query
         name: limit
@@ -1250,6 +1278,18 @@ paths:
       - description: Node ID
         in: query
         name: node_id
+        type: integer
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Page Size
+        in: query
+        name: page_size
+        type: integer
+      - description: Limit, compatible with page_size
+        in: query
+        name: limit
         type: integer
       produces:
       - application/json

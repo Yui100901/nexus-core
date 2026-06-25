@@ -194,12 +194,24 @@ type ControlServiceData struct {
 	Status       int             `json:"status"`
 }
 
+type ListControlServicesCommand struct {
+	ProductID *uint
+	Limit     int
+	Offset    int
+}
+
 type ReportNodeCapabilityCommand struct {
 	NodeID            uint
 	ServiceIdentifier string
 	Schema            json.RawMessage
 	Protocol          string
 	Endpoint          *string
+}
+
+type ListNodeCapabilitiesCommand struct {
+	NodeID uint
+	Limit  int
+	Offset int
 }
 
 type NodeCapabilityData struct {

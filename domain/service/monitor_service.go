@@ -87,15 +87,23 @@ func (s *MonitorService) GetOnlineSummary(ctx context.Context) (*OnlineSummaryDa
 }
 
 func (s *MonitorService) ListNodeHeartbeats(ctx context.Context, limit int) ([]NodeHeartbeatData, error) {
+	return s.ListNodeHeartbeatsPage(ctx, limit, 0)
+}
+
+func (s *MonitorService) ListNodeHeartbeatsPage(ctx context.Context, limit int, offset int) ([]NodeHeartbeatData, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
 
-	var nodes []model.Node
-	if err := global.DB.WithContext(ctx).
+	query := global.DB.WithContext(ctx).
 		Order("last_seen_at IS NULL ASC, last_seen_at DESC, id DESC").
-		Limit(limit).
-		Find(&nodes).Error; err != nil {
+		Limit(limit)
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	var nodes []model.Node
+	if err := query.Find(&nodes).Error; err != nil {
 		return nil, WrapInternal("list node heartbeats failed", err)
 	}
 
