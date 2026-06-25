@@ -34,6 +34,11 @@ func (c *ControlController) RegisterRoutes(r *gin.Engine) {
 		commands.POST("", c.CreateControlCommand)
 		commands.GET("/:id", c.GetControlCommandByID)
 	}
+
+	nodeControl := r.Group("/node-control")
+	{
+		nodeControl.GET("/ws", c.ConnectNodeControlWebSocket)
+	}
 }
 
 // CreateControlService 创建控制服务定义
@@ -241,4 +246,17 @@ func (c *ControlController) GetControlCommandByID(ctx *gin.Context) {
 		return
 	}
 	Success(ctx, data)
+}
+
+// ConnectNodeControlWebSocket accepts a node-owned websocket connection for server-to-node commands.
+func (c *ControlController) ConnectNodeControlWebSocket(ctx *gin.Context) {
+	nodeID, err := UintParamOrQuery(ctx, "node_id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := service.DefaultControlWebSocketHub.ServeHTTP(ctx.Writer, ctx.Request, nodeID); err != nil {
+		HandleError(ctx, err)
+		return
+	}
 }

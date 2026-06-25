@@ -2,7 +2,6 @@ port: 8080
 swagger_enabled: true
 auto_open_browser: false
 
-# Swagger UI 配置
 swagger_url: /swagger/index.html
 swagger_doc_url: /swagger/doc.json
 
@@ -16,9 +15,15 @@ db_list:
       max_idle_conns: 10
       conn_max_lifetime: 30
 
+# Example for another database:
 #    - name: analytics_db
 #      db_type: postgres
 #      db_path: host=127.0.0.1 port=5432 user=admin password=secret dbname=analytics sslmode=disable
 #      max_open_conns: 50
-#      # max_idle_conns 未配置 → nil
-#      # conn_max_lifetime 未配置 → nil
+
+mqtt:
+  broker_url: ""
+  client_id: nexus-core-control
+  username: ""
+  password: ""
+  publish_timeout_seconds: 5

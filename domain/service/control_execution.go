@@ -213,8 +213,15 @@ func validateNodeCapabilityCommand(ctx context.Context, cmd ReportNodeCapability
 	if !isSupportedControlProtocol(strings.TrimSpace(cmd.Protocol)) {
 		return ErrBadRequest("invalid protocol")
 	}
-	if strings.TrimSpace(cmd.Protocol) == "http" && (cmd.Endpoint == nil || strings.TrimSpace(*cmd.Endpoint) == "") {
-		return ErrBadRequest("endpoint is required for http protocol")
+	switch strings.TrimSpace(cmd.Protocol) {
+	case "http":
+		if cmd.Endpoint == nil || strings.TrimSpace(*cmd.Endpoint) == "" {
+			return ErrBadRequest("endpoint is required for http protocol")
+		}
+	case "mqtt":
+		if cmd.Endpoint == nil || strings.TrimSpace(*cmd.Endpoint) == "" {
+			return ErrBadRequest("endpoint topic is required for mqtt protocol")
+		}
 	}
 	node, err := GetNodeEntityByID(ctx, global.DB.WithContext(ctx), cmd.NodeID)
 	if err != nil {
@@ -277,8 +284,10 @@ func (s *ControlService) dispatchControlCommand(ctx context.Context, command *mo
 	switch capability.Protocol {
 	case "http":
 		return dispatchHTTPControlCommand(ctx, command, capability)
-	case "mqtt", "websocket":
-		return ErrBadRequest("protocol dispatch is not implemented")
+	case "mqtt":
+		return dispatchMQTTControlCommand(ctx, command, capability)
+	case "websocket":
+		return DefaultControlWebSocketHub.Dispatch(ctx, command)
 	default:
 		return ErrBadRequest("invalid protocol")
 	}
@@ -289,16 +298,9 @@ func dispatchHTTPControlCommand(ctx context.Context, command *model.ControlComma
 		return ErrBadRequest("endpoint is required for http protocol")
 	}
 
-	now := time.Now()
-	if err := global.DB.WithContext(ctx).Model(command).Updates(map[string]interface{}{
-		"status":  ControlCommandStatusSent,
-		"sent_at": &now,
-	}).Error; err != nil {
-		return WrapInternal("mark command sent failed", err)
+	if err := markControlCommandSent(ctx, command); err != nil {
+		return err
 	}
-	command.Status = ControlCommandStatusSent
-	command.SentAt = &now
-	_ = createControlCommandLog(ctx, command.ID, command.NodeID, "sent", command.Status, nil, nil)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, *capability.Endpoint, bytes.NewReader(command.ConvertedPayload))
 	if err != nil {
@@ -335,26 +337,11 @@ func dispatchHTTPControlCommand(ctx context.Context, command *model.ControlComma
 		errorMessage = &message
 	}
 
-	if err := global.DB.WithContext(ctx).Model(command).Updates(map[string]interface{}{
-		"status":        status,
-		"result":        datatypes.JSON(result),
-		"error_message": errorMessage,
-		"completed_at":  &completedAt,
-	}).Error; err != nil {
-		return WrapInternal("update control command result failed", err)
-	}
-
-	command.Status = status
-	command.Result = datatypes.JSON(result)
-	command.ErrorMessage = errorMessage
-	command.CompletedAt = &completedAt
-
 	event := "succeeded"
 	if status == ControlCommandStatusFailed {
 		event = "failed"
 	}
-	_ = createControlCommandLog(ctx, command.ID, command.NodeID, event, status, errorMessage, result)
-	return nil
+	return completeControlCommand(ctx, command, status, event, errorMessage, result, &completedAt)
 }
 
 func createControlCommandLog(ctx context.Context, commandID uint, nodeID uint, event string, status int, message *string, data []byte) error {
@@ -367,6 +354,51 @@ func createControlCommandLog(ctx context.Context, commandID uint, nodeID uint, e
 		Data:      normalizeJSON(data),
 	}
 	return global.DB.WithContext(ctx).Create(&log).Error
+}
+
+func markControlCommandSent(ctx context.Context, command *model.ControlCommand) error {
+	now := time.Now()
+	if err := global.DB.WithContext(ctx).Model(command).Updates(map[string]interface{}{
+		"status":  ControlCommandStatusSent,
+		"sent_at": &now,
+	}).Error; err != nil {
+		return WrapInternal("mark command sent failed", err)
+	}
+	command.Status = ControlCommandStatusSent
+	command.SentAt = &now
+	_ = createControlCommandLog(ctx, command.ID, command.NodeID, "sent", command.Status, nil, nil)
+	return nil
+}
+
+func completeControlCommand(ctx context.Context, command *model.ControlCommand, status int, event string, message *string, data []byte, completedAt *time.Time) error {
+	if len(data) == 0 {
+		data = []byte("{}")
+	}
+	if !json.Valid(data) {
+		data = mustMarshalJSON(map[string]interface{}{
+			"raw": string(data),
+		})
+	}
+	if completedAt == nil {
+		now := time.Now()
+		completedAt = &now
+	}
+
+	if err := global.DB.WithContext(ctx).Model(command).Updates(map[string]interface{}{
+		"status":        status,
+		"result":        datatypes.JSON(data),
+		"error_message": message,
+		"completed_at":  completedAt,
+	}).Error; err != nil {
+		return WrapInternal("update control command result failed", err)
+	}
+
+	command.Status = status
+	command.Result = datatypes.JSON(data)
+	command.ErrorMessage = message
+	command.CompletedAt = completedAt
+	_ = createControlCommandLog(ctx, command.ID, command.NodeID, event, status, message, data)
+	return nil
 }
 
 func toNodeCapabilityData(capability *model.NodeServiceCapability) *NodeCapabilityData {
