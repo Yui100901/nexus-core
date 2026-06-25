@@ -249,6 +249,16 @@ func (c *ControlController) GetControlCommandByID(ctx *gin.Context) {
 }
 
 // ConnectNodeControlWebSocket accepts a node-owned websocket connection for server-to-node commands.
+// @Summary Connect node control websocket
+// @Description Nodes connect to this endpoint, then the server can dispatch websocket control commands by node_id.
+// @Tags node-control
+// @Accept json
+// @Produce json
+// @Param node_id query uint true "Node ID"
+// @Success 101 {string} string "Switching Protocols"
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /node-control/ws [get]
 func (c *ControlController) ConnectNodeControlWebSocket(ctx *gin.Context) {
 	nodeID, err := UintParamOrQuery(ctx, "node_id")
 	if err != nil {

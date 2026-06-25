@@ -344,3 +344,7 @@ go run ./cmd/demo-product \
   -heartbeats 3 \
   -heartbeat-interval 1s
 ```
+
+## 节点控制接口示例
+
+控制服务、节点能力上报、HTTP/MQTT/WebSocket 下发和结果查询的最小调用顺序见 [docs/control-examples.md](docs/control-examples.md)。

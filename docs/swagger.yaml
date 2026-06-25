@@ -20,33 +20,43 @@ definitions:
       node_id:
         description: 节点ID
         type: integer
-      product_id:
-        description: 产品ID
-        type: integer
     required:
     - license_id
     - node_id
-    - product_id
     type: object
-  dto.AutoBindCommand:
+  dto.CreateControlCommand:
     properties:
-      device_code:
-        description: 设备唯一识别码
-        type: string
-      license_key:
-        description: 许可证
-        type: string
-      product_id:
-        description: 产品ID
+      node_id:
         type: integer
-      version_code:
-        description: 产品版本号
+      payload:
+        type: object
+      service_identifier:
         type: string
     required:
-    - device_code
-    - license_key
-    - product_id
-    - version_code
+    - node_id
+    - payload
+    - service_identifier
+    type: object
+  dto.CreateControlServiceCommand:
+    properties:
+      description:
+        type: string
+      identifier:
+        type: string
+      input_schema:
+        type: object
+      name:
+        type: string
+      output_schema:
+        type: object
+      product_id:
+        type: integer
+      service_type:
+        type: string
+    required:
+    - identifier
+    - name
+    - service_type
     type: object
   dto.CreateLicenseCommand:
     description: Command to create a license
@@ -57,21 +67,17 @@ definitions:
       max_nodes:
         description: 最大节点数
         type: integer
+      product_id:
+        description: 授权范围列表
+        type: integer
       remark:
         description: 备注
         type: string
-      scope_list:
-        description: 授权范围列表
-        items:
-          $ref: '#/definitions/dto.ScopeDTO'
-        type: array
       validity_hours:
         description: 有效时长（小时）
         type: integer
     required:
-    - max_concurrent
-    - max_nodes
-    - scope_list
+    - product_id
     - validity_hours
     type: object
   dto.CreateNodeCommand:
@@ -80,7 +86,7 @@ definitions:
       device_code:
         description: 设备唯一识别码
         type: string
-      meta_info:
+      metadata:
         description: 设备元信息
         type: string
     required:
@@ -110,6 +116,10 @@ definitions:
       release_date:
         description: 发布时间
         type: string
+      release_method:
+        allOf:
+        - $ref: '#/definitions/dto.ReleaseMethod'
+        description: 0立即发布，1定时发布，2暂不发布
       version_code:
         description: 版本号
         type: string
@@ -126,19 +136,6 @@ definitions:
     required:
     - product_id
     - version_id
-    type: object
-  dto.ForceUnbindCommand:
-    description: Command to force unbind a node binding using node and license IDs
-    properties:
-      license_id:
-        description: 许可证ID
-        type: integer
-      node_id:
-        description: 节点ID
-        type: integer
-    required:
-    - license_id
-    - node_id
     type: object
   dto.HeartbeatCommand:
     description: Heartbeat payload from client containing device and license info
@@ -161,6 +158,44 @@ definitions:
     - product_id
     - version_code
     type: object
+  dto.RegisterCommand:
+    properties:
+      device_code:
+        description: 设备唯一识别码
+        type: string
+      license_key:
+        description: 许可证
+        type: string
+      product_id:
+        description: 产品ID
+        type: integer
+      version_code:
+        description: 产品版本号
+        type: string
+    required:
+    - device_code
+    - license_key
+    - product_id
+    - version_code
+    type: object
+  dto.ReleaseMethod:
+    enum:
+    - 0
+    - 1
+    - 2
+    type: integer
+    x-enum-comments:
+      ReleaseHold: 2 暂不发布
+      ReleaseImmediate: 0 立即发布
+      ReleaseScheduled: 1 定时发布
+    x-enum-descriptions:
+    - 0 立即发布
+    - 1 定时发布
+    - 2 暂不发布
+    x-enum-varnames:
+    - ReleaseImmediate
+    - ReleaseScheduled
+    - ReleaseHold
   dto.ReleaseNewVersionCommand:
     properties:
       product_id:
@@ -176,64 +211,60 @@ definitions:
     - product_id
     - version_id
     type: object
-  dto.ScopeDTO:
-    description: Scope transfer object
+  dto.ReportNodeCapabilityCommand:
     properties:
-      feature_mask:
-        description: 功能模块掩码
+      endpoint:
         type: string
-      product_id:
-        description: 产品ID
+      node_id:
         type: integer
+      protocol:
+        type: string
+      schema:
+        type: object
+      service_identifier:
+        type: string
     required:
-    - product_id
+    - node_id
+    - protocol
+    - schema
+    - service_identifier
     type: object
-  dto.UpdateBindingStatusCommand:
+  dto.UnbindCommand:
     description: Command to update binding status
     properties:
-      id:
-        description: 绑定ID
+      license_id:
+        description: 许可证ID
         type: integer
-      status:
-        description: 新状态
+      node_id:
+        description: 节点ID
         type: integer
     required:
-    - id
-    - status
+    - license_id
+    - node_id
     type: object
   dto.UpdateLicenseCommand:
     description: Command to update a license
     properties:
+      feature_mask:
+        type: string
       id:
         description: 许可证ID
         type: integer
-      license_key:
-        description: 许可证密钥
-        type: string
+      max_concurrent:
+        type: integer
+      max_nodes:
+        type: integer
       remark:
         description: 备注
         type: string
-      status:
-        description: 状态
-        type: integer
-      validity_hours:
-        description: 有效时长（小时）
-        type: integer
-    required:
-    - id
-    - license_key
     type: object
   dto.UpdateLicenseStatusCommand:
     properties:
       id:
         description: 许可证ID
         type: integer
-      status:
-        description: 新状态
-        type: integer
     required:
     - id
-    - status
     type: object
   dto.UpdateMinVersionCommand:
     description: Command to update min supported version
@@ -248,11 +279,22 @@ definitions:
     - product_id
     - version_id
     type: object
+  entity.BindingStatus:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-comments:
+      BindingStatusBound: 1 绑定
+      BindingStatusUnbound: 0 未绑定
+    x-enum-descriptions:
+    - 0 未绑定
+    - 1 绑定
+    x-enum-varnames:
+    - BindingStatusUnbound
+    - BindingStatusBound
   entity.Node:
     properties:
-      banned:
-        description: 是否被封禁，0 = 未封禁，1 = 已封禁
-        type: integer
       deviceCode:
         description: 设备唯一识别码，用于区分不同设备
         type: string
@@ -262,14 +304,14 @@ definitions:
       metadata:
         description: 设备元信息，包含操作系统、版本等信息
         type: string
+      status:
+        description: 是否被封禁，0 = 未封禁，1 = 已封禁
+        type: integer
     type: object
   entity.NodeLicenseBinding:
     properties:
       id:
         description: 绑定关系唯一标识符
-        type: integer
-      isBound:
-        description: 绑定状态，表示当前绑定的状态
         type: integer
       licenseID:
         description: 关联的许可证ID，指向License实体
@@ -280,6 +322,10 @@ definitions:
       productID:
         description: 关联的产品ID，指向Product实体
         type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/entity.BindingStatus'
+        description: 绑定状态，表示当前绑定的状态
     type: object
   entity.Product:
     properties:
@@ -290,7 +336,7 @@ definitions:
         description: 产品唯一标识符
         type: integer
       minSupportedVersionID:
-        description: 最低支持的版本ID，用于版本兼容性检查
+        description: 最低支持的版本ID，用于版本兼容性检查，按时间，在此之前发布的版本将无法使用
         type: integer
       name:
         description: 产品名称，具有唯一性
@@ -308,12 +354,12 @@ definitions:
         type: string
       id:
         type: integer
-      isEnabled:
-        description: 版本状态，用于标识版本是否可用
-        type: integer
       releaseDate:
         description: 版本发布时间
         type: string
+      status:
+        description: 版本状态，用于标识版本是否可用
+        type: integer
       versionCode:
         description: 版本号，遵循语义化版本规范
         type: string
@@ -325,35 +371,6 @@ info:
   title: Nexus Core API
   version: 0.0.1
 paths:
-  /access/auto-bind:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Auto Bind
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.AutoBindCommand'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Client auto bind
-      tags:
-      - access
   /access/heartbeat:
     post:
       consumes:
@@ -383,20 +400,17 @@ paths:
       summary: Client heartbeat
       tags:
       - access
-  /license/batchCreate:
+  /access/register:
     post:
       consumes:
       - application/json
-      description: Create multiple licenses in batch
       parameters:
-      - description: Create Licenses
+      - description: Register
         in: body
         name: body
         required: true
         schema:
-          items:
-            $ref: '#/definitions/dto.CreateLicenseCommand'
-          type: array
+          $ref: '#/definitions/dto.RegisterCommand'
       produces:
       - application/json
       responses:
@@ -412,10 +426,220 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.CommonResponse'
-      summary: Batch create licenses
+      summary: Client auto bind
+      tags:
+      - access
+  /control-commands:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Control Command
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateControlCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Create a control command
+      tags:
+      - control-commands
+  /control-commands/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Command ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get a control command
+      tags:
+      - control-commands
+  /control-services:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: query
+        name: product_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: List control services
+      tags:
+      - control-services
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create Control Service
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateControlServiceCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Create a control service
+      tags:
+      - control-services
+  /control-services/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Service ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get a control service
+      tags:
+      - control-services
+  /license-cleanups/invalid:
+    delete:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Delete expired licenses
       tags:
       - licenses
-  /license/create:
+  /license-keys/{key}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: License Key
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get license by key
+      tags:
+      - licenses
+  /licenses:
     post:
       consumes:
       - application/json
@@ -445,8 +669,8 @@ paths:
       summary: Create a license
       tags:
       - licenses
-  /license/deleteExpired:
-    post:
+  /licenses/{id}:
+    delete:
       consumes:
       - application/json
       produces:
@@ -463,13 +687,12 @@ paths:
       summary: Delete expired licenses
       tags:
       - licenses
-  /license/getByID:
     get:
       consumes:
       - application/json
       parameters:
       - description: License ID
-        in: query
+        in: path
         name: id
         required: true
         type: integer
@@ -491,36 +714,7 @@ paths:
       summary: Get license by ID
       tags:
       - licenses
-  /license/getByKey:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: License Key
-        in: query
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Get license by key
-      tags:
-      - licenses
-  /license/update:
-    post:
+    patch:
       consumes:
       - application/json
       parameters:
@@ -548,7 +742,65 @@ paths:
       summary: Update license
       tags:
       - licenses
-  /license/updateStatus:
+  /licenses/{id}/bindings:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: CleanLicenseBindings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateLicenseCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Remove all node bindings of a license
+      tags:
+      - licenses
+  /licenses/{id}/renew:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: renew License
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateLicenseCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: renew license
+      tags:
+      - licenses
+  /licenses/{id}/revoke:
     post:
       consumes:
       - application/json
@@ -577,7 +829,35 @@ paths:
       summary: Update license status
       tags:
       - licenses
-  /node/addBinding:
+  /node-bindings:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update binding status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UnbindCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Update binding status
+      tags:
+      - nodes
     post:
       consumes:
       - application/json
@@ -606,28 +886,22 @@ paths:
       summary: Add node binding
       tags:
       - nodes
-  /node/batchCreate:
-    post:
+  /node-capabilities:
+    get:
       consumes:
       - application/json
       parameters:
-      - description: Create Nodes
-        in: body
-        name: body
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/dto.CreateNodeCommand'
-          type: array
+      - description: Node ID
+        in: query
+        name: node_id
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/entity.Node'
-            type: array
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
@@ -636,10 +910,129 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/api.CommonResponse'
-      summary: Batch create nodes
+      summary: List node capabilities
+      tags:
+      - node-capabilities
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Report Node Capability
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReportNodeCapabilityCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Report node capability
+      tags:
+      - node-capabilities
+  /node-cleanups/unbound:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Delete a node
       tags:
       - nodes
-  /node/create:
+  /node-control/ws:
+    get:
+      consumes:
+      - application/json
+      description: Nodes connect to this endpoint, then the server can dispatch websocket
+        control commands by node_id.
+      parameters:
+      - description: Node ID
+        in: query
+        name: node_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Connect node control websocket
+      tags:
+      - node-control
+  /node-devices/{device_code}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device Code
+        in: query
+        name: device_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Node'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get node by device code
+      tags:
+      - nodes
+  /nodes:
     post:
       consumes:
       - application/json
@@ -668,8 +1061,8 @@ paths:
       summary: Create a node
       tags:
       - nodes
-  /node/delete:
-    post:
+  /nodes/{id}:
+    delete:
       consumes:
       - application/json
       parameters:
@@ -697,16 +1090,15 @@ paths:
       summary: Delete a node
       tags:
       - nodes
-  /node/getByDevice:
     get:
       consumes:
       - application/json
       parameters:
-      - description: Device Code
-        in: query
-        name: device_code
+      - description: Node ID
+        in: path
+        name: id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -722,16 +1114,16 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/api.CommonResponse'
-      summary: Get node by device code
+      summary: Get node by ID
       tags:
       - nodes
-  /node/getByID:
-    get:
+  /nodes/{id}/ban:
+    post:
       consumes:
       - application/json
       parameters:
       - description: Node ID
-        in: query
+        in: path
         name: id
         required: true
         type: integer
@@ -741,29 +1133,28 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.Node'
+            $ref: '#/definitions/api.CommonResponse'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/api.CommonResponse'
-        "504":
-          description: Gateway Timeout
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/api.CommonResponse'
-      summary: Get node by ID
+      summary: Ban a node
       tags:
       - nodes
-  /node/unbind:
+  /nodes/{id}/unban:
     post:
       consumes:
       - application/json
       parameters:
-      - description: Force unbind command
-        in: body
-        name: body
+      - description: Node ID
+        in: path
+        name: id
         required: true
-        schema:
-          $ref: '#/definitions/dto.ForceUnbindCommand'
+        type: integer
       produces:
       - application/json
       responses:
@@ -775,76 +1166,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/api.CommonResponse'
-      summary: Force unbind a node binding using node and license IDs
+      summary: Unban a node
       tags:
       - nodes
-  /node/updateBindingStatus:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Update binding status
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateBindingStatusCommand'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Update binding status
-      tags:
-      - nodes
-  /product/batchCreate:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Create Products
-        in: body
-        name: body
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/dto.CreateProductCommand'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/entity.Product'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Batch create products
-      tags:
-      - products
-  /product/create:
+  /products:
     post:
       consumes:
       - application/json
@@ -873,7 +1202,92 @@ paths:
       summary: Create a product
       tags:
       - products
-  /product/createVersion:
+  /products/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: '{\'
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Delete product
+      tags:
+      - products
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Get product by ID
+      tags:
+      - products
+  /products/min-supported-version:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Set Min Version
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateMinVersionCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Set min supported version
+      tags:
+      - products
+  /products/versions:
     post:
       consumes:
       - application/json
@@ -902,36 +1316,7 @@ paths:
       summary: Create a product version
       tags:
       - products
-  /product/delete:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: '{\'
-        in: body
-        name: body
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Delete product
-      tags:
-      - products
-  /product/deprecateVersion:
+  /products/versions/deprecate:
     post:
       consumes:
       - application/json
@@ -960,89 +1345,25 @@ paths:
       summary: Deprecate a version
       tags:
       - products
-  /product/getByID:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: Product ID
-        in: query
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/entity.Product'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Get product by ID
-      tags:
-      - products
-  /product/getByName:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: Product Name
-        in: query
-        name: name
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/entity.Product'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Get product by name
-      tags:
-      - products
-  /product/setMinVersion:
+  /products/versions/release:
     post:
       consumes:
       - application/json
       parameters:
-      - description: Set Min Version
+      - description: Release New Version
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdateMinVersionCommand'
+          $ref: '#/definitions/dto.ReleaseNewVersionCommand'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/api.CommonResponse'
-      summary: Set min supported version
+            $ref: '#/definitions/entity.Version'
+      summary: Release a new version
       tags:
       - products
 schemes:

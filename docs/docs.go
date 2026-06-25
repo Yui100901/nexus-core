@@ -15,51 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/access/auto-bind": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "access"
-                ],
-                "summary": "Client auto bind",
-                "parameters": [
-                    {
-                        "description": "Auto Bind",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.AutoBindCommand"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/access/heartbeat": {
             "post": {
                 "consumes": [
@@ -105,9 +60,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/license/batchCreate": {
+        "/access/register": {
             "post": {
-                "description": "Create multiple licenses in batch",
                 "consumes": [
                     "application/json"
                 ],
@@ -115,20 +69,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "licenses"
+                    "access"
                 ],
-                "summary": "Batch create licenses",
+                "summary": "Client auto bind",
                 "parameters": [
                     {
-                        "description": "Create Licenses",
+                        "description": "Register",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.CreateLicenseCommand"
-                            }
+                            "$ref": "#/definitions/dto.RegisterCommand"
                         }
                     }
                 ],
@@ -154,7 +105,330 @@ const docTemplate = `{
                 }
             }
         },
-        "/license/create": {
+        "/control-commands": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "control-commands"
+                ],
+                "summary": "Create a control command",
+                "parameters": [
+                    {
+                        "description": "Create Control Command",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateControlCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/control-commands/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "control-commands"
+                ],
+                "summary": "Get a control command",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Control Command ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/control-services": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "control-services"
+                ],
+                "summary": "List control services",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "product_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "control-services"
+                ],
+                "summary": "Create a control service",
+                "parameters": [
+                    {
+                        "description": "Create Control Service",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateControlServiceCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/control-services/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "control-services"
+                ],
+                "summary": "Get a control service",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Control Service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/license-cleanups/invalid": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Delete expired licenses",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/license-keys/{key}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Get license by key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "License Key",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/licenses": {
             "post": {
                 "description": "Create a new license with scopes",
                 "consumes": [
@@ -200,8 +474,49 @@ const docTemplate = `{
                 }
             }
         },
-        "/license/deleteExpired": {
-            "post": {
+        "/licenses/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Get license by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "License ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -226,96 +541,8 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/license/getByID": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "licenses"
-                ],
-                "summary": "Get license by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "License ID",
-                        "name": "id",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/license/getByKey": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "licenses"
-                ],
-                "summary": "Get license by key",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "License Key",
-                        "name": "key",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/license/update": {
-            "post": {
+            },
+            "patch": {
                 "consumes": [
                     "application/json"
                 ],
@@ -359,7 +586,97 @@ const docTemplate = `{
                 }
             }
         },
-        "/license/updateStatus": {
+        "/licenses/{id}/bindings": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Remove all node bindings of a license",
+                "parameters": [
+                    {
+                        "description": "CleanLicenseBindings",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateLicenseCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/licenses/{id}/renew": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "renew license",
+                "parameters": [
+                    {
+                        "description": "renew License",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateLicenseCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/licenses/{id}/revoke": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -404,7 +721,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/addBinding": {
+        "/node-bindings": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -447,10 +764,8 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/node/batchCreate": {
-            "post": {
+            },
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -460,18 +775,15 @@ const docTemplate = `{
                 "tags": [
                     "nodes"
                 ],
-                "summary": "Batch create nodes",
+                "summary": "Update binding status",
                 "parameters": [
                     {
-                        "description": "Create Nodes",
+                        "description": "Update binding status",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.CreateNodeCommand"
-                            }
+                            "$ref": "#/definitions/dto.UnbindCommand"
                         }
                     }
                 ],
@@ -479,10 +791,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entity.Node"
-                            }
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
@@ -500,7 +809,230 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/create": {
+        "/node-capabilities": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "node-capabilities"
+                ],
+                "summary": "List node capabilities",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "node_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "node-capabilities"
+                ],
+                "summary": "Report node capability",
+                "parameters": [
+                    {
+                        "description": "Report Node Capability",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReportNodeCapabilityCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/node-cleanups/unbound": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Delete a node",
+                "parameters": [
+                    {
+                        "description": "{\\",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/node-control/ws": {
+            "get": {
+                "description": "Nodes connect to this endpoint, then the server can dispatch websocket control commands by node_id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "node-control"
+                ],
+                "summary": "Connect node control websocket",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "node_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/node-devices/{device_code}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Get node by device code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device Code",
+                        "name": "device_code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entity.Node"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/nodes": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -545,8 +1077,49 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/delete": {
-            "post": {
+        "/nodes/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Get node by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entity.Node"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -590,8 +1163,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/getByDevice": {
-            "get": {
+        "/nodes/{id}/ban": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -601,13 +1174,13 @@ const docTemplate = `{
                 "tags": [
                     "nodes"
                 ],
-                "summary": "Get node by device code",
+                "summary": "Ban a node",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Device Code",
-                        "name": "device_code",
-                        "in": "query",
+                        "type": "integer",
+                        "description": "Node ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -615,7 +1188,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Node"
+                            "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
                     "400": {
@@ -633,8 +1206,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/getByID": {
-            "get": {
+        "/nodes/{id}/unban": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -644,13 +1217,13 @@ const docTemplate = `{
                 "tags": [
                     "nodes"
                 ],
-                "summary": "Get node by ID",
+                "summary": "Unban a node",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "Node ID",
                         "name": "id",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -658,51 +1231,6 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Node"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "504": {
-                        "description": "Gateway Timeout",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/node/unbind": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "nodes"
-                ],
-                "summary": "Force unbind a node binding using node and license IDs",
-                "parameters": [
-                    {
-                        "description": "Force unbind command",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.ForceUnbindCommand"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
                             "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
@@ -712,8 +1240,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/api.CommonResponse"
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/api.CommonResponse"
                         }
@@ -721,103 +1249,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/node/updateBindingStatus": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "nodes"
-                ],
-                "summary": "Update binding status",
-                "parameters": [
-                    {
-                        "description": "Update binding status",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateBindingStatusCommand"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/product/batchCreate": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "products"
-                ],
-                "summary": "Batch create products",
-                "parameters": [
-                    {
-                        "description": "Create Products",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.CreateProductCommand"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/entity.Product"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/product/create": {
+        "/products": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -862,7 +1294,52 @@ const docTemplate = `{
                 }
             }
         },
-        "/product/createVersion": {
+        "/products/min-supported-version": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Set min supported version",
+                "parameters": [
+                    {
+                        "description": "Set Min Version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateMinVersionCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/api.CommonResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/versions": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -907,52 +1384,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/product/delete": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "products"
-                ],
-                "summary": "Delete product",
-                "parameters": [
-                    {
-                        "description": "{\\",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/product/deprecateVersion": {
+        "/products/versions/deprecate": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -997,7 +1429,40 @@ const docTemplate = `{
                 }
             }
         },
-        "/product/getByID": {
+        "/products/versions/release": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Release a new version",
+                "parameters": [
+                    {
+                        "description": "Release New Version",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReleaseNewVersionCommand"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/entity.Version"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -1014,7 +1479,7 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Product ID",
                         "name": "id",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -1038,10 +1503,8 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/product/getByName": {
-            "get": {
+            },
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1051,58 +1514,15 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Get product by name",
+                "summary": "Delete product",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Product Name",
-                        "name": "name",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entity.Product"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/api.CommonResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/product/setMinVersion": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "products"
-                ],
-                "summary": "Set min supported version",
-                "parameters": [
-                    {
-                        "description": "Set Min Version",
+                        "description": "{\\",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.UpdateMinVersionCommand"
+                            "type": "object"
                         }
                     }
                 ],
@@ -1151,8 +1571,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "license_id",
-                "node_id",
-                "product_id"
+                "node_id"
             ],
             "properties": {
                 "license_id": {
@@ -1162,36 +1581,55 @@ const docTemplate = `{
                 "node_id": {
                     "description": "节点ID",
                     "type": "integer"
-                },
-                "product_id": {
-                    "description": "产品ID",
-                    "type": "integer"
                 }
             }
         },
-        "dto.AutoBindCommand": {
+        "dto.CreateControlCommand": {
             "type": "object",
             "required": [
-                "device_code",
-                "license_key",
-                "product_id",
-                "version_code"
+                "node_id",
+                "payload",
+                "service_identifier"
             ],
             "properties": {
-                "device_code": {
-                    "description": "设备唯一识别码",
-                    "type": "string"
-                },
-                "license_key": {
-                    "description": "许可证",
-                    "type": "string"
-                },
-                "product_id": {
-                    "description": "产品ID",
+                "node_id": {
                     "type": "integer"
                 },
-                "version_code": {
-                    "description": "产品版本号",
+                "payload": {
+                    "type": "object"
+                },
+                "service_identifier": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateControlServiceCommand": {
+            "type": "object",
+            "required": [
+                "identifier",
+                "name",
+                "service_type"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "input_schema": {
+                    "type": "object"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "output_schema": {
+                    "type": "object"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "service_type": {
                     "type": "string"
                 }
             }
@@ -1200,9 +1638,7 @@ const docTemplate = `{
             "description": "Command to create a license",
             "type": "object",
             "required": [
-                "max_concurrent",
-                "max_nodes",
-                "scope_list",
+                "product_id",
                 "validity_hours"
             ],
             "properties": {
@@ -1214,16 +1650,13 @@ const docTemplate = `{
                     "description": "最大节点数",
                     "type": "integer"
                 },
+                "product_id": {
+                    "description": "授权范围列表",
+                    "type": "integer"
+                },
                 "remark": {
                     "description": "备注",
                     "type": "string"
-                },
-                "scope_list": {
-                    "description": "授权范围列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.ScopeDTO"
-                    }
                 },
                 "validity_hours": {
                     "description": "有效时长（小时）",
@@ -1242,7 +1675,7 @@ const docTemplate = `{
                     "description": "设备唯一识别码",
                     "type": "string"
                 },
-                "meta_info": {
+                "metadata": {
                     "description": "设备元信息",
                     "type": "string"
                 }
@@ -1285,6 +1718,14 @@ const docTemplate = `{
                     "description": "发布时间",
                     "type": "string"
                 },
+                "release_method": {
+                    "description": "0立即发布，1定时发布，2暂不发布",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ReleaseMethod"
+                        }
+                    ]
+                },
                 "version_code": {
                     "description": "版本号",
                     "type": "string"
@@ -1302,24 +1743,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "version_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.ForceUnbindCommand": {
-            "description": "Command to force unbind a node binding using node and license IDs",
-            "type": "object",
-            "required": [
-                "license_id",
-                "node_id"
-            ],
-            "properties": {
-                "license_id": {
-                    "description": "许可证ID",
-                    "type": "integer"
-                },
-                "node_id": {
-                    "description": "节点ID",
                     "type": "integer"
                 }
             }
@@ -1352,6 +1775,56 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RegisterCommand": {
+            "type": "object",
+            "required": [
+                "device_code",
+                "license_key",
+                "product_id",
+                "version_code"
+            ],
+            "properties": {
+                "device_code": {
+                    "description": "设备唯一识别码",
+                    "type": "string"
+                },
+                "license_key": {
+                    "description": "许可证",
+                    "type": "string"
+                },
+                "product_id": {
+                    "description": "产品ID",
+                    "type": "integer"
+                },
+                "version_code": {
+                    "description": "产品版本号",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ReleaseMethod": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2
+            ],
+            "x-enum-comments": {
+                "ReleaseHold": "2 暂不发布",
+                "ReleaseImmediate": "0 立即发布",
+                "ReleaseScheduled": "1 定时发布"
+            },
+            "x-enum-descriptions": [
+                "0 立即发布",
+                "1 定时发布",
+                "2 暂不发布"
+            ],
+            "x-enum-varnames": [
+                "ReleaseImmediate",
+                "ReleaseScheduled",
+                "ReleaseHold"
+            ]
+        },
         "dto.ReleaseNewVersionCommand": {
             "type": "object",
             "required": [
@@ -1373,37 +1846,46 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ScopeDTO": {
-            "description": "Scope transfer object",
+        "dto.ReportNodeCapabilityCommand": {
             "type": "object",
             "required": [
-                "product_id"
+                "node_id",
+                "protocol",
+                "schema",
+                "service_identifier"
             ],
             "properties": {
-                "feature_mask": {
-                    "description": "功能模块掩码",
+                "endpoint": {
                     "type": "string"
                 },
-                "product_id": {
-                    "description": "产品ID",
+                "node_id": {
                     "type": "integer"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "schema": {
+                    "type": "object"
+                },
+                "service_identifier": {
+                    "type": "string"
                 }
             }
         },
-        "dto.UpdateBindingStatusCommand": {
+        "dto.UnbindCommand": {
             "description": "Command to update binding status",
             "type": "object",
             "required": [
-                "id",
-                "status"
+                "license_id",
+                "node_id"
             ],
             "properties": {
-                "id": {
-                    "description": "绑定ID",
+                "license_id": {
+                    "description": "许可证ID",
                     "type": "integer"
                 },
-                "status": {
-                    "description": "新状态",
+                "node_id": {
+                    "description": "节点ID",
                     "type": "integer"
                 }
             }
@@ -1411,46 +1893,34 @@ const docTemplate = `{
         "dto.UpdateLicenseCommand": {
             "description": "Command to update a license",
             "type": "object",
-            "required": [
-                "id",
-                "license_key"
-            ],
             "properties": {
+                "feature_mask": {
+                    "type": "string"
+                },
                 "id": {
                     "description": "许可证ID",
                     "type": "integer"
                 },
-                "license_key": {
-                    "description": "许可证密钥",
-                    "type": "string"
+                "max_concurrent": {
+                    "type": "integer"
+                },
+                "max_nodes": {
+                    "type": "integer"
                 },
                 "remark": {
                     "description": "备注",
                     "type": "string"
-                },
-                "status": {
-                    "description": "状态",
-                    "type": "integer"
-                },
-                "validity_hours": {
-                    "description": "有效时长（小时）",
-                    "type": "integer"
                 }
             }
         },
         "dto.UpdateLicenseStatusCommand": {
             "type": "object",
             "required": [
-                "id",
-                "status"
+                "id"
             ],
             "properties": {
                 "id": {
                     "description": "许可证ID",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "新状态",
                     "type": "integer"
                 }
             }
@@ -1473,13 +1943,28 @@ const docTemplate = `{
                 }
             }
         },
+        "entity.BindingStatus": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-comments": {
+                "BindingStatusBound": "1 绑定",
+                "BindingStatusUnbound": "0 未绑定"
+            },
+            "x-enum-descriptions": [
+                "0 未绑定",
+                "1 绑定"
+            ],
+            "x-enum-varnames": [
+                "BindingStatusUnbound",
+                "BindingStatusBound"
+            ]
+        },
         "entity.Node": {
             "type": "object",
             "properties": {
-                "banned": {
-                    "description": "是否被封禁，0 = 未封禁，1 = 已封禁",
-                    "type": "integer"
-                },
                 "deviceCode": {
                     "description": "设备唯一识别码，用于区分不同设备",
                     "type": "string"
@@ -1491,6 +1976,10 @@ const docTemplate = `{
                 "metadata": {
                     "description": "设备元信息，包含操作系统、版本等信息",
                     "type": "string"
+                },
+                "status": {
+                    "description": "是否被封禁，0 = 未封禁，1 = 已封禁",
+                    "type": "integer"
                 }
             }
         },
@@ -1499,10 +1988,6 @@ const docTemplate = `{
             "properties": {
                 "id": {
                     "description": "绑定关系唯一标识符",
-                    "type": "integer"
-                },
-                "isBound": {
-                    "description": "绑定状态，表示当前绑定的状态",
                     "type": "integer"
                 },
                 "licenseID": {
@@ -1516,6 +2001,14 @@ const docTemplate = `{
                 "productID": {
                     "description": "关联的产品ID，指向Product实体",
                     "type": "integer"
+                },
+                "status": {
+                    "description": "绑定状态，表示当前绑定的状态",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entity.BindingStatus"
+                        }
+                    ]
                 }
             }
         },
@@ -1531,7 +2024,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "minSupportedVersionID": {
-                    "description": "最低支持的版本ID，用于版本兼容性检查",
+                    "description": "最低支持的版本ID，用于版本兼容性检查，按时间，在此之前发布的版本将无法使用",
                     "type": "integer"
                 },
                 "name": {
@@ -1557,13 +2050,13 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "isEnabled": {
-                    "description": "版本状态，用于标识版本是否可用",
-                    "type": "integer"
-                },
                 "releaseDate": {
                     "description": "版本发布时间",
                     "type": "string"
+                },
+                "status": {
+                    "description": "版本状态，用于标识版本是否可用",
+                    "type": "integer"
                 },
                 "versionCode": {
                     "description": "版本号，遵循语义化版本规范",
