@@ -1,6 +1,9 @@
 package service
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type AccessCommand struct {
 	DeviceCode  string
@@ -127,4 +130,61 @@ type ReleaseNewVersionCommand struct {
 type UpdateMinVersionCommand struct {
 	ProductID uint
 	VersionID uint
+}
+
+type CreateControlServiceCommand struct {
+	ProductID    *uint
+	Identifier   string
+	Name         string
+	Description  *string
+	ServiceType  string
+	InputSchema  json.RawMessage
+	OutputSchema json.RawMessage
+}
+
+type ControlServiceData struct {
+	ID           uint            `json:"id"`
+	ProductID    *uint           `json:"product_id,omitempty"`
+	Identifier   string          `json:"identifier"`
+	Name         string          `json:"name"`
+	Description  *string         `json:"description,omitempty"`
+	ServiceType  string          `json:"service_type"`
+	InputSchema  json.RawMessage `json:"input_schema"`
+	OutputSchema json.RawMessage `json:"output_schema"`
+	Status       int             `json:"status"`
+}
+
+type ReportNodeCapabilityCommand struct {
+	NodeID            uint
+	ServiceIdentifier string
+	Schema            json.RawMessage
+	Protocol          string
+	Endpoint          *string
+}
+
+type NodeCapabilityData struct {
+	ID                uint            `json:"id"`
+	NodeID            uint            `json:"node_id"`
+	ServiceIdentifier string          `json:"service_identifier"`
+	Schema            json.RawMessage `json:"schema"`
+	Protocol          string          `json:"protocol"`
+	Endpoint          *string         `json:"endpoint,omitempty"`
+	Status            int             `json:"status"`
+}
+
+type CreateControlCommand struct {
+	NodeID            uint
+	ServiceIdentifier string
+	Payload           json.RawMessage
+}
+
+type ControlCommandData struct {
+	ID                uint            `json:"id"`
+	NodeID            uint            `json:"node_id"`
+	ServiceIdentifier string          `json:"service_identifier"`
+	Payload           json.RawMessage `json:"payload"`
+	ConvertedPayload  json.RawMessage `json:"converted_payload"`
+	Status            int             `json:"status"`
+	Result            json.RawMessage `json:"result"`
+	ErrorMessage      *string         `json:"error_message,omitempty"`
 }

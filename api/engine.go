@@ -49,6 +49,7 @@ func RegisterDefaultRoutes() {
 	NewProductController().RegisterRoutes(WebEngine)
 	NewNodeController().RegisterRoutes(WebEngine)
 	NewAccessController().RegisterRoutes(WebEngine)
+	NewControlController().RegisterRoutes(WebEngine)
 
 	// serve swagger UI under /swagger when enabled in config
 	cfg := global.GetConfig()

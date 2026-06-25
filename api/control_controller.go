@@ -1,0 +1,244 @@
+package api
+
+import (
+	"nexus-core/api/dto"
+	"nexus-core/domain/service"
+
+	"github.com/gin-gonic/gin"
+)
+
+type ControlController struct {
+	cs *service.ControlService
+}
+
+func NewControlController() *ControlController {
+	return &ControlController{cs: service.NewControlService()}
+}
+
+func (c *ControlController) RegisterRoutes(r *gin.Engine) {
+	g := r.Group("/control-services")
+	{
+		g.POST("", c.CreateControlService)
+		g.GET("", c.ListControlServices)
+		g.GET("/:id", c.GetControlServiceByID)
+	}
+
+	capabilities := r.Group("/node-capabilities")
+	{
+		capabilities.POST("", c.ReportNodeCapability)
+		capabilities.GET("", c.ListNodeCapabilities)
+	}
+
+	commands := r.Group("/control-commands")
+	{
+		commands.POST("", c.CreateControlCommand)
+		commands.GET("/:id", c.GetControlCommandByID)
+	}
+}
+
+// CreateControlService 创建控制服务定义
+// @Summary Create a control service
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param body body dto.CreateControlServiceCommand true "Create Control Service"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 409 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services [post]
+func (c *ControlController) CreateControlService(ctx *gin.Context) {
+	var cmd dto.CreateControlServiceCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.CreateControlService(ctx.Request.Context(), service.CreateControlServiceCommand{
+		ProductID:    cmd.ProductID,
+		Identifier:   cmd.Identifier,
+		Name:         cmd.Name,
+		Description:  cmd.Description,
+		ServiceType:  cmd.ServiceType,
+		InputSchema:  cmd.InputSchema,
+		OutputSchema: cmd.OutputSchema,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// GetControlServiceByID 查询控制服务定义
+// @Summary Get a control service
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Service ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services/{id} [get]
+func (c *ControlController) GetControlServiceByID(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	data, err := c.cs.GetControlServiceByID(ctx.Request.Context(), id)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// ListControlServices 查询控制服务列表
+// @Summary List control services
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param product_id query uint false "Product ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services [get]
+func (c *ControlController) ListControlServices(ctx *gin.Context) {
+	var productID *uint
+	if ctx.Query("product_id") != "" {
+		id, err := UintParamOrQuery(ctx, "product_id")
+		if err != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		productID = &id
+	}
+
+	data, err := c.cs.ListControlServices(ctx.Request.Context(), productID)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// ReportNodeCapability 上报节点控制能力
+// @Summary Report node capability
+// @Tags node-capabilities
+// @Accept json
+// @Produce json
+// @Param body body dto.ReportNodeCapabilityCommand true "Report Node Capability"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /node-capabilities [post]
+func (c *ControlController) ReportNodeCapability(ctx *gin.Context) {
+	var cmd dto.ReportNodeCapabilityCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.ReportNodeCapability(ctx.Request.Context(), service.ReportNodeCapabilityCommand{
+		NodeID:            cmd.NodeID,
+		ServiceIdentifier: cmd.ServiceIdentifier,
+		Schema:            cmd.Schema,
+		Protocol:          cmd.Protocol,
+		Endpoint:          cmd.Endpoint,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// ListNodeCapabilities 查询节点控制能力
+// @Summary List node capabilities
+// @Tags node-capabilities
+// @Accept json
+// @Produce json
+// @Param node_id query uint false "Node ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /node-capabilities [get]
+func (c *ControlController) ListNodeCapabilities(ctx *gin.Context) {
+	var nodeID uint
+	if ctx.Query("node_id") != "" {
+		id, err := UintParamOrQuery(ctx, "node_id")
+		if err != nil {
+			BadRequest(ctx, err.Error())
+			return
+		}
+		nodeID = id
+	}
+
+	data, err := c.cs.ListNodeCapabilities(ctx.Request.Context(), nodeID)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// CreateControlCommand 创建并下发控制指令
+// @Summary Create a control command
+// @Tags control-commands
+// @Accept json
+// @Produce json
+// @Param body body dto.CreateControlCommand true "Create Control Command"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 403 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-commands [post]
+func (c *ControlController) CreateControlCommand(ctx *gin.Context) {
+	var cmd dto.CreateControlCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.CreateControlCommand(ctx.Request.Context(), service.CreateControlCommand{
+		NodeID:            cmd.NodeID,
+		ServiceIdentifier: cmd.ServiceIdentifier,
+		Payload:           cmd.Payload,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// GetControlCommandByID 查询控制指令结果
+// @Summary Get a control command
+// @Tags control-commands
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Command ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-commands/{id} [get]
+func (c *ControlController) GetControlCommandByID(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.GetControlCommandByID(ctx.Request.Context(), id)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
