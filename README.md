@@ -345,6 +345,32 @@ go run ./cmd/demo-product \
   -heartbeat-interval 1s
 ```
 
+## 协议转换测试产品
+
+仓库还提供了一个更完整的协议转换测试客户端，用于验证服务端控制链路的字段映射、类型转换、默认值、约束校验和输出转换。
+
+先启动服务端：
+
+```bash
+go run .
+```
+
+再运行协议转换测试：
+
+```bash
+go run ./cmd/protocol-demo-product -server http://localhost:8080
+```
+
+它会自动执行以下流程：
+
+1. 创建测试产品、版本、License。
+2. 注册测试节点并发送心跳。
+3. 创建 HTTP 控制服务和复杂节点 Schema。
+4. 启动本地 HTTP 节点接收端，验证服务端转换后的 payload。
+5. 构造非法 payload，验证转换约束会拒绝请求。
+6. 创建 WebSocket 控制服务，模拟节点长连接，验证 WebSocket 下发消息转换。
+7. 验证节点返回结果会按控制服务 `output_schema` 转换。
+
 ## 节点控制接口示例
 
 控制服务、节点能力上报、HTTP/MQTT/WebSocket 下发和结果查询的最小调用顺序见 [docs/control-examples.md](docs/control-examples.md)。

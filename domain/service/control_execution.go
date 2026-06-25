@@ -21,7 +21,9 @@ import (
 const (
 	NodeCapabilityStatusEnabled  = 1
 	NodeCapabilityStatusDisabled = 2
+)
 
+const (
 	ControlCommandStatusPending = iota
 	ControlCommandStatusSent
 	ControlCommandStatusRunning

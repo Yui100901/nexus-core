@@ -184,3 +184,13 @@ curl http://localhost:8080/control-commands/10
 - `3`：success，执行成功。
 - `4`：failed，执行失败。
 - `5`：timeout，执行超时。
+
+## 8. 协议转换测试产品
+
+需要完整验证字段映射、类型转换、默认值、枚举、范围、格式校验和输出转换时，可以使用协议转换测试产品：
+
+```bash
+go run ./cmd/protocol-demo-product -server http://localhost:8080
+```
+
+该测试产品会自动创建产品、License、节点和控制服务，并分别通过 HTTP 和 WebSocket 模拟节点侧协议，验证服务端转换后的节点 payload。
