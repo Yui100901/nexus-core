@@ -71,6 +71,13 @@ func (s *OnlineStat) AddOnlineNode(id string) {
 	s.OnlineMap[id] = onlineNodeKey
 }
 
+func (s *OnlineStat) HasOnlineNode(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.OnlineMap[id]
+	return ok
+}
+
 func (s *OnlineStat) RemoveOnlineNode(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

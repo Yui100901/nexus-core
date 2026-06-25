@@ -208,13 +208,17 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, ErrConflict("binding not bound")
 	}
 
-	// 并发检查
+	onlineKey := fmt.Sprintf("%d|%s|%s", productID, node.DeviceCode, license.LicenseKey)
+
+	// 并发检查，同一个节点刷新心跳不占用新的并发名额。
 	totalConcurrent := monitor.GlobalStat.GetConcurrentByLicenseForProduct(license.LicenseKey, productID)
+	if monitor.GlobalStat.HasOnlineNode(onlineKey) {
+		totalConcurrent--
+	}
 	if !license.ValidateConcurrentLimit(totalConcurrent) {
 		return nil, ErrConflict("maximum concurrent exceeded")
 	}
 
-	onlineKey := fmt.Sprintf("%d|%s|%s", productID, node.DeviceCode, license.LicenseKey)
 	monitor.GlobalMonitor.HeartBeat(onlineKey, time.Second*60)
 	monitor.GlobalStat.AddOnlineNode(onlineKey)
 

@@ -237,6 +237,7 @@ func (s *NodeService) UnbindByID(ctx context.Context, cmd UnbindCommand) error {
 		}
 		if err := tx.Model(&binding).Updates(map[string]interface{}{
 			"status":     entity.BindingStatusUnbound,
+			"is_bound":   false,
 			"unbound_at": time.Now(),
 		}).Error; err != nil {
 			return WrapInternal("update binding failed", err)

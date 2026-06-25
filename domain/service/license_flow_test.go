@@ -158,6 +158,14 @@ func TestLicenseMainFlow(t *testing.T) {
 	if !heartbeatResult.Online {
 		t.Fatal("heartbeat should mark node online")
 	}
+
+	heartbeatResult, err = fixture.accessService.Heartbeat(fixture.ctx, "device-a", fixture.product.ID, "1.0.0", fixture.license.LicenseKey)
+	if err != nil {
+		t.Fatalf("repeated heartbeat from same node should refresh online state: %v", err)
+	}
+	if !heartbeatResult.Online {
+		t.Fatal("repeated heartbeat should keep node online")
+	}
 }
 
 func TestBindingLimitAndUnbindRecovery(t *testing.T) {

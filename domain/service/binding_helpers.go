@@ -33,6 +33,7 @@ func bindNodeToLicense(ctx context.Context, tx *gorm.DB, nodeID uint, license *e
 			LicenseID: license.ID,
 			ProductID: productID,
 			Status:    int(entity.BindingStatusBound),
+			IsBound:   true,
 			BoundAt:   &now,
 		}
 		if err := tx.WithContext(ctx).Create(&binding).Error; err != nil {
@@ -42,6 +43,7 @@ func bindNodeToLicense(ctx context.Context, tx *gorm.DB, nodeID uint, license *e
 		if err := tx.WithContext(ctx).Model(&binding).Updates(map[string]interface{}{
 			"product_id": productID,
 			"status":     entity.BindingStatusBound,
+			"is_bound":   true,
 			"bound_at":   &now,
 			"unbound_at": nil,
 			"updated_at": now,

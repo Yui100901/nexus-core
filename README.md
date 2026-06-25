@@ -310,3 +310,37 @@ Swagger 地址：
 ```text
 http://localhost:8080/swagger/index.html
 ```
+
+## 简易测试产品
+
+仓库提供了一个最小测试客户端，用于快速验证服务端主链路。
+
+先启动服务端：
+
+```bash
+go run .
+```
+
+再运行测试产品：
+
+```bash
+go run ./cmd/demo-product
+```
+
+它会自动执行以下流程：
+
+1. 创建一个测试产品。
+2. 创建并立即发布 `1.0.0` 版本。
+3. 创建 License。
+4. 使用 License 注册测试节点。
+5. 连续发送心跳。
+
+常用参数：
+
+```bash
+go run ./cmd/demo-product \
+  -server http://localhost:8080 \
+  -device demo-device-001 \
+  -heartbeats 3 \
+  -heartbeat-interval 1s
+```

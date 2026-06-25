@@ -109,6 +109,7 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 			ReleaseDate: cmd.ReleaseDate,
 			Description: cmd.Description,
 			Status:      int(entity.VersionStatusUnreleased), //默认未发布
+			IsEnabled:   true,
 		}
 		if err := productVersionRepo.Create(ctx, tx, newVersion); err != nil {
 			return err
