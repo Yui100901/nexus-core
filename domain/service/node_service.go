@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // NodeService 提供节点相关的业务逻辑服务
@@ -25,7 +25,7 @@ func NewNodeService() *NodeService {
 
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
-func (s *NodeService) CreateNode(cmd dto.CreateNodeCommand) (*dto.NodeData, error) {
+func (s *NodeService) CreateNode(cmd CreateNodeCommand) (*NodeData, error) {
 	n := &model.Node{
 		DeviceCode: cmd.DeviceCode,
 		Metadata:   datatypes.JSON(*cmd.Metadata),
@@ -36,7 +36,7 @@ func (s *NodeService) CreateNode(cmd dto.CreateNodeCommand) (*dto.NodeData, erro
 		return nil, err
 	}
 	metadata := string(n.Metadata)
-	return &dto.NodeData{
+	return &NodeData{
 		ID:         n.ID,
 		DeviceCode: n.DeviceCode,
 		Status:     n.Status,
@@ -44,16 +44,8 @@ func (s *NodeService) CreateNode(cmd dto.CreateNodeCommand) (*dto.NodeData, erro
 	}, nil
 }
 
-// BatchCreateNode 批量创建节点
-// 支持一次性创建多个节点
-//func (s *NodeService) BatchCreateNode(nodes []*entity.Node) error {
-//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-//		return s.nr.BatchCreateNode(txCtx, txCtx.MustDefaultDB(), nodes)
-//	})
-//}
-
 // GetNodeDataByID 根据ID获取节点信息
-func (s *NodeService) GetNodeDataByID(id uint) (*dto.NodeData, error) {
+func (s *NodeService) GetNodeDataByID(id uint) (*NodeData, error) {
 	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
@@ -62,7 +54,7 @@ func (s *NodeService) GetNodeDataByID(id uint) (*dto.NodeData, error) {
 		return nil, fmt.Errorf("product not found")
 	}
 	metadata := string(pNode.Metadata)
-	return &dto.NodeData{
+	return &NodeData{
 		ID:         pNode.ID,
 		DeviceCode: pNode.DeviceCode,
 		Status:     pNode.Status,
@@ -72,7 +64,7 @@ func (s *NodeService) GetNodeDataByID(id uint) (*dto.NodeData, error) {
 
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
-func (s *NodeService) GetByDeviceCode(code string) (*dto.NodeData, error) {
+func (s *NodeService) GetByDeviceCode(code string) (*NodeData, error) {
 	pNode, err := nodeRepo.GetByDeviceCode(context.Background(), global.DB, code)
 	if err != nil {
 		return nil, err
@@ -81,7 +73,7 @@ func (s *NodeService) GetByDeviceCode(code string) (*dto.NodeData, error) {
 		return nil, fmt.Errorf("product not found")
 	}
 	metadata := string(pNode.Metadata)
-	return &dto.NodeData{
+	return &NodeData{
 		ID:         pNode.ID,
 		DeviceCode: pNode.DeviceCode,
 		Status:     pNode.Status,
@@ -102,15 +94,18 @@ func (s *NodeService) DeleteNode(id uint) error {
 	})
 }
 
-func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
+func (s *NodeService) AddBinding(cmd AddBindingCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查 License 是否存在
-		license, err := GetLicenseEntityByID(licenseID)
-		if err != nil || license == nil {
-			return fmt.Errorf("invalid license")
+		var pLicense *model.License
+		if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+			Where("id = ?", licenseID).
+			First(&pLicense).Error; err != nil {
+			return fmt.Errorf("invalid license %s", err)
 		}
+		license := ToEntityLicense(pLicense)
 
 		// 检查 Node 是否存在
 		n, err := GetNodeEntityByID(nodeID)
@@ -127,31 +122,42 @@ func (s *NodeService) AddBinding(cmd dto.AddBindingCommand) error {
 		var binding model.NodeLicenseBinding
 		err = tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
 			First(&binding).Error
-
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-
+		toUpdate := false
 		// 已存在绑定记录
 		if err == nil {
 			if binding.Status == int(entity.BindingStatusBound) {
 				return nil // 已绑定，无需重复绑定
 			}
-			// 更新绑定状态
-			return tx.Model(&binding).Update("status", entity.BindingStatusBound).Error
+			toUpdate = true
 		}
 
-		// 插入新绑定
-		newBinding := model.NodeLicenseBinding{
-			NodeID:    nodeID,
-			LicenseID: licenseID,
-			Status:    int(entity.BindingStatusBound),
+		err = tx.Model(&model.License{}).
+			Where("id = ? AND (max_nodes = 0 OR current_node_count < max_nodes)", licenseID).
+			Update("current_node_count", gorm.Expr("current_node_count + ?", 1)).Error
+		if err != nil {
+			return fmt.Errorf("license has reached max nodes or update failed: %w", err)
 		}
-		return tx.Create(&newBinding).Error
+
+		if toUpdate {
+			// 更新绑定状态
+			return tx.Model(&binding).Update("status", entity.BindingStatusBound).Error
+		} else {
+			// 插入新绑定
+			newBinding := model.NodeLicenseBinding{
+				NodeID:    nodeID,
+				LicenseID: licenseID,
+				Status:    int(entity.BindingStatusBound),
+			}
+			return tx.Create(&newBinding).Error
+		}
+
 	})
 }
 
-func (s *NodeService) AutoBind(cmd dto.AutoBindCommand) error {
+func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
 	deviceCode, licenseID := cmd.DeviceCode, cmd.LicenseID
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 检查 License 是否存在
@@ -214,7 +220,7 @@ func (s *NodeService) AutoBind(cmd dto.AutoBindCommand) error {
 
 }
 
-func (s *NodeService) UnbindByID(cmd dto.UnbindCommand) error {
+func (s *NodeService) UnbindByID(cmd UnbindCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 	return global.DB.Transaction(func(tx *gorm.DB) error {
 		// 查找是否已有绑定关系

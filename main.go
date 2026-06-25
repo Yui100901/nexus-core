@@ -52,7 +52,8 @@ func main() {
 	cfg := global.LoadConfig()
 	fmt.Println("Nexus Core starting...")
 	base.MainDBManager = base.InitDBManager(cfg.DBConfig)
-	base.AutoMigrate(base.MainDBManager.GetDefaultDB())
+	global.DB = base.MainDBManager.GetDefaultDB()
+	base.AutoMigrate(global.DB)
 	r := api.WebEngine
 
 	// register default routes

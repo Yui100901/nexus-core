@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"nexus-core/domain/entity"
 	"nexus-core/persistence/model"
-	"nexus-core/sc"
 
 	"gorm.io/gorm"
 )
@@ -30,33 +28,12 @@ func (r *LicenseRepository) Create(ctx context.Context, db *gorm.DB, license *mo
 }
 
 // BatchCreateLicense 批量创建 License
-func (r *LicenseRepository) BatchCreateLicense(ctx *sc.ServiceContext, db *gorm.DB, licenses []*entity.License) error {
-	var pLicenses []model.License
-	for _, license := range licenses {
-		pLicenses = append(pLicenses, model.License{
-			LicenseKey:    license.LicenseKey,
-			ValidityHours: license.ValidityHours,
-			Status:        0,
-		})
-	}
-
-	if err := gorm.G[model.License](db).CreateInBatches(ctx, &pLicenses, 100); err != nil {
-		return err
-	}
-
-	// 回填 License 信息
-	for i := range licenses {
-		licenses[i].ID = pLicenses[i].ID
-		licenses[i].ActivatedAt = pLicenses[i].ActivatedAt
-		licenses[i].ExpiredAt = pLicenses[i].ExpiredAt
-		licenses[i].Status = pLicenses[i].Status
-	}
-
-	return nil
+func (r *LicenseRepository) BatchCreateLicense(ctx context.Context, db *gorm.DB, licenses []model.License) error {
+	return gorm.G[model.License](db).CreateInBatches(ctx, &licenses, 100)
 }
 
 // UpdateLicenseStatus 更新 License 状态
-func (r *LicenseRepository) UpdateLicenseStatus(ctx *sc.ServiceContext, db *gorm.DB, id uint, status int) error {
+func (r *LicenseRepository) UpdateLicenseStatus(ctx context.Context, db *gorm.DB, id uint, status int) error {
 	_, err := gorm.G[model.License](db).
 		Where("id = ?", id).
 		Update(ctx, "status", status)
@@ -64,19 +41,11 @@ func (r *LicenseRepository) UpdateLicenseStatus(ctx *sc.ServiceContext, db *gorm
 }
 
 // UpdateLicense 更新 License
-func (r *LicenseRepository) UpdateLicense(ctx *sc.ServiceContext, db *gorm.DB, license *entity.License) error {
-	pLicense := model.License{
-		ValidityHours: license.ValidityHours,
-		ActivatedAt:   license.ActivatedAt,
-		ExpiredAt:     license.ExpiredAt,
-		Status:        license.Status,
-		Remark:        license.Remark,
-	}
-
+func (r *LicenseRepository) UpdateLicense(ctx context.Context, db *gorm.DB, license *model.License) error {
 	_, err := gorm.G[model.License](db).
 		Where("id = ?", license.ID).
 		Where("license_key = ?", license.LicenseKey).
-		Updates(ctx, pLicense)
+		Updates(ctx, *license)
 	if err != nil {
 		return err
 	}
@@ -110,7 +79,7 @@ func (r *LicenseRepository) GetByKey(ctx context.Context, db *gorm.DB, key strin
 	return m, nil
 }
 
-func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, db *gorm.DB, status int) ([]uint, error) {
+func (r *LicenseRepository) GetIdListByStatus(ctx context.Context, db *gorm.DB, status int) ([]uint, error) {
 	licenses, err := gorm.G[model.License](db).
 		Select("id").
 		Where("status = ?", status).
@@ -127,7 +96,7 @@ func (r *LicenseRepository) GetIdListByStatus(ctx *sc.ServiceContext, db *gorm.D
 }
 
 // BatchDeleteByIdList 批量删除 License
-func (r *LicenseRepository) BatchDeleteByIdList(ctx *sc.ServiceContext, db *gorm.DB, ids []uint) error {
+func (r *LicenseRepository) BatchDeleteByIdList(ctx context.Context, db *gorm.DB, ids []uint) error {
 	if len(ids) == 0 {
 		return nil
 	}

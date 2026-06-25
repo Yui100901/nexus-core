@@ -13,7 +13,7 @@ type HeartbeatCommand struct {
 	AccessBaseCommand
 }
 
-// AutoBindCommand 自动绑定命令对象
-type AutoBindCommand struct {
+// RegisterCommand 自动绑定命令对象
+type RegisterCommand struct {
 	AccessBaseCommand
 }

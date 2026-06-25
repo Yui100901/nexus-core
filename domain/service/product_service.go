@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"nexus-core/api/dto"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
@@ -24,7 +23,7 @@ func NewProductService() *ProductService {
 
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
-func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.ProductData, error) {
+func (s *ProductService) CreateProduct(cmd CreateProductCommand) (*ProductData, error) {
 	pProduct := &model.Product{
 		Name:        cmd.Name,
 		Description: cmd.Description,
@@ -33,34 +32,15 @@ func (s *ProductService) CreateProduct(cmd dto.CreateProductCommand) (*dto.Produ
 	if err != nil {
 		return nil, err
 	}
-	return &dto.ProductData{
+	return &ProductData{
 		ID:          pProduct.ID,
 		Name:        pProduct.Name,
 		Description: pProduct.Description,
 	}, nil
 }
 
-//// BatchCreateProduct 批量创建产品
-//// 支持一次性创建多个产品及其版本信息
-//func (s *ProductService) BatchCreateProduct(products []dto.CreateProductCommand) error {
-//	// 1. 校验重复名称
-//	seen := make(map[string]bool)
-//	for _, p := range products {
-//		if seen[p.Name] {
-//			return fmt.Errorf("duplicate product name: %s", p.Name)
-//		}
-//		seen[p.Name] = true
-//	}
-//
-//	// 2. 调用仓储层批量创建 在事务中
-//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-//		// txCtx.MustDefaultDB() returns tx
-//		return s.pr.BatchCreateProduct(txCtx, txCtx.MustDefaultDB(), products)
-//	})
-//}
-
 // GetProductDataByID 根据ID获取产品信息
-func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
+func (s *ProductService) GetProductDataByID(id uint) (*ProductData, error) {
 	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
@@ -68,7 +48,7 @@ func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
 	if pProduct == nil {
 		return nil, fmt.Errorf("product not found")
 	}
-	return &dto.ProductData{
+	return &ProductData{
 		ID:          pProduct.ID,
 		Name:        pProduct.Name,
 		Description: pProduct.Description,
@@ -77,7 +57,7 @@ func (s *ProductService) GetProductDataByID(id uint) (*dto.ProductData, error) {
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
-func (s *ProductService) SetMinSupportedVersion(cmd dto.UpdateMinVersionCommand) error {
+func (s *ProductService) SetMinSupportedVersion(cmd UpdateMinVersionCommand) error {
 	versionID, productID := cmd.VersionID, cmd.ProductID
 	version, err := productVersionRepo.GetByID(context.Background(), global.DB, versionID)
 	if err != nil {
@@ -110,7 +90,7 @@ func (s *ProductService) DeleteProduct(id uint) error {
 
 // CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
-func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionCommand) (*dto.ProductVersionData, error) {
+func (s *ProductService) CreateProductVersion(cmd CreateProductVersionCommand) (*ProductVersionData, error) {
 	product, err := GetProductEntityByID(cmd.ProductID)
 	if err != nil {
 		return nil, err
@@ -133,12 +113,12 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 	}
 
 	switch cmd.Method {
-	case dto.ReleaseImmediate:
+	case ReleaseImmediate:
 		err := s.doReleaseVersion(newVersion.ID, time.Now())
 		if err != nil {
 			return nil, fmt.Errorf("failed to release version: %w", err)
 		}
-	case dto.ReleaseScheduled:
+	case ReleaseScheduled:
 		var releaseDate time.Time
 		if newVersion.ReleaseDate != nil {
 			releaseDate = *newVersion.ReleaseDate
@@ -146,11 +126,11 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 			releaseDate = time.Now()
 		}
 		s.ScheduleReleaseTask(newVersion.ID, releaseDate)
-	case dto.ReleaseHold:
+	case ReleaseHold:
 
 	}
 
-	return &dto.ProductVersionData{
+	return &ProductVersionData{
 		ID:          newVersion.ID,
 		ProductID:   newVersion.ProductID,
 		VersionCode: newVersion.VersionCode,
@@ -159,7 +139,7 @@ func (s *ProductService) CreateProductVersion(cmd dto.CreateProductVersionComman
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(cmd dto.ReleaseNewVersionCommand) error {
+func (s *ProductService) ReleaseVersion(cmd ReleaseNewVersionCommand) error {
 	versionID, releaseDate := cmd.VersionID, cmd.ReleaseDate
 	if releaseDate == nil {
 		return s.doReleaseVersion(versionID, time.Now())

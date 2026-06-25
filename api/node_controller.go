@@ -51,7 +51,10 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.CreateNode(cmd)
+	n, err := c.ns.CreateNode(service.CreateNodeCommand{
+		DeviceCode: cmd.DeviceCode,
+		Metadata:   cmd.Metadata,
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -158,7 +161,10 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(cmd); err != nil {
+	if err := c.ns.AddBinding(service.AddBindingCommand{
+		NodeID:    cmd.NodeID,
+		LicenseID: cmd.LicenseID,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -181,7 +187,10 @@ func (c *NodeController) AutoBind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AutoBind(cmd); err != nil {
+	if err := c.ns.AutoBind(service.AutoBindCommand{
+		DeviceCode: cmd.DeviceCode,
+		LicenseID:  cmd.LicenseID,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -204,7 +213,10 @@ func (c *NodeController) Unbind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.UnbindByID(cmd); err != nil {
+	if err := c.ns.UnbindByID(service.UnbindCommand{
+		NodeID:    cmd.NodeID,
+		LicenseID: cmd.LicenseID,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

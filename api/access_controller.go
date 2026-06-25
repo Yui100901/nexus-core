@@ -57,7 +57,12 @@ func (c *AccessController) Register(ctx *gin.Context) {
 		return
 	}
 
-	err := c.as.Register(cmd)
+	err := c.as.Register(service.AccessCommand{
+		DeviceCode:  cmd.DeviceCode,
+		LicenseKey:  cmd.LicenseKey,
+		ProductID:   cmd.ProductID,
+		VersionCode: cmd.VersionCode,
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return

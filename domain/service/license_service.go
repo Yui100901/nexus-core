@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"nexus-core/api/dto"
 	"nexus-core/global"
 	"nexus-core/persistence/model"
 	"strings"
@@ -31,7 +30,7 @@ func NewLicenseService() *LicenseService {
 }
 
 // CreateLicense 创建单个许可证
-func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.LicenseData, error) {
+func (s *LicenseService) CreateLicense(cmd CreateLicenseCommand) (*LicenseData, error) {
 	var product model.Product
 	if err := global.DB.Model(&model.Product{}).Where("id = ?", &cmd.ProductID).First(product).Error; err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.Licen
 	if err != nil {
 		return nil, err
 	}
-	return &dto.LicenseData{
+	return &LicenseData{
 		ID:            license.ID,
 		ProductID:     license.ProductID,
 		LicenseKey:    license.LicenseKey,
@@ -62,68 +61,6 @@ func (s *LicenseService) CreateLicense(cmd dto.CreateLicenseCommand) (*dto.Licen
 	}, nil
 }
 
-//// BatchCreateLicense 批量创建许可证
-//func (s *LicenseService) BatchCreateLicense(ctx *sc.ServiceContext, licenses []*entity.License) error {
-//	if len(licenses) == 0 {
-//		return fmt.Errorf("licenses list cannot be empty")
-//	}
-//
-//	// 收集所有需要的产品 ID
-//	allIDs := make(map[uint]struct{})
-//	for _, license := range licenses {
-//		id := license.ProductID
-//		allIDs[id] = struct{}{}
-//	}
-//
-//	var allIDList []uint
-//	for k := range allIDs {
-//		allIDList = append(allIDList, k)
-//	}
-//
-//	db := ctx.MustDefaultDB()
-//	exists, err := s.pr.ExistIds(ctx, db, allIDList)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if !exists {
-//		return fmt.Errorf("some products in scope do not exist")
-//	}
-//
-//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-//		return s.lr.BatchCreateLicense(txCtx, txCtx.MustDefaultDB(), licenses)
-//	})
-//}
-
-//// ActivateLicenseIfNeeded 激活许可证
-//func (s *LicenseService) ActivateLicenseIfNeeded(ctx *sc.ServiceContext, license *entity.License) error {
-//	// Use transaction wrapper for consistency
-//	return ctx.RunInTransaction(base.DefaultDBName, func(txCtx *sc.ServiceContext) error {
-//		return s.ActivateLicenseIfNeededWithCtx(txCtx, license)
-//	})
-//}
-
-//// ActivateLicenseIfNeededWithCtx 在已有事务中激活许可证（供其他 service 在同一事务中调用）
-//// 使用 ServiceContext 来获取当前活跃的 DB（可能是 tx）
-//func (s *LicenseService) ActivateLicenseIfNeededWithCtx(ctx *sc.ServiceContext, license *entity.License) error {
-//	if license.IsActive() {
-//		return nil
-//	}
-//
-//	if err := license.Activate(time.Now()); err != nil {
-//		return err
-//	}
-//
-//	// use ctx.MustDefaultDB() so callers don't need to pass tx explicitly
-//	return s.lr.UpdateLicenseStatus(ctx, ctx.MustDefaultDB(), license.ID, int(entity.StatusActive))
-//}
-//
-//// GetLicenseBindList 获取许可证绑定列表
-//func (s *LicenseService) GetLicenseBindList(ctx *sc.ServiceContext, licenseID uint) ([]entity.NodeLicenseBinding, error) {
-//	db := ctx.MustDefaultDB()
-//	return s.nlr.GetBindingsByLicenseID(ctx, db, licenseID)
-//}
-
 // RevokeLicense 吊销许可证
 // todo 后续可能需要强制下线？
 func (s *LicenseService) RevokeLicense(licenseID uint) error {
@@ -131,7 +68,7 @@ func (s *LicenseService) RevokeLicense(licenseID uint) error {
 }
 
 // UpdateLicense 更新许可证信息
-func (s *LicenseService) UpdateLicense(cmd dto.UpdateLicenseCommand) error {
+func (s *LicenseService) UpdateLicense(cmd UpdateLicenseCommand) error {
 	id := cmd.ID
 	updates := model.License{
 		MaxNodes:      cmd.MaxNodes,
@@ -143,7 +80,7 @@ func (s *LicenseService) UpdateLicense(cmd dto.UpdateLicenseCommand) error {
 }
 
 // RenewLicense 增加或减少许可证时间
-func (s *LicenseService) RenewLicense(cmd dto.RenewLicenseCommand) error {
+func (s *LicenseService) RenewLicense(cmd RenewLicenseCommand) error {
 	licenseID, extraHours := cmd.ID, cmd.ExtraHours
 	license, err := GetLicenseEntityByID(licenseID)
 	if err != nil {
@@ -177,7 +114,7 @@ func (s *LicenseService) DeleteLicense(id uint) error {
 }
 
 // GetLicenseDataByID 根据ID获取许可证
-func (s *LicenseService) GetLicenseDataByID(id uint) (*dto.LicenseData, error) {
+func (s *LicenseService) GetLicenseDataByID(id uint) (*LicenseData, error) {
 	license, err := licenseRepo.GetByID(context.Background(), global.DB, id)
 	if err != nil {
 		return nil, err
@@ -185,7 +122,7 @@ func (s *LicenseService) GetLicenseDataByID(id uint) (*dto.LicenseData, error) {
 	if license == nil {
 		return nil, fmt.Errorf("product not found")
 	}
-	return &dto.LicenseData{
+	return &LicenseData{
 		ID:            license.ID,
 		ProductID:     license.ProductID,
 		LicenseKey:    license.LicenseKey,
@@ -196,7 +133,7 @@ func (s *LicenseService) GetLicenseDataByID(id uint) (*dto.LicenseData, error) {
 }
 
 // GetLicenseDataByKey 根据许可证密钥获取许可证
-func (s *LicenseService) GetLicenseDataByKey(key string) (*dto.LicenseData, error) {
+func (s *LicenseService) GetLicenseDataByKey(key string) (*LicenseData, error) {
 	license, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
 	if err != nil {
 		return nil, err
@@ -204,7 +141,7 @@ func (s *LicenseService) GetLicenseDataByKey(key string) (*dto.LicenseData, erro
 	if license == nil {
 		return nil, fmt.Errorf("product not found")
 	}
-	return &dto.LicenseData{
+	return &LicenseData{
 		ID:            license.ID,
 		ProductID:     license.ProductID,
 		LicenseKey:    license.LicenseKey,

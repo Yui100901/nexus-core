@@ -21,6 +21,51 @@ import (
 // @Date 2025/7/21 15 26
 //
 
+type DBManager struct {
+	defaultDBName string
+	dbMap         map[string]*gorm.DB
+}
+
+var MainDBManager *DBManager
+
+func InitDBManager(cfg *global.DBConfig) *DBManager {
+	if cfg == nil {
+		panic("database config is nil")
+	}
+	if len(cfg.ConnectList) == 0 {
+		panic("database connect list is empty")
+	}
+
+	manager := &DBManager{
+		defaultDBName: cfg.DefaultDBName,
+		dbMap:         make(map[string]*gorm.DB, len(cfg.ConnectList)),
+	}
+
+	for _, connectConfig := range cfg.ConnectList {
+		db, err := InitDB(connectConfig)
+		if err != nil {
+			panic(fmt.Sprintf("failed to initialize database %s: %v", connectConfig.Name, err))
+		}
+		manager.dbMap[connectConfig.Name] = db
+		if manager.defaultDBName == "" {
+			manager.defaultDBName = connectConfig.Name
+		}
+	}
+
+	if _, ok := manager.dbMap[manager.defaultDBName]; !ok {
+		panic(fmt.Sprintf("default database %s not found", manager.defaultDBName))
+	}
+
+	return manager
+}
+
+func (m *DBManager) GetDefaultDB() *gorm.DB {
+	if m == nil {
+		return nil
+	}
+	return m.dbMap[m.defaultDBName]
+}
+
 func InitDB(cfg global.DBConnectConfig) (*gorm.DB, error) {
 
 	var (

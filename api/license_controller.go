@@ -58,7 +58,13 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	license, err := c.ls.CreateLicense(cmd)
+	license, err := c.ls.CreateLicense(service.CreateLicenseCommand{
+		ProductID:     cmd.ProductID,
+		ValidityHours: cmd.ValidityHours,
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		Remark:        cmd.Remark,
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -193,7 +199,13 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.UpdateLicense(cmd); err != nil {
+	if err := c.ls.UpdateLicense(service.UpdateLicenseCommand{
+		ID:            cmd.ID,
+		MaxNodes:      cmd.MaxNodes,
+		MaxConcurrent: cmd.MaxConcurrent,
+		FeatureMask:   cmd.FeatureMask,
+		Remark:        cmd.Remark,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -217,7 +229,10 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.RenewLicense(cmd); err != nil {
+	if err := c.ls.RenewLicense(service.RenewLicenseCommand{
+		ID:         cmd.ID,
+		ExtraHours: cmd.ExtraHours,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

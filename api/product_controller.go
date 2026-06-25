@@ -53,7 +53,10 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	p, err := c.ps.CreateProduct(cmd)
+	p, err := c.ps.CreateProduct(service.CreateProductCommand{
+		Name:        cmd.Name,
+		Description: cmd.Description,
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -77,7 +80,13 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	v, err := c.ps.CreateProductVersion(cmd)
+	v, err := c.ps.CreateProductVersion(service.CreateProductVersionCommand{
+		ProductID:   cmd.ProductID,
+		VersionCode: cmd.VersionCode,
+		ReleaseDate: cmd.ReleaseDate,
+		Description: cmd.Description,
+		Method:      service.ReleaseMethod(cmd.Method),
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -98,7 +107,11 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	err := c.ps.ReleaseVersion(cmd)
+	err := c.ps.ReleaseVersion(service.ReleaseNewVersionCommand{
+		ProductID:   cmd.ProductID,
+		VersionID:   cmd.VersionID,
+		ReleaseDate: cmd.ReleaseDate,
+	})
 	if err != nil {
 		InternalError(ctx, err.Error())
 		return
@@ -190,7 +203,10 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(cmd); err != nil {
+	if err := c.ps.SetMinSupportedVersion(service.UpdateMinVersionCommand{
+		ProductID: cmd.ProductID,
+		VersionID: cmd.VersionID,
+	}); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
