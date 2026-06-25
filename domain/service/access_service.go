@@ -52,120 +52,130 @@ type HeartbeatResult struct {
 // Register 执行自动节点绑定注册逻辑
 // 检查许可证，产品，版本之前的支持情况
 // 绑定成功后激活许可证
-func (s *AccessService) Register(cmd AccessCommand) error {
+func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) error {
 	deviceCode, licenseKey, productID, versionCode := cmd.DeviceCode, cmd.LicenseKey, cmd.ProductID, cmd.VersionCode
-	//验证许可证产品支持
-	license, err := GetLicenseEntityByKey(licenseKey)
-	if err != nil || license == nil {
-		return fmt.Errorf("invalid license")
-	}
-	if license.ProductID != productID {
-		return fmt.Errorf("license not support for this product id %d", productID)
-	}
-
-	//验证产品版本支持
-	product, err := GetProductEntityByID(productID)
-	if err != nil || product == nil {
-		return fmt.Errorf("invalid product")
-	}
-	if !product.CheckVersionSupportedByCode(versionCode) {
-		return fmt.Errorf("version not supported")
-	}
-
-	// 检查许可证状态
-	toActivate := false
-	currentStatus := license.CalculateStatus(time.Now())
-	switch currentStatus {
-	case entity.StatusInactive:
-		//尝试激活许可证
-		if !license.Activate(time.Now()) || !license.IsActive() {
-			return fmt.Errorf("license activation failed")
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		//验证许可证产品支持
+		license, err := GetLicenseEntityByKey(ctx, tx, licenseKey)
+		if err != nil || license == nil {
+			return fmt.Errorf("invalid license")
 		}
-		toActivate = true
-	case entity.StatusActive:
-	case entity.StatusExpired, entity.StatusRevoked:
-		return fmt.Errorf("license not avaliable")
-	}
-
-	// 检查当前绑定数量是否超过 MaxNodes
-	if !license.ValidateNodeLimit() {
-		return fmt.Errorf("license has reached max nodes ")
-	}
-
-	// 检查 Node 是否存在
-	node, err := GetNodeEntityByCode(deviceCode)
-	if err != nil {
-		return err
-	}
-	if node == nil {
-		//创建节点
-		newNode := &model.Node{
-			DeviceCode: cmd.DeviceCode,
-			Status:     0, //默认正常
+		if license.ProductID != productID {
+			return fmt.Errorf("license not support for this product id %d", productID)
 		}
-		err = nodeRepo.Create(context.Background(), global.DB, newNode)
+
+		//验证产品版本支持
+		product, err := GetProductEntityByID(ctx, tx, productID)
+		if err != nil || product == nil {
+			return fmt.Errorf("invalid product")
+		}
+		if !product.CheckVersionSupportedByCode(versionCode) {
+			return fmt.Errorf("version not supported")
+		}
+
+		// 检查许可证状态
+		toActivate := false
+		currentStatus := license.CalculateStatus(time.Now())
+		switch currentStatus {
+		case entity.StatusInactive:
+			//尝试激活许可证
+			if !license.Activate(time.Now()) || !license.IsActive() {
+				return fmt.Errorf("license activation failed")
+			}
+			toActivate = true
+		case entity.StatusActive:
+		case entity.StatusExpired, entity.StatusRevoked:
+			return fmt.Errorf("license not avaliable")
+		}
+
+		// 检查当前绑定数量是否超过 MaxNodes
+		if !license.ValidateNodeLimit() {
+			return fmt.Errorf("license has reached max nodes ")
+		}
+
+		// 检查 Node 是否存在
+		node, err := GetNodeEntityByCode(ctx, tx, deviceCode)
 		if err != nil {
 			return err
 		}
-		metadata := string(newNode.Metadata)
-		node = &entity.Node{
-			ID:         newNode.ID,
-			DeviceCode: newNode.DeviceCode,
-			Status:     0,
-			Metadata:   &metadata,
-		}
-		// 插入新绑定
-		now := time.Now()
-		newBinding := model.NodeLicenseBinding{
-			NodeID:    node.ID,
-			LicenseID: license.ID,
-			ProductID: productID,
-			Status:    int(entity.BindingStatusBound),
-			BoundAt:   &now,
-		}
-		if err := global.DB.Create(&newBinding).Error; err != nil {
-			return fmt.Errorf("create binding failed")
-		}
-	} else {
-		// 查找是否已有绑定关系
-		var binding model.NodeLicenseBinding
-		err = global.DB.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
-			First(&binding).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		// 已存在绑定记录
-		if err == nil {
-			if binding.Status == 1 {
-				return nil // 已绑定，无需重复绑定
+		if node == nil {
+			//创建节点
+			newNode := &model.Node{
+				DeviceCode: cmd.DeviceCode,
+				Status:     0, //默认正常
 			}
-			now := time.Now()
-			if err := global.DB.Model(&binding).Updates(map[string]interface{}{
-				"status":     entity.BindingStatusBound,
-				"bound_at":   &now,
-				"unbound_at": nil,
-			}).Error; err != nil {
+			err = nodeRepo.Create(ctx, tx, newNode)
+			if err != nil {
 				return err
 			}
+			metadata := string(newNode.Metadata)
+			node = &entity.Node{
+				ID:         newNode.ID,
+				DeviceCode: newNode.DeviceCode,
+				Status:     0,
+				Metadata:   &metadata,
+			}
+			// 插入新绑定
+			now := time.Now()
+			newBinding := model.NodeLicenseBinding{
+				NodeID:    node.ID,
+				LicenseID: license.ID,
+				ProductID: productID,
+				Status:    int(entity.BindingStatusBound),
+				BoundAt:   &now,
+			}
+			if err := tx.Create(&newBinding).Error; err != nil {
+				return fmt.Errorf("create binding failed")
+			}
+		} else {
+			// 查找是否已有绑定关系
+			var binding model.NodeLicenseBinding
+			err = tx.Where("node_id = ? AND license_id = ?", node.ID, license.ID).
+				First(&binding).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				now := time.Now()
+				newBinding := model.NodeLicenseBinding{
+					NodeID:    node.ID,
+					LicenseID: license.ID,
+					ProductID: productID,
+					Status:    int(entity.BindingStatusBound),
+					BoundAt:   &now,
+				}
+				if err := tx.Create(&newBinding).Error; err != nil {
+					return fmt.Errorf("create binding failed")
+				}
+			} else if binding.Status != int(entity.BindingStatusBound) {
+				now := time.Now()
+				if err := tx.Model(&binding).Updates(map[string]interface{}{
+					"status":     entity.BindingStatusBound,
+					"bound_at":   &now,
+					"unbound_at": nil,
+				}).Error; err != nil {
+					return err
+				}
+			}
 		}
-	}
-	if toActivate {
-		global.DB.Model(model.License{}).Where("id = ?", license.ID).
-			Updates(model.License{
-				ActivatedAt: license.ActivatedAt,
-				ExpiredAt:   license.ExpiredAt,
-				Status:      int(license.Status),
-			})
-	}
+		if toActivate {
+			tx.Model(model.License{}).Where("id = ?", license.ID).
+				Updates(model.License{
+					ActivatedAt: license.ActivatedAt,
+					ExpiredAt:   license.ExpiredAt,
+					Status:      int(license.Status),
+				})
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // Heartbeat 处理心跳逻辑
 func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, productID uint, versionCode string, licenseKey string) (*HeartbeatResult, error) {
 	_ = ctx
 
-	product, err := GetProductEntityByID(productID)
+	product, err := GetProductEntityByID(ctx, global.DB.WithContext(ctx), productID)
 	if err != nil || product == nil {
 		return nil, NewServiceError(400, "invalid product")
 	}
@@ -173,7 +183,7 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, NewServiceError(400, "product version not supported")
 	}
 
-	license, err := GetLicenseEntityByKey(licenseKey)
+	license, err := GetLicenseEntityByKey(ctx, global.DB.WithContext(ctx), licenseKey)
 	if err != nil || license == nil {
 		return nil, NewServiceError(400, "invalid license")
 	}
@@ -193,7 +203,7 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, NewServiceError(400, "invalid license")
 	}
 
-	node, err := GetNodeEntityByCode(deviceCode)
+	node, err := GetNodeEntityByCode(ctx, global.DB.WithContext(ctx), deviceCode)
 	if err != nil {
 		return nil, NewServiceError(500, "get node failed")
 	}
@@ -205,7 +215,7 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 	}
 
 	var binding model.NodeLicenseBinding
-	err = global.DB.Where("node_id = ? AND license_id = ?", node.ID, license.ID).First(&binding).Error
+	err = global.DB.WithContext(ctx).Where("node_id = ? AND license_id = ?", node.ID, license.ID).First(&binding).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, NewServiceError(400, "binding not found")
 	}

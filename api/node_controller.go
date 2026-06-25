@@ -51,7 +51,7 @@ func (c *NodeController) CreateNode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	n, err := c.ns.CreateNode(service.CreateNodeCommand{
+	n, err := c.ns.CreateNode(ctx.Request.Context(), service.CreateNodeCommand{
 		DeviceCode: cmd.DeviceCode,
 		Metadata:   cmd.Metadata,
 	})
@@ -116,7 +116,7 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	data, err := c.ns.GetNodeDataByID(id)
+	data, err := c.ns.GetNodeDataByID(ctx.Request.Context(), id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -137,7 +137,7 @@ func (c *NodeController) GetByID(ctx *gin.Context) {
 func (c *NodeController) GetByDeviceCode(ctx *gin.Context) {
 	// 获取 query 参数
 	code := ctx.Query("deviceCode")
-	n, err := c.ns.GetByDeviceCode(code)
+	n, err := c.ns.GetByDeviceCode(ctx.Request.Context(), code)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -161,7 +161,7 @@ func (c *NodeController) AddBinding(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AddBinding(service.AddBindingCommand{
+	if err := c.ns.AddBinding(ctx.Request.Context(), service.AddBindingCommand{
 		NodeID:    cmd.NodeID,
 		LicenseID: cmd.LicenseID,
 	}); err != nil {
@@ -187,7 +187,7 @@ func (c *NodeController) AutoBind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.AutoBind(service.AutoBindCommand{
+	if err := c.ns.AutoBind(ctx.Request.Context(), service.AutoBindCommand{
 		DeviceCode: cmd.DeviceCode,
 		LicenseID:  cmd.LicenseID,
 	}); err != nil {
@@ -213,7 +213,7 @@ func (c *NodeController) Unbind(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.UnbindByID(service.UnbindCommand{
+	if err := c.ns.UnbindByID(ctx.Request.Context(), service.UnbindCommand{
 		NodeID:    cmd.NodeID,
 		LicenseID: cmd.LicenseID,
 	}); err != nil {
@@ -241,7 +241,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ns.DeleteNode(cmd.ID); err != nil {
+	if err := c.ns.DeleteNode(ctx.Request.Context(), cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -259,7 +259,7 @@ func (c *NodeController) DeleteNode(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /node/delete [post]
 func (c *NodeController) CleanUnboundNode(ctx *gin.Context) {
-	if err := c.ns.CleanUnboundNode(); err != nil {
+	if err := c.ns.CleanUnboundNode(ctx.Request.Context()); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

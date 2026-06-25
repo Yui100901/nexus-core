@@ -26,7 +26,7 @@ func NewNodeService() *NodeService {
 
 // CreateNode 创建新节点
 // 将节点信息持久化到数据库
-func (s *NodeService) CreateNode(cmd CreateNodeCommand) (*NodeData, error) {
+func (s *NodeService) CreateNode(ctx context.Context, cmd CreateNodeCommand) (*NodeData, error) {
 	var metadata datatypes.JSON
 	if cmd.Metadata != nil {
 		metadata = datatypes.JSON([]byte(*cmd.Metadata))
@@ -36,7 +36,7 @@ func (s *NodeService) CreateNode(cmd CreateNodeCommand) (*NodeData, error) {
 		Metadata:   metadata,
 		Status:     entity.NodeStatusNormal,
 	}
-	err := nodeRepo.Create(context.Background(), global.DB, n)
+	err := nodeRepo.Create(ctx, global.DB.WithContext(ctx), n)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func (s *NodeService) CreateNode(cmd CreateNodeCommand) (*NodeData, error) {
 }
 
 // GetNodeDataByID 根据ID获取节点信息
-func (s *NodeService) GetNodeDataByID(id uint) (*NodeData, error) {
-	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
+func (s *NodeService) GetNodeDataByID(ctx context.Context, id uint) (*NodeData, error) {
+	pNode, err := nodeRepo.GetByID(ctx, global.DB.WithContext(ctx), id)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +69,8 @@ func (s *NodeService) GetNodeDataByID(id uint) (*NodeData, error) {
 
 // GetByDeviceCode 根据设备码获取节点信息
 // 主要用于心跳验证时根据设备码查找节点
-func (s *NodeService) GetByDeviceCode(code string) (*NodeData, error) {
-	pNode, err := nodeRepo.GetByDeviceCode(context.Background(), global.DB, code)
+func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*NodeData, error) {
+	pNode, err := nodeRepo.GetByDeviceCode(ctx, global.DB.WithContext(ctx), code)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func (s *NodeService) GetByDeviceCode(code string) (*NodeData, error) {
 }
 
 // DeleteNode 删除节点，并移除所有绑定
-func (s *NodeService) DeleteNode(id uint) error {
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("id = ?", id).Delete(&model.Node{}).Error; err != nil {
 			return err
 		}
@@ -99,21 +99,21 @@ func (s *NodeService) DeleteNode(id uint) error {
 	})
 }
 
-func (s *NodeService) AddBinding(cmd AddBindingCommand) error {
+func (s *NodeService) AddBinding(ctx context.Context, cmd AddBindingCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
 
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 检查 License 是否存在
-		var pLicense *model.License
+		var pLicense model.License
 		if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 			Where("id = ?", licenseID).
 			First(&pLicense).Error; err != nil {
 			return fmt.Errorf("invalid license %s", err)
 		}
-		license := ToEntityLicense(pLicense)
+		license := ToEntityLicense(&pLicense)
 
 		// 检查 Node 是否存在
-		n, err := GetNodeEntityByID(nodeID)
+		n, err := GetNodeEntityByID(ctx, tx, nodeID)
 		if err != nil || n == nil {
 			return fmt.Errorf("invalid node")
 		}
@@ -170,17 +170,17 @@ func (s *NodeService) AddBinding(cmd AddBindingCommand) error {
 	})
 }
 
-func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
+func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 	deviceCode, licenseID := cmd.DeviceCode, cmd.LicenseID
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 检查 License 是否存在
-		license, err := GetLicenseEntityByID(licenseID)
+		license, err := GetLicenseEntityByID(ctx, tx, licenseID)
 		if err != nil || license == nil {
 			return fmt.Errorf("invalid license")
 		}
 
 		// 检查 Node 是否存在
-		node, err := GetNodeEntityByCode(deviceCode)
+		node, err := GetNodeEntityByCode(ctx, tx, deviceCode)
 		if err != nil {
 			return fmt.Errorf("failed to get node")
 		}
@@ -190,7 +190,7 @@ func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
 				DeviceCode: cmd.DeviceCode,
 				Status:     0, //默认正常
 			}
-			err = nodeRepo.Create(context.Background(), tx, newNode)
+			err = nodeRepo.Create(ctx, tx, newNode)
 			if err != nil {
 				return err
 			}
@@ -241,9 +241,9 @@ func (s *NodeService) AutoBind(cmd AutoBindCommand) error {
 
 }
 
-func (s *NodeService) UnbindByID(cmd UnbindCommand) error {
+func (s *NodeService) UnbindByID(ctx context.Context, cmd UnbindCommand) error {
 	nodeID, licenseID := cmd.NodeID, cmd.LicenseID
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 查找是否已有绑定关系
 		var binding model.NodeLicenseBinding
 		err := tx.Where("node_id = ? AND license_id = ?", nodeID, licenseID).
@@ -262,27 +262,29 @@ func (s *NodeService) UnbindByID(cmd UnbindCommand) error {
 	})
 }
 
-func (s *NodeService) CleanUnboundNode() error {
-	// 1. 查出所有已绑定的节点 ID（status=1）
-	var boundNodeIDs []uint
-	if err := global.DB.Model(&model.NodeLicenseBinding{}).
-		Where("status = ?", entity.BindingStatusBound).
-		Pluck("node_id", &boundNodeIDs).Error; err != nil {
-		return err
-	}
-
-	// 2. 如果没有任何绑定，则删除所有节点
-	if len(boundNodeIDs) == 0 {
-		if err := global.DB.Delete(&model.Node{}).Error; err != nil {
+func (s *NodeService) CleanUnboundNode(ctx context.Context) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. 查出所有已绑定的节点 ID（status=1）
+		var boundNodeIDs []uint
+		if err := tx.Model(&model.NodeLicenseBinding{}).
+			Where("status = ?", entity.BindingStatusBound).
+			Pluck("node_id", &boundNodeIDs).Error; err != nil {
 			return err
 		}
+
+		// 2. 如果没有任何绑定，则删除所有节点
+		if len(boundNodeIDs) == 0 {
+			if err := tx.Delete(&model.Node{}).Error; err != nil {
+				return err
+			}
+			return nil
+		}
+
+		// 3. 删除未绑定的节点
+		if err := tx.Where("id NOT IN ?", boundNodeIDs).Delete(&model.Node{}).Error; err != nil {
+			return err
+		}
+
 		return nil
-	}
-
-	// 3. 删除未绑定的节点
-	if err := global.DB.Where("id NOT IN ?", boundNodeIDs).Delete(&model.Node{}).Error; err != nil {
-		return err
-	}
-
-	return nil
+	})
 }

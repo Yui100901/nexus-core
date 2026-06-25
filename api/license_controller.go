@@ -58,7 +58,7 @@ func (c *LicenseController) CreateLicense(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	license, err := c.ls.CreateLicense(service.CreateLicenseCommand{
+	license, err := c.ls.CreateLicense(ctx.Request.Context(), service.CreateLicenseCommand{
 		ProductID:     cmd.ProductID,
 		ValidityHours: cmd.ValidityHours,
 		MaxNodes:      cmd.MaxNodes,
@@ -129,7 +129,7 @@ func (c *LicenseController) GetByID(ctx *gin.Context) {
 	}
 	id := uint(idUint64)
 
-	license, err := c.ls.GetLicenseDataByID(id)
+	license, err := c.ls.GetLicenseDataByID(ctx.Request.Context(), id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -151,7 +151,7 @@ func (c *LicenseController) GetByKey(ctx *gin.Context) {
 	// 获取 query 参数
 	key := ctx.Query("deviceCode")
 
-	license, err := c.ls.GetLicenseDataByKey(key)
+	license, err := c.ls.GetLicenseDataByKey(ctx.Request.Context(), key)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -175,7 +175,7 @@ func (c *LicenseController) RevokeLicense(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ls.RevokeLicense(cmd.ID); err != nil {
+	if err := c.ls.RevokeLicense(ctx.Request.Context(), cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -199,7 +199,7 @@ func (c *LicenseController) UpdateLicense(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.UpdateLicense(service.UpdateLicenseCommand{
+	if err := c.ls.UpdateLicense(ctx.Request.Context(), service.UpdateLicenseCommand{
 		ID:            cmd.ID,
 		MaxNodes:      cmd.MaxNodes,
 		MaxConcurrent: cmd.MaxConcurrent,
@@ -229,7 +229,7 @@ func (c *LicenseController) RenewLicense(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.RenewLicense(service.RenewLicenseCommand{
+	if err := c.ls.RenewLicense(ctx.Request.Context(), service.RenewLicenseCommand{
 		ID:         cmd.ID,
 		ExtraHours: cmd.ExtraHours,
 	}); err != nil {
@@ -258,7 +258,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.RemoveBindings(cmd.ID); err != nil {
+	if err := c.ls.RemoveBindings(ctx.Request.Context(), cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -274,7 +274,7 @@ func (c *LicenseController) CleanLicenseBindings(ctx *gin.Context) {
 // @Failure 500 {object} api.CommonResponse
 // @Router /license/deleteExpired [post]
 func (c *LicenseController) CleanInvalidLicense(ctx *gin.Context) {
-	if err := c.ls.CleanInvalidLicense(); err != nil {
+	if err := c.ls.CleanInvalidLicense(ctx.Request.Context()); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -298,7 +298,7 @@ func (c *LicenseController) DeleteLicense(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ls.DeleteLicense(cmd.ID); err != nil {
+	if err := c.ls.DeleteLicense(ctx.Request.Context(), cmd.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}

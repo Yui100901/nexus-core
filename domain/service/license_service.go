@@ -30,9 +30,9 @@ func NewLicenseService() *LicenseService {
 }
 
 // CreateLicense 创建单个许可证
-func (s *LicenseService) CreateLicense(cmd CreateLicenseCommand) (*LicenseData, error) {
+func (s *LicenseService) CreateLicense(ctx context.Context, cmd CreateLicenseCommand) (*LicenseData, error) {
 	var product model.Product
-	if err := global.DB.Model(&model.Product{}).Where("id = ?", &cmd.ProductID).First(product).Error; err != nil {
+	if err := global.DB.WithContext(ctx).Model(&model.Product{}).Where("id = ?", cmd.ProductID).First(&product).Error; err != nil {
 		return nil, err
 	}
 	license := &model.License{
@@ -47,7 +47,7 @@ func (s *LicenseService) CreateLicense(cmd CreateLicenseCommand) (*LicenseData, 
 		FeatureMask:   "",
 		Remark:        cmd.Remark,
 	}
-	err := licenseRepo.Create(context.Background(), global.DB, license)
+	err := licenseRepo.Create(ctx, global.DB.WithContext(ctx), license)
 	if err != nil {
 		return nil, err
 	}
@@ -63,12 +63,12 @@ func (s *LicenseService) CreateLicense(cmd CreateLicenseCommand) (*LicenseData, 
 
 // RevokeLicense 吊销许可证
 // todo 后续可能需要强制下线？
-func (s *LicenseService) RevokeLicense(licenseID uint) error {
-	return global.DB.Model(&model.License{}).Where("id = ?", licenseID).Update("status", entity.StatusRevoked).Error
+func (s *LicenseService) RevokeLicense(ctx context.Context, licenseID uint) error {
+	return global.DB.WithContext(ctx).Model(&model.License{}).Where("id = ?", licenseID).Update("status", entity.StatusRevoked).Error
 }
 
 // UpdateLicense 更新许可证信息
-func (s *LicenseService) UpdateLicense(cmd UpdateLicenseCommand) error {
+func (s *LicenseService) UpdateLicense(ctx context.Context, cmd UpdateLicenseCommand) error {
 	id := cmd.ID
 	updates := model.License{
 		MaxNodes:      cmd.MaxNodes,
@@ -76,18 +76,18 @@ func (s *LicenseService) UpdateLicense(cmd UpdateLicenseCommand) error {
 		FeatureMask:   cmd.FeatureMask,
 		Remark:        cmd.Remark,
 	}
-	return global.DB.Model(&model.License{}).Where("id = ?", id).Updates(updates).Error
+	return global.DB.WithContext(ctx).Model(&model.License{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // RenewLicense 增加或减少许可证时间
-func (s *LicenseService) RenewLicense(cmd RenewLicenseCommand) error {
+func (s *LicenseService) RenewLicense(ctx context.Context, cmd RenewLicenseCommand) error {
 	licenseID, extraHours := cmd.ID, cmd.ExtraHours
-	license, err := GetLicenseEntityByID(licenseID)
+	license, err := GetLicenseEntityByID(ctx, global.DB.WithContext(ctx), licenseID)
 	if err != nil {
 		return err
 	}
 	license.Renew(time.Now(), extraHours)
-	return global.DB.Model(model.License{}).Where("id = ?", licenseID).
+	return global.DB.WithContext(ctx).Model(model.License{}).Where("id = ?", licenseID).
 		Updates(model.License{
 			ValidityHours: license.ValidityHours,
 			ExpiredAt:     license.ExpiredAt,
@@ -96,13 +96,13 @@ func (s *LicenseService) RenewLicense(cmd RenewLicenseCommand) error {
 }
 
 // RemoveBindings 移除许可证的所有绑定关系
-func (s *LicenseService) RemoveBindings(id uint) error {
-	return global.DB.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error
+func (s *LicenseService) RemoveBindings(ctx context.Context, id uint) error {
+	return global.DB.WithContext(ctx).Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error
 }
 
 // DeleteLicense 删除许可证
-func (s *LicenseService) DeleteLicense(id uint) error {
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+func (s *LicenseService) DeleteLicense(ctx context.Context, id uint) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("license_id = ?", id).Delete(&model.NodeLicenseBinding{}).Error; err != nil {
 			return err
 		}
@@ -114,8 +114,8 @@ func (s *LicenseService) DeleteLicense(id uint) error {
 }
 
 // GetLicenseDataByID 根据ID获取许可证
-func (s *LicenseService) GetLicenseDataByID(id uint) (*LicenseData, error) {
-	license, err := licenseRepo.GetByID(context.Background(), global.DB, id)
+func (s *LicenseService) GetLicenseDataByID(ctx context.Context, id uint) (*LicenseData, error) {
+	license, err := licenseRepo.GetByID(ctx, global.DB.WithContext(ctx), id)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +133,8 @@ func (s *LicenseService) GetLicenseDataByID(id uint) (*LicenseData, error) {
 }
 
 // GetLicenseDataByKey 根据许可证密钥获取许可证
-func (s *LicenseService) GetLicenseDataByKey(key string) (*LicenseData, error) {
-	license, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
+func (s *LicenseService) GetLicenseDataByKey(ctx context.Context, key string) (*LicenseData, error) {
+	license, err := licenseRepo.GetByKey(ctx, global.DB.WithContext(ctx), key)
 	if err != nil {
 		return nil, err
 	}
@@ -152,8 +152,8 @@ func (s *LicenseService) GetLicenseDataByKey(key string) (*LicenseData, error) {
 }
 
 // CleanInvalidLicense 删除所有过期的许可证，同时删除节点许可证绑定
-func (s *LicenseService) CleanInvalidLicense() error {
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+func (s *LicenseService) CleanInvalidLicense(ctx context.Context) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var expiredLicenses []model.License
 
 		// 查询所有已过期或被吊销的许可证

@@ -23,12 +23,12 @@ func NewProductService() *ProductService {
 
 // CreateProduct 创建新产品
 // 包括产品基本信息和版本列表的持久化存储
-func (s *ProductService) CreateProduct(cmd CreateProductCommand) (*ProductData, error) {
+func (s *ProductService) CreateProduct(ctx context.Context, cmd CreateProductCommand) (*ProductData, error) {
 	pProduct := &model.Product{
 		Name:        cmd.Name,
 		Description: cmd.Description,
 	}
-	err := productRepo.Create(context.Background(), global.DB, pProduct)
+	err := productRepo.Create(ctx, global.DB.WithContext(ctx), pProduct)
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +40,8 @@ func (s *ProductService) CreateProduct(cmd CreateProductCommand) (*ProductData, 
 }
 
 // GetProductDataByID 根据ID获取产品信息
-func (s *ProductService) GetProductDataByID(id uint) (*ProductData, error) {
-	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
+func (s *ProductService) GetProductDataByID(ctx context.Context, id uint) (*ProductData, error) {
+	pProduct, err := productRepo.GetByID(ctx, global.DB.WithContext(ctx), id)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +57,9 @@ func (s *ProductService) GetProductDataByID(id uint) (*ProductData, error) {
 
 // SetMinSupportedVersion 设置产品的最低支持版本
 // 用于控制产品版本的兼容性要求
-func (s *ProductService) SetMinSupportedVersion(cmd UpdateMinVersionCommand) error {
+func (s *ProductService) SetMinSupportedVersion(ctx context.Context, cmd UpdateMinVersionCommand) error {
 	versionID, productID := cmd.VersionID, cmd.ProductID
-	version, err := productVersionRepo.GetByID(context.Background(), global.DB, versionID)
+	version, err := productVersionRepo.GetByID(ctx, global.DB.WithContext(ctx), versionID)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (s *ProductService) SetMinSupportedVersion(cmd UpdateMinVersionCommand) err
 		return fmt.Errorf("unkonwn version id %d", versionID)
 	}
 	if version.ProductID == productID {
-		return global.DB.Model(&model.Product{}).
+		return global.DB.WithContext(ctx).Model(&model.Product{}).
 			Where("id = ?", productID).
 			Update("min_supported_version_id", versionID).Error
 	}
@@ -76,8 +76,8 @@ func (s *ProductService) SetMinSupportedVersion(cmd UpdateMinVersionCommand) err
 
 // DeleteProduct 删除产品
 // 同时删除产品相关的所有版本信息
-func (s *ProductService) DeleteProduct(id uint) error {
-	return global.DB.Transaction(func(tx *gorm.DB) error {
+func (s *ProductService) DeleteProduct(ctx context.Context, id uint) error {
+	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("id = ?", id).Delete(&model.Product{}).Error; err != nil {
 			return err
 		}
@@ -90,44 +90,48 @@ func (s *ProductService) DeleteProduct(id uint) error {
 
 // CreateProductVersion 创建新产品版本
 // 创建新产品版本，若指定了发布时间，则注册定时发布任务
-func (s *ProductService) CreateProductVersion(cmd CreateProductVersionCommand) (*ProductVersionData, error) {
-	product, err := GetProductEntityByID(cmd.ProductID)
-	if err != nil {
-		return nil, err
-	}
-	if product == nil {
-		return nil, fmt.Errorf("product not found")
-	}
-	if product.ExistsVersionCode(cmd.VersionCode) {
-		return nil, fmt.Errorf("version code already exists")
-	}
-	newVersion := &model.ProductVersion{
-		ProductID:   cmd.ProductID,
-		VersionCode: cmd.VersionCode,
-		ReleaseDate: cmd.ReleaseDate,
-		Description: cmd.Description,
-		Status:      int(entity.VersionStatusUnreleased), //默认未发布
-	}
-	if err := productVersionRepo.Create(context.Background(), global.DB, newVersion); err != nil {
+func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreateProductVersionCommand) (*ProductVersionData, error) {
+	var newVersion *model.ProductVersion
+	if err := global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		product, err := GetProductEntityByID(ctx, tx, cmd.ProductID)
+		if err != nil {
+			return err
+		}
+		if product == nil {
+			return fmt.Errorf("product not found")
+		}
+		if product.ExistsVersionCode(cmd.VersionCode) {
+			return fmt.Errorf("version code already exists")
+		}
+		newVersion = &model.ProductVersion{
+			ProductID:   cmd.ProductID,
+			VersionCode: cmd.VersionCode,
+			ReleaseDate: cmd.ReleaseDate,
+			Description: cmd.Description,
+			Status:      int(entity.VersionStatusUnreleased), //默认未发布
+		}
+		if err := productVersionRepo.Create(ctx, tx, newVersion); err != nil {
+			return err
+		}
+
+		if cmd.Method == ReleaseImmediate {
+			if err := s.doReleaseVersion(ctx, tx, newVersion.ID, time.Now()); err != nil {
+				return fmt.Errorf("failed to release version: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	switch cmd.Method {
-	case ReleaseImmediate:
-		err := s.doReleaseVersion(newVersion.ID, time.Now())
-		if err != nil {
-			return nil, fmt.Errorf("failed to release version: %w", err)
-		}
-	case ReleaseScheduled:
+	if cmd.Method == ReleaseScheduled {
 		var releaseDate time.Time
 		if newVersion.ReleaseDate != nil {
 			releaseDate = *newVersion.ReleaseDate
 		} else {
 			releaseDate = time.Now()
 		}
-		s.ScheduleReleaseTask(newVersion.ID, releaseDate)
-	case ReleaseHold:
-
+		s.scheduleReleaseTask(newVersion.ID, releaseDate)
 	}
 
 	return &ProductVersionData{
@@ -139,43 +143,45 @@ func (s *ProductService) CreateProductVersion(cmd CreateProductVersionCommand) (
 
 // ReleaseVersion 发布指定产品的指定版本
 // 若指定了发布时间则定时发布，否则立即发布
-func (s *ProductService) ReleaseVersion(cmd ReleaseNewVersionCommand) error {
+func (s *ProductService) ReleaseVersion(ctx context.Context, cmd ReleaseNewVersionCommand) error {
 	versionID, releaseDate := cmd.VersionID, cmd.ReleaseDate
 	if releaseDate == nil {
-		return s.doReleaseVersion(versionID, time.Now())
+		return s.doReleaseVersion(ctx, global.DB.WithContext(ctx), versionID, time.Now())
 	} else {
 		//创建定时任务
-		s.ScheduleReleaseTask(versionID, *releaseDate)
+		s.scheduleReleaseTask(versionID, *releaseDate)
 		return nil
 	}
 }
 
 // ScheduleReleaseTask 简易定时发布
 // todo 后续考虑如何管理定时任务
-func (s *ProductService) ScheduleReleaseTask(versionID uint, releaseDate time.Time) {
+func (s *ProductService) scheduleReleaseTask(versionID uint, releaseDate time.Time) {
 	delay := time.Until(releaseDate)
 	if delay <= 0 {
 		// 已经过了发布时间，直接发布
-		_ = s.doReleaseVersion(versionID, releaseDate)
+		bg := context.Background()
+		_ = s.doReleaseVersion(bg, global.DB.WithContext(bg), versionID, releaseDate)
 		return
 	}
 	go func() {
 		<-time.After(delay)
-		_ = s.doReleaseVersion(versionID, releaseDate)
+		bg := context.Background()
+		_ = s.doReleaseVersion(bg, global.DB.WithContext(bg), versionID, releaseDate)
 	}()
 }
 
 // 内部方法执行版本发布
-func (s *ProductService) doReleaseVersion(versionID uint, releaseDate time.Time) error {
+func (s *ProductService) doReleaseVersion(ctx context.Context, db *gorm.DB, versionID uint, releaseDate time.Time) error {
 
-	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
+	return db.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
 		"status":       entity.VersionStatusAvailable,
 		"release_date": releaseDate,
 	}).Error
 }
 
-func (s *ProductService) DeprecateVersion(versionID uint) error {
-	return global.DB.Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
+func (s *ProductService) DeprecateVersion(ctx context.Context, versionID uint) error {
+	return global.DB.WithContext(ctx).Model(&model.ProductVersion{}).Where("id = ?", versionID).Updates(map[string]interface{}{
 		"status": entity.VersionStatusDeprecated,
 	}).Error
 }

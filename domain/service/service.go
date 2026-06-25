@@ -3,9 +3,10 @@ package service
 import (
 	"context"
 	"nexus-core/domain/entity"
-	"nexus-core/global"
 	"nexus-core/persistence/model"
 	"nexus-core/persistence/repository"
+
+	"gorm.io/gorm"
 )
 
 //
@@ -21,8 +22,8 @@ var (
 )
 
 // GetLicenseEntityByID 获取license实体
-func GetLicenseEntityByID(id uint) (*entity.License, error) {
-	pLicense, err := licenseRepo.GetByID(context.Background(), global.DB, id)
+func GetLicenseEntityByID(ctx context.Context, db *gorm.DB, id uint) (*entity.License, error) {
+	pLicense, err := licenseRepo.GetByID(ctx, db, id)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +48,8 @@ func GetLicenseEntityByID(id uint) (*entity.License, error) {
 }
 
 // GetLicenseEntityByKey 获取license实体
-func GetLicenseEntityByKey(key string) (*entity.License, error) {
-	pLicense, err := licenseRepo.GetByKey(context.Background(), global.DB, key)
+func GetLicenseEntityByKey(ctx context.Context, db *gorm.DB, key string) (*entity.License, error) {
+	pLicense, err := licenseRepo.GetByKey(ctx, db, key)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +78,8 @@ func ToEntityLicense(pLicense *model.License) *entity.License {
 }
 
 // GetNodeEntityByID 获取node实体
-func GetNodeEntityByID(id uint) (*entity.Node, error) {
-	pNode, err := nodeRepo.GetByID(context.Background(), global.DB, id)
+func GetNodeEntityByID(ctx context.Context, db *gorm.DB, id uint) (*entity.Node, error) {
+	pNode, err := nodeRepo.GetByID(ctx, db, id)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +90,8 @@ func GetNodeEntityByID(id uint) (*entity.Node, error) {
 }
 
 // GetNodeEntityByCode 获取node实体
-func GetNodeEntityByCode(code string) (*entity.Node, error) {
-	pNode, err := nodeRepo.GetByDeviceCode(context.Background(), global.DB, code)
+func GetNodeEntityByCode(ctx context.Context, db *gorm.DB, code string) (*entity.Node, error) {
+	pNode, err := nodeRepo.GetByDeviceCode(ctx, db, code)
 	if err != nil {
 		return nil, err
 	}
@@ -111,15 +112,15 @@ func ToEntityNode(pNode *model.Node) *entity.Node {
 }
 
 // GetProductEntityByID 获取产品实体
-func GetProductEntityByID(id uint) (*entity.Product, error) {
-	pProduct, err := productRepo.GetByID(context.Background(), global.DB, id)
+func GetProductEntityByID(ctx context.Context, db *gorm.DB, id uint) (*entity.Product, error) {
+	pProduct, err := productRepo.GetByID(ctx, db, id)
 	if err != nil {
 		return nil, err
 	}
 	if pProduct == nil {
 		return nil, nil
 	}
-	pVersionList, err := productVersionRepo.ListByProductID(context.Background(), global.DB, id)
+	pVersionList, err := productVersionRepo.ListByProductID(ctx, db, id)
 	if err != nil {
 		return nil, err
 	}

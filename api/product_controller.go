@@ -53,7 +53,7 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	p, err := c.ps.CreateProduct(service.CreateProductCommand{
+	p, err := c.ps.CreateProduct(ctx.Request.Context(), service.CreateProductCommand{
 		Name:        cmd.Name,
 		Description: cmd.Description,
 	})
@@ -80,7 +80,7 @@ func (c *ProductController) CreateProductVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	v, err := c.ps.CreateProductVersion(service.CreateProductVersionCommand{
+	v, err := c.ps.CreateProductVersion(ctx.Request.Context(), service.CreateProductVersionCommand{
 		ProductID:   cmd.ProductID,
 		VersionCode: cmd.VersionCode,
 		ReleaseDate: cmd.ReleaseDate,
@@ -107,7 +107,7 @@ func (c *ProductController) ReleaseNewVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	err := c.ps.ReleaseVersion(service.ReleaseNewVersionCommand{
+	err := c.ps.ReleaseVersion(ctx.Request.Context(), service.ReleaseNewVersionCommand{
 		ProductID:   cmd.ProductID,
 		VersionID:   cmd.VersionID,
 		ReleaseDate: cmd.ReleaseDate,
@@ -179,7 +179,7 @@ func (c *ProductController) GetByID(ctx *gin.Context) {
 	id := uint(idUint64)
 
 	// 调用服务层
-	data, err := c.ps.GetProductDataByID(id)
+	data, err := c.ps.GetProductDataByID(ctx.Request.Context(), id)
 	if err != nil {
 		NotFound(ctx, err.Error())
 		return
@@ -203,7 +203,7 @@ func (c *ProductController) SetMinVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.SetMinSupportedVersion(service.UpdateMinVersionCommand{
+	if err := c.ps.SetMinSupportedVersion(ctx.Request.Context(), service.UpdateMinVersionCommand{
 		ProductID: cmd.ProductID,
 		VersionID: cmd.VersionID,
 	}); err != nil {
@@ -229,7 +229,7 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeprecateVersion(cmd.VersionID); err != nil {
+	if err := c.ps.DeprecateVersion(ctx.Request.Context(), cmd.VersionID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
@@ -254,7 +254,7 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 		BadRequest(ctx, err.Error())
 		return
 	}
-	if err := c.ps.DeleteProduct(q.ID); err != nil {
+	if err := c.ps.DeleteProduct(ctx.Request.Context(), q.ID); err != nil {
 		InternalError(ctx, err.Error())
 		return
 	}
