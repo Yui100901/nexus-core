@@ -80,6 +80,137 @@ func (s *ControlService) ListControlServices(ctx context.Context, productID *uin
 	return data, nil
 }
 
+func (s *ControlService) UpdateControlService(ctx context.Context, cmd UpdateControlServiceCommand) (*ControlServiceData, error) {
+	if cmd.ID == 0 {
+		return nil, ErrBadRequest("id is required")
+	}
+
+	var existing model.ControlService
+	err := global.DB.WithContext(ctx).Where("id = ?", cmd.ID).First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound("control service not found")
+	}
+	if err != nil {
+		return nil, WrapInternal("get control service failed", err)
+	}
+
+	updates := map[string]interface{}{}
+	if cmd.ProductID != nil {
+		product, err := productRepo.GetByID(ctx, global.DB.WithContext(ctx), *cmd.ProductID)
+		if err != nil {
+			return nil, WrapInternal("get product failed", err)
+		}
+		if product == nil {
+			return nil, ErrNotFound("product not found")
+		}
+		updates["product_id"] = cmd.ProductID
+	}
+	if cmd.Name != nil {
+		name := strings.TrimSpace(*cmd.Name)
+		if name == "" {
+			return nil, ErrBadRequest("name is required")
+		}
+		updates["name"] = name
+	}
+	if cmd.Description != nil {
+		updates["description"] = cmd.Description
+	}
+	if cmd.ServiceType != nil {
+		serviceType := strings.TrimSpace(*cmd.ServiceType)
+		if !isValidControlServiceType(serviceType) {
+			return nil, ErrBadRequest("invalid service_type")
+		}
+		updates["service_type"] = serviceType
+	}
+	if len(cmd.InputSchema) > 0 {
+		if err := validateJSONSchema("input_schema", cmd.InputSchema); err != nil {
+			return nil, err
+		}
+		updates["input_schema"] = normalizeJSON(cmd.InputSchema)
+	}
+	if len(cmd.OutputSchema) > 0 {
+		if err := validateJSONSchema("output_schema", cmd.OutputSchema); err != nil {
+			return nil, err
+		}
+		updates["output_schema"] = normalizeJSON(cmd.OutputSchema)
+	}
+	if len(updates) == 0 {
+		return nil, ErrBadRequest("no control service fields to update")
+	}
+
+	if err := global.DB.WithContext(ctx).Model(&existing).Updates(updates).Error; err != nil {
+		return nil, WrapInternal("update control service failed", err)
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "control_service", existing.ID, "update", updates)
+	return s.GetControlServiceByID(ctx, existing.ID)
+}
+
+func (s *ControlService) UpdateControlServiceStatus(ctx context.Context, cmd UpdateControlServiceStatusCommand) (*ControlServiceData, error) {
+	if cmd.ID == 0 {
+		return nil, ErrBadRequest("id is required")
+	}
+	if cmd.Status != ControlServiceStatusEnabled && cmd.Status != ControlServiceStatusDisabled {
+		return nil, ErrBadRequest("invalid status")
+	}
+
+	result := global.DB.WithContext(ctx).Model(&model.ControlService{}).
+		Where("id = ?", cmd.ID).
+		Update("status", cmd.Status)
+	if result.Error != nil {
+		return nil, WrapInternal("update control service status failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound("control service not found")
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "control_service", cmd.ID, "status_update", map[string]interface{}{
+		"status": cmd.Status,
+	})
+	return s.GetControlServiceByID(ctx, cmd.ID)
+}
+
+func (s *ControlService) DeleteControlService(ctx context.Context, id uint) error {
+	if id == 0 {
+		return ErrBadRequest("id is required")
+	}
+
+	var serviceDef model.ControlService
+	err := global.DB.WithContext(ctx).Where("id = ?", id).First(&serviceDef).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrNotFound("control service not found")
+	}
+	if err != nil {
+		return WrapInternal("get control service failed", err)
+	}
+
+	var capabilityCount int64
+	if err := global.DB.WithContext(ctx).Model(&model.NodeServiceCapability{}).
+		Where("service_identifier = ?", serviceDef.Identifier).
+		Count(&capabilityCount).Error; err != nil {
+		return WrapInternal("count node capabilities failed", err)
+	}
+	if capabilityCount > 0 {
+		return ErrConflict("control service has node capabilities")
+	}
+
+	var commandCount int64
+	if err := global.DB.WithContext(ctx).Model(&model.ControlCommand{}).
+		Where("service_identifier = ?", serviceDef.Identifier).
+		Count(&commandCount).Error; err != nil {
+		return WrapInternal("count control commands failed", err)
+	}
+	if commandCount > 0 {
+		return ErrConflict("control service has control commands")
+	}
+
+	if err := global.DB.WithContext(ctx).Delete(&serviceDef).Error; err != nil {
+		return WrapInternal("delete control service failed", err)
+	}
+	recordAuditLog(ctx, global.DB.WithContext(ctx), "control_service", id, "delete", map[string]interface{}{
+		"identifier": serviceDef.Identifier,
+	})
+	return nil
+}
+
 func validateCreateControlServiceCommand(ctx context.Context, cmd CreateControlServiceCommand) error {
 	if strings.TrimSpace(cmd.Identifier) == "" {
 		return ErrBadRequest("identifier is required")

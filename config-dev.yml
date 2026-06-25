@@ -27,3 +27,8 @@ mqtt:
   username: ""
   password: ""
   publish_timeout_seconds: 5
+
+control:
+  dispatch_timeout_seconds: 5
+  dispatch_max_retries: 0
+  node_online_ttl_seconds: 120

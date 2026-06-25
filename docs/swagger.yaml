@@ -40,6 +40,19 @@ definitions:
     - product_id
     - validity_hours
     type: object
+  dto.CompleteControlCommand:
+    properties:
+      command_id:
+        type: integer
+      error_message:
+        type: string
+      result:
+        type: object
+      status:
+        type: string
+    required:
+    - status
+    type: object
   dto.CreateControlCommand:
     properties:
       node_id:
@@ -251,6 +264,28 @@ definitions:
     required:
     - license_id
     - node_id
+    type: object
+  dto.UpdateControlServiceCommand:
+    properties:
+      description:
+        type: string
+      input_schema:
+        type: object
+      name:
+        type: string
+      output_schema:
+        type: object
+      product_id:
+        type: integer
+      service_type:
+        type: string
+    type: object
+  dto.UpdateControlServiceStatusCommand:
+    properties:
+      status:
+        type: integer
+    required:
+    - status
     type: object
   dto.UpdateLicenseCommand:
     description: Command to update a license
@@ -565,6 +600,44 @@ paths:
       summary: Get a control command
       tags:
       - control-commands
+  /control-commands/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Command ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Complete Control Command
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CompleteControlCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Complete a control command
+      tags:
+      - control-commands
   /control-services:
     get:
       consumes:
@@ -629,6 +702,41 @@ paths:
       tags:
       - control-services
   /control-services/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Service ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Delete a control service
+      tags:
+      - control-services
     get:
       consumes:
       - application/json
@@ -658,6 +766,81 @@ paths:
           schema:
             $ref: '#/definitions/api.CommonResponse'
       summary: Get a control service
+      tags:
+      - control-services
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Service ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Control Service
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateControlServiceCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Update a control service
+      tags:
+      - control-services
+  /control-services/{id}/status:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Service ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Control Service Status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateControlServiceStatusCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.CommonResponse'
+      summary: Update control service status
       tags:
       - control-services
   /license-cleanups/invalid:

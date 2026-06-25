@@ -32,7 +32,8 @@ type AutoBindResult struct {
 
 // HeartbeatResult 返回心跳结果（简化）
 type HeartbeatResult struct {
-	Online bool
+	Online         bool                   `json:"online"`
+	PendingControl *PendingControlSummary `json:"pending_control,omitempty"`
 }
 
 // Register 执行自动节点绑定注册逻辑
@@ -235,5 +236,45 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 		return nil, WrapInternal("update node heartbeat failed", err)
 	}
 
-	return &HeartbeatResult{Online: true}, nil
+	pendingControl, err := getPendingControlSummary(ctx, node.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HeartbeatResult{Online: true, PendingControl: pendingControl}, nil
+}
+
+func getPendingControlSummary(ctx context.Context, nodeID uint) (*PendingControlSummary, error) {
+	statuses := []int{
+		ControlCommandStatusPending,
+		ControlCommandStatusSent,
+		ControlCommandStatusRunning,
+	}
+
+	var count int64
+	if err := global.DB.WithContext(ctx).Model(&model.ControlCommand{}).
+		Where("node_id = ? AND status IN ?", nodeID, statuses).
+		Count(&count).Error; err != nil {
+		return nil, WrapInternal("count pending control commands failed", err)
+	}
+
+	var commands []model.ControlCommand
+	if err := global.DB.WithContext(ctx).
+		Select("id").
+		Where("node_id = ? AND status IN ?", nodeID, statuses).
+		Order("id DESC").
+		Limit(10).
+		Find(&commands).Error; err != nil {
+		return nil, WrapInternal("list pending control commands failed", err)
+	}
+
+	commandIDs := make([]uint, 0, len(commands))
+	for _, command := range commands {
+		commandIDs = append(commandIDs, command.ID)
+	}
+
+	return &PendingControlSummary{
+		Count:      int(count),
+		CommandIDs: commandIDs,
+	}, nil
 }

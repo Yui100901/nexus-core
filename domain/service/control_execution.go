@@ -121,7 +121,10 @@ func (s *ControlService) CreateControlCommand(ctx context.Context, cmd CreateCon
 	if err != nil {
 		return nil, err
 	}
-	if err := validateNodeHasValidBindingForControl(ctx, cmd.NodeID, serviceDef.ProductID); err != nil {
+	if err := validateControlNodeOnline(ctx, cmd.NodeID, capability.Protocol); err != nil {
+		return nil, err
+	}
+	if err := validateNodeHasValidBindingForControl(ctx, cmd.NodeID, serviceDef); err != nil {
 		return nil, err
 	}
 
@@ -168,6 +171,32 @@ func (s *ControlService) GetControlCommandByID(ctx context.Context, id uint) (*C
 	}
 	if err != nil {
 		return nil, WrapInternal("get control command failed", err)
+	}
+	return toControlCommandData(&command), nil
+}
+
+func (s *ControlService) CompleteControlCommand(ctx context.Context, cmd CompleteControlCommandCommand) (*ControlCommandData, error) {
+	if cmd.CommandID == 0 {
+		return nil, ErrBadRequest("command_id is required")
+	}
+
+	var command model.ControlCommand
+	err := global.DB.WithContext(ctx).Where("id = ?", cmd.CommandID).First(&command).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound("control command not found")
+	}
+	if err != nil {
+		return nil, WrapInternal("get control command failed", err)
+	}
+
+	response := ControlCommandResponse{
+		CommandID:    cmd.CommandID,
+		Status:       cmd.Status,
+		Result:       cmd.Result,
+		ErrorMessage: cmd.ErrorMessage,
+	}
+	if err := applyControlCommandResponse(ctx, &command, response); err != nil {
+		return nil, err
 	}
 	return toControlCommandData(&command), nil
 }
@@ -255,14 +284,14 @@ func isSupportedControlProtocol(protocol string) bool {
 	}
 }
 
-func validateNodeHasValidBindingForControl(ctx context.Context, nodeID uint, productID *uint) error {
-	if productID == nil {
+func validateNodeHasValidBindingForControl(ctx context.Context, nodeID uint, serviceDef *model.ControlService) error {
+	if serviceDef.ProductID == nil {
 		return nil
 	}
 
 	var bindings []model.NodeLicenseBinding
 	if err := global.DB.WithContext(ctx).
-		Where("node_id = ? AND product_id = ? AND status = ?", nodeID, *productID, entity.BindingStatusBound).
+		Where("node_id = ? AND product_id = ? AND status = ?", nodeID, *serviceDef.ProductID, entity.BindingStatusBound).
 		Find(&bindings).Error; err != nil {
 		return WrapInternal("get node bindings failed", err)
 	}
@@ -273,6 +302,9 @@ func validateNodeHasValidBindingForControl(ctx context.Context, nodeID uint, pro
 			return WrapInternal("get license failed", err)
 		}
 		if license != nil && license.CalculateStatus(time.Now()) == entity.StatusActive {
+			if err := validateLicenseControlServiceScope(ctx, license.ID, serviceDef.Identifier); err != nil {
+				return err
+			}
 			return nil
 		}
 	}
@@ -280,17 +312,82 @@ func validateNodeHasValidBindingForControl(ctx context.Context, nodeID uint, pro
 	return ErrForbidden("node has no valid license for control service")
 }
 
-func (s *ControlService) dispatchControlCommand(ctx context.Context, command *model.ControlCommand, capability *model.NodeServiceCapability) error {
-	switch capability.Protocol {
-	case "http":
-		return dispatchHTTPControlCommand(ctx, command, capability)
-	case "mqtt":
-		return dispatchMQTTControlCommand(ctx, command, capability)
-	case "websocket":
-		return DefaultControlWebSocketHub.Dispatch(ctx, command)
-	default:
-		return ErrBadRequest("invalid protocol")
+func validateLicenseControlServiceScope(ctx context.Context, licenseID uint, serviceIdentifier string) error {
+	var scopeCount int64
+	if err := global.DB.WithContext(ctx).Model(&model.LicenseServiceScope{}).
+		Where("license_id = ?", licenseID).
+		Count(&scopeCount).Error; err != nil {
+		return WrapInternal("count license service scopes failed", err)
 	}
+	if scopeCount == 0 {
+		return nil
+	}
+
+	var allowedCount int64
+	if err := global.DB.WithContext(ctx).Model(&model.LicenseServiceScope{}).
+		Where("license_id = ? AND service_identifier = ? AND status = ?", licenseID, serviceIdentifier, 1).
+		Count(&allowedCount).Error; err != nil {
+		return WrapInternal("count license service scope failed", err)
+	}
+	if allowedCount == 0 {
+		return ErrForbidden("license does not allow control service")
+	}
+	return nil
+}
+
+func validateControlNodeOnline(ctx context.Context, nodeID uint, protocol string) error {
+	if protocol == "websocket" && DefaultControlWebSocketHub.IsOnline(nodeID) {
+		return nil
+	}
+
+	var node model.Node
+	err := global.DB.WithContext(ctx).Where("id = ?", nodeID).First(&node).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrNotFound("node not found")
+	}
+	if err != nil {
+		return WrapInternal("get node failed", err)
+	}
+	if node.LastSeenAt == nil {
+		return ErrConflict("node is not online")
+	}
+	ttl := time.Duration(global.GetConfig().Control.NodeOnlineTTLSeconds) * time.Second
+	if ttl <= 0 {
+		ttl = 120 * time.Second
+	}
+	if time.Since(*node.LastSeenAt) > ttl {
+		return ErrConflict("node is not online")
+	}
+	return nil
+}
+
+func (s *ControlService) dispatchControlCommand(ctx context.Context, command *model.ControlCommand, capability *model.NodeServiceCapability) error {
+	attempts := global.GetConfig().Control.DispatchMaxRetries + 1
+	if attempts <= 0 {
+		attempts = 1
+	}
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			_ = createControlCommandLog(ctx, command.ID, command.NodeID, "retry", command.Status, nil, mustMarshalJSON(map[string]interface{}{
+				"attempt": i + 1,
+			}))
+		}
+		switch capability.Protocol {
+		case "http":
+			lastErr = dispatchHTTPControlCommand(ctx, command, capability)
+		case "mqtt":
+			lastErr = dispatchMQTTControlCommand(ctx, command, capability)
+		case "websocket":
+			lastErr = DefaultControlWebSocketHub.Dispatch(ctx, command)
+		default:
+			return ErrBadRequest("invalid protocol")
+		}
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return lastErr
 }
 
 func dispatchHTTPControlCommand(ctx context.Context, command *model.ControlCommand, capability *model.NodeServiceCapability) error {
@@ -308,7 +405,7 @@ func dispatchHTTPControlCommand(ctx context.Context, command *model.ControlComma
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: controlDispatchTimeout()}
 	resp, err := client.Do(req)
 	if err != nil {
 		return WrapInternal("send control command failed", err)
@@ -342,6 +439,14 @@ func dispatchHTTPControlCommand(ctx context.Context, command *model.ControlComma
 		event = "failed"
 	}
 	return completeControlCommand(ctx, command, status, event, errorMessage, result, &completedAt)
+}
+
+func controlDispatchTimeout() time.Duration {
+	timeout := time.Duration(global.GetConfig().Control.DispatchTimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		return 5 * time.Second
+	}
+	return timeout
 }
 
 func createControlCommandLog(ctx context.Context, commandID uint, nodeID uint, event string, status int, message *string, data []byte) error {
@@ -383,6 +488,15 @@ func completeControlCommand(ctx context.Context, command *model.ControlCommand, 
 		now := time.Now()
 		completedAt = &now
 	}
+	converted, err := convertControlCommandResult(ctx, command.ServiceIdentifier, data)
+	if err != nil {
+		status = ControlCommandStatusFailed
+		event = "failed"
+		errMessage := err.Error()
+		message = &errMessage
+	} else {
+		data = converted
+	}
 
 	if err := global.DB.WithContext(ctx).Model(command).Updates(map[string]interface{}{
 		"status":        status,
@@ -399,6 +513,30 @@ func completeControlCommand(ctx context.Context, command *model.ControlCommand, 
 	command.CompletedAt = completedAt
 	_ = createControlCommandLog(ctx, command.ID, command.NodeID, event, status, message, data)
 	return nil
+}
+
+func convertControlCommandResult(ctx context.Context, serviceIdentifier string, data []byte) ([]byte, error) {
+	if len(data) == 0 || !json.Valid(data) {
+		return data, nil
+	}
+	var serviceDef model.ControlService
+	err := global.DB.WithContext(ctx).
+		Where("identifier = ?", serviceIdentifier).
+		First(&serviceDef).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return data, nil
+	}
+	if err != nil {
+		return nil, WrapInternal("get control service failed", err)
+	}
+	if len(serviceDef.OutputSchema) == 0 {
+		return data, nil
+	}
+	converted, err := ConvertPayload(json.RawMessage(data), json.RawMessage(serviceDef.OutputSchema))
+	if err != nil {
+		return nil, err
+	}
+	return converted, nil
 }
 
 func toNodeCapabilityData(capability *model.NodeServiceCapability) *NodeCapabilityData {

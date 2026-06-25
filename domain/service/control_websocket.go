@@ -16,8 +16,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const defaultWebSocketCommandTimeout = 10 * time.Second
-
 type ControlCommandResponse struct {
 	CommandID    uint            `json:"command_id"`
 	Status       string          `json:"status"`
@@ -106,7 +104,7 @@ func (h *ControlWebSocketHub) Dispatch(ctx context.Context, command *model.Contr
 		return WrapInternal("send websocket control command failed", err)
 	}
 
-	timer := time.NewTimer(defaultWebSocketCommandTimeout)
+	timer := time.NewTimer(controlDispatchTimeout())
 	defer timer.Stop()
 
 	select {

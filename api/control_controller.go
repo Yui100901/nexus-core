@@ -21,6 +21,9 @@ func (c *ControlController) RegisterRoutes(r *gin.Engine) {
 		g.POST("", c.CreateControlService)
 		g.GET("", c.ListControlServices)
 		g.GET("/:id", c.GetControlServiceByID)
+		g.PATCH("/:id", c.UpdateControlService)
+		g.DELETE("/:id", c.DeleteControlService)
+		g.POST("/:id/status", c.UpdateControlServiceStatus)
 	}
 
 	capabilities := r.Group("/node-capabilities")
@@ -33,6 +36,7 @@ func (c *ControlController) RegisterRoutes(r *gin.Engine) {
 	{
 		commands.POST("", c.CreateControlCommand)
 		commands.GET("/:id", c.GetControlCommandByID)
+		commands.POST("/:id/complete", c.CompleteControlCommand)
 	}
 
 	nodeControl := r.Group("/node-control")
@@ -269,4 +273,142 @@ func (c *ControlController) ConnectNodeControlWebSocket(ctx *gin.Context) {
 		HandleError(ctx, err)
 		return
 	}
+}
+
+// UpdateControlService updates a control service definition.
+// @Summary Update a control service
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Service ID"
+// @Param body body dto.UpdateControlServiceCommand true "Update Control Service"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services/{id} [patch]
+func (c *ControlController) UpdateControlService(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	var cmd dto.UpdateControlServiceCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.UpdateControlService(ctx.Request.Context(), service.UpdateControlServiceCommand{
+		ID:           id,
+		ProductID:    cmd.ProductID,
+		Name:         cmd.Name,
+		Description:  cmd.Description,
+		ServiceType:  cmd.ServiceType,
+		InputSchema:  cmd.InputSchema,
+		OutputSchema: cmd.OutputSchema,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// UpdateControlServiceStatus enables or disables a control service.
+// @Summary Update control service status
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Service ID"
+// @Param body body dto.UpdateControlServiceStatusCommand true "Update Control Service Status"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services/{id}/status [post]
+func (c *ControlController) UpdateControlServiceStatus(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	var cmd dto.UpdateControlServiceStatusCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+
+	data, err := c.cs.UpdateControlServiceStatus(ctx.Request.Context(), service.UpdateControlServiceStatusCommand{
+		ID:     id,
+		Status: cmd.Status,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
+}
+
+// DeleteControlService deletes an unused control service definition.
+// @Summary Delete a control service
+// @Tags control-services
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Service ID"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 409 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-services/{id} [delete]
+func (c *ControlController) DeleteControlService(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := c.cs.DeleteControlService(ctx.Request.Context(), id); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "control service deleted")
+}
+
+// CompleteControlCommand records an async node control command response.
+// @Summary Complete a control command
+// @Tags control-commands
+// @Accept json
+// @Produce json
+// @Param id path uint true "Control Command ID"
+// @Param body body dto.CompleteControlCommand true "Complete Control Command"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-commands/{id}/complete [post]
+func (c *ControlController) CompleteControlCommand(ctx *gin.Context) {
+	id, err := UintParamOrQuery(ctx, "id")
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	var cmd dto.CompleteControlCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	cmd.CommandID = id
+
+	data, err := c.cs.CompleteControlCommand(ctx.Request.Context(), service.CompleteControlCommandCommand{
+		CommandID:    cmd.CommandID,
+		Status:       cmd.Status,
+		Result:       cmd.Result,
+		ErrorMessage: cmd.ErrorMessage,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }

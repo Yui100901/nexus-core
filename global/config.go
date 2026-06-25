@@ -7,13 +7,14 @@ import (
 )
 
 type Config struct {
-	Port            int        `yaml:"port"`
-	DBConfig        *DBConfig  `yaml:"db_list"`
-	SwaggerEnabled  bool       `yaml:"swagger_enabled"`
-	AutoOpenBrowser bool       `yaml:"auto_open_browser"`
-	SwaggerURL      string     `yaml:"swagger_url"`
-	SwaggerDocURL   string     `yaml:"swagger_doc_url"`
-	MQTT            MQTTConfig `yaml:"mqtt"`
+	Port            int           `yaml:"port"`
+	DBConfig        *DBConfig     `yaml:"db_list"`
+	SwaggerEnabled  bool          `yaml:"swagger_enabled"`
+	AutoOpenBrowser bool          `yaml:"auto_open_browser"`
+	SwaggerURL      string        `yaml:"swagger_url"`
+	SwaggerDocURL   string        `yaml:"swagger_doc_url"`
+	MQTT            MQTTConfig    `yaml:"mqtt"`
+	Control         ControlConfig `yaml:"control"`
 }
 
 type DBConfig struct {
@@ -38,6 +39,12 @@ type MQTTConfig struct {
 	PublishTimeoutSeconds int    `yaml:"publish_timeout_seconds"`
 }
 
+type ControlConfig struct {
+	DispatchTimeoutSeconds int `yaml:"dispatch_timeout_seconds"`
+	DispatchMaxRetries     int `yaml:"dispatch_max_retries"`
+	NodeOnlineTTLSeconds   int `yaml:"node_online_ttl_seconds"`
+}
+
 var cfg *Config
 
 func LoadConfig() *Config {
@@ -60,6 +67,11 @@ func LoadConfig() *Config {
 		MQTT: MQTTConfig{
 			PublishTimeoutSeconds: 5,
 		},
+		Control: ControlConfig{
+			DispatchTimeoutSeconds: 5,
+			DispatchMaxRetries:     0,
+			NodeOnlineTTLSeconds:   120,
+		},
 	}
 
 	f, err := os.ReadFile("config-dev.yml")
@@ -81,6 +93,12 @@ func LoadConfig() *Config {
 	}
 	if cfg.MQTT.PublishTimeoutSeconds <= 0 {
 		cfg.MQTT.PublishTimeoutSeconds = 5
+	}
+	if cfg.Control.DispatchTimeoutSeconds <= 0 {
+		cfg.Control.DispatchTimeoutSeconds = 5
+	}
+	if cfg.Control.NodeOnlineTTLSeconds <= 0 {
+		cfg.Control.NodeOnlineTTLSeconds = 120
 	}
 
 	return cfg

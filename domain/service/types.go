@@ -167,6 +167,21 @@ type CreateControlServiceCommand struct {
 	OutputSchema json.RawMessage
 }
 
+type UpdateControlServiceCommand struct {
+	ID           uint
+	ProductID    *uint
+	Name         *string
+	Description  *string
+	ServiceType  *string
+	InputSchema  json.RawMessage
+	OutputSchema json.RawMessage
+}
+
+type UpdateControlServiceStatusCommand struct {
+	ID     uint
+	Status int
+}
+
 type ControlServiceData struct {
 	ID           uint            `json:"id"`
 	ProductID    *uint           `json:"product_id,omitempty"`
@@ -212,4 +227,16 @@ type ControlCommandData struct {
 	Status            int             `json:"status"`
 	Result            json.RawMessage `json:"result"`
 	ErrorMessage      *string         `json:"error_message,omitempty"`
+}
+
+type CompleteControlCommandCommand struct {
+	CommandID    uint
+	Status       string
+	Result       json.RawMessage
+	ErrorMessage *string
+}
+
+type PendingControlSummary struct {
+	Count      int    `json:"count"`
+	CommandIDs []uint `json:"command_ids"`
 }

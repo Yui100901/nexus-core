@@ -3,7 +3,9 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 type nodeSchema struct {
@@ -11,10 +13,17 @@ type nodeSchema struct {
 }
 
 type nodeSchemaField struct {
-	Source   string          `json:"source"`
-	Type     string          `json:"type"`
-	Required bool            `json:"required"`
-	Default  json.RawMessage `json:"default"`
+	Source    string            `json:"source"`
+	Type      string            `json:"type"`
+	Required  bool              `json:"required"`
+	Default   json.RawMessage   `json:"default"`
+	Enum      []json.RawMessage `json:"enum"`
+	Minimum   *float64          `json:"minimum"`
+	Maximum   *float64          `json:"maximum"`
+	MinLength *int              `json:"min_length"`
+	MaxLength *int              `json:"max_length"`
+	Pattern   string            `json:"pattern"`
+	Format    string            `json:"format"`
 }
 
 func ConvertPayload(payload json.RawMessage, schemaRaw json.RawMessage) (json.RawMessage, error) {
@@ -67,6 +76,9 @@ func ConvertPayload(payload json.RawMessage, schemaRaw json.RawMessage) (json.Ra
 		if err != nil {
 			return nil, ErrBadRequest(fmt.Sprintf("%s %s", targetName, err.Error()))
 		}
+		if err := validateConvertedValue(targetName, typedValue, field); err != nil {
+			return nil, err
+		}
 		converted[targetName] = typedValue
 	}
 
@@ -75,6 +87,94 @@ func ConvertPayload(payload json.RawMessage, schemaRaw json.RawMessage) (json.Ra
 		return nil, WrapInternal("marshal converted payload failed", err)
 	}
 	return data, nil
+}
+
+func validateConvertedValue(fieldName string, value interface{}, field nodeSchemaField) error {
+	if len(field.Enum) > 0 {
+		if !valueInEnum(value, field.Enum) {
+			return ErrBadRequest(fmt.Sprintf("%s must be one of enum values", fieldName))
+		}
+	}
+
+	switch v := value.(type) {
+	case int:
+		if err := validateNumberRange(fieldName, float64(v), field); err != nil {
+			return err
+		}
+	case float64:
+		if err := validateNumberRange(fieldName, v, field); err != nil {
+			return err
+		}
+	case string:
+		if field.MinLength != nil && len(v) < *field.MinLength {
+			return ErrBadRequest(fmt.Sprintf("%s length must be at least %d", fieldName, *field.MinLength))
+		}
+		if field.MaxLength != nil && len(v) > *field.MaxLength {
+			return ErrBadRequest(fmt.Sprintf("%s length must be less than or equal to %d", fieldName, *field.MaxLength))
+		}
+		if field.Pattern != "" {
+			ok, err := regexp.MatchString(field.Pattern, v)
+			if err != nil {
+				return ErrBadRequest(fmt.Sprintf("%s pattern is invalid", fieldName))
+			}
+			if !ok {
+				return ErrBadRequest(fmt.Sprintf("%s format is invalid", fieldName))
+			}
+		}
+		if err := validateStringFormat(fieldName, v, field.Format); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateNumberRange(fieldName string, value float64, field nodeSchemaField) error {
+	if field.Minimum != nil && value < *field.Minimum {
+		return ErrBadRequest(fmt.Sprintf("%s must be greater than or equal to %v", fieldName, *field.Minimum))
+	}
+	if field.Maximum != nil && value > *field.Maximum {
+		return ErrBadRequest(fmt.Sprintf("%s must be less than or equal to %v", fieldName, *field.Maximum))
+	}
+	return nil
+}
+
+func valueInEnum(value interface{}, enum []json.RawMessage) bool {
+	valueRaw, err := json.Marshal(value)
+	if err != nil {
+		return false
+	}
+	var valueAny interface{}
+	if err := json.Unmarshal(valueRaw, &valueAny); err != nil {
+		return false
+	}
+	for _, enumRaw := range enum {
+		var enumValue interface{}
+		if err := json.Unmarshal(enumRaw, &enumValue); err != nil {
+			continue
+		}
+		if fmt.Sprintf("%v", enumValue) == fmt.Sprintf("%v", valueAny) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateStringFormat(fieldName string, value string, format string) error {
+	switch strings.TrimSpace(format) {
+	case "":
+		return nil
+	case "email":
+		if !strings.Contains(value, "@") {
+			return ErrBadRequest(fmt.Sprintf("%s must be email", fieldName))
+		}
+	case "uuid":
+		if ok, _ := regexp.MatchString(`^[0-9a-fA-F-]{36}$`, value); !ok {
+			return ErrBadRequest(fmt.Sprintf("%s must be uuid", fieldName))
+		}
+	default:
+		return ErrBadRequest(fmt.Sprintf("%s has unsupported format %s", fieldName, format))
+	}
+	return nil
 }
 
 func convertScalarValue(value interface{}, targetType string) (interface{}, error) {
