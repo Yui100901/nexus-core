@@ -371,6 +371,47 @@ go run ./cmd/protocol-demo-product -server http://localhost:8080
 6. 创建 WebSocket 控制服务，模拟节点长连接，验证 WebSocket 下发消息转换。
 7. 验证节点返回结果会按控制服务 `output_schema` 转换。
 
+## 只读 Shell 命令测试产品
+
+仓库提供了一个简单的只读 Shell 命令测试产品，用于验证“服务端下发控制命令，节点执行后返回结果”的最小链路。
+
+先启动服务端：
+
+```bash
+go run .
+```
+
+再运行测试产品：
+
+```bash
+go run ./cmd/shell-demo-product -server http://localhost:8080
+```
+
+它会自动执行以下流程：
+
+1. 创建测试产品、版本和 License。
+2. 注册测试节点并发送心跳。
+3. 在本地启动 HTTP 节点控制端点。
+4. 创建 `run_shell_*` 控制服务并上报节点能力。
+5. 服务端下发控制指令。
+6. 节点执行白名单内的只读命令并返回输出。
+
+默认命令为：
+
+```bash
+echo "hello from nexus shell demo"
+```
+
+也可以指定只读命令：
+
+```bash
+go run ./cmd/shell-demo-product \
+  -server http://localhost:8080 \
+  -command dir
+```
+
+当前仅允许 `echo`、`dir`、`pwd`、`whoami`，并拒绝 `del`、`rm`、`move` 等非白名单命令。
+
 ## 发布验证
 
 发布前可以执行一键验证脚本：
