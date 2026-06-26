@@ -17,15 +17,14 @@ import {
 import { api } from '../api/client';
 import type { ProductData, ProductVersionData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
-import ResultPanel from '../components/ResultPanel.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
 import { formatDate, statusTone } from '../utils/status';
 
 type ProductDialogMode = 'create' | 'edit';
 
 const loading = ref(false);
 const error = ref('');
-const result = ref<unknown>({});
 const products = ref<ProductData[]>([]);
 const expandedProductId = ref<number | null>(null);
 const productDialogMode = ref<ProductDialogMode | null>(null);
@@ -121,10 +120,13 @@ function toggleProduct(product: ProductData) {
 async function run(action: () => Promise<unknown>, refresh = false) {
   error.value = '';
   try {
-    result.value = await action();
+    await action();
     if (refresh) await loadProducts();
+    notifySuccess();
+    return true;
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '操作失败';
+    notifyError(errorMessage(err));
+    return false;
   }
 }
 
@@ -165,23 +167,21 @@ async function loadProducts() {
 }
 
 async function submitProduct() {
-  if (productDialogMode.value === 'create') {
-    await run(() => api.createProduct({ name: productForm.name, description: productForm.description || null }), true);
-  } else {
-    await run(() => api.updateProduct(productForm.id, { name: productForm.name || null, description: productForm.description || null }), true);
-  }
-  closeProductDialog();
+  const ok = productDialogMode.value === 'create'
+    ? await run(() => api.createProduct({ name: productForm.name, description: productForm.description || null }), true)
+    : await run(() => api.updateProduct(productForm.id, { name: productForm.name || null, description: productForm.description || null }), true);
+  if (ok) closeProductDialog();
 }
 
 async function submitVersion() {
-  await run(() => api.createProductVersion({
+  const ok = await run(() => api.createProductVersion({
     product_id: versionForm.product_id,
     version_code: versionForm.version_code,
     description: versionForm.description || null,
     release_method: versionForm.release_method,
     release_date: toRfc3339(versionForm.release_date),
   }), true);
-  closeVersionDialog();
+  if (ok) closeVersionDialog();
 }
 
 async function releaseNow(product: ProductData, version: ProductVersionData) {
@@ -189,12 +189,12 @@ async function releaseNow(product: ProductData, version: ProductVersionData) {
 }
 
 async function submitScheduledRelease() {
-  await run(() => api.releaseVersion({
+  const ok = await run(() => api.releaseVersion({
     product_id: releaseForm.product_id,
     version_id: releaseForm.version_id,
     release_date: toRfc3339(releaseForm.release_date),
   }), true);
-  closeReleaseDialog();
+  if (ok) closeReleaseDialog();
 }
 
 async function setMinVersion(product: ProductData, version: ProductVersionData) {
@@ -410,7 +410,6 @@ onMounted(loadProducts);
       </form>
     </div>
 
-    <ResultPanel :value="result" />
     <ConfirmDialog
       :open="confirmDialog.open"
       :title="confirmDialog.title"

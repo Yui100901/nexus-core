@@ -5,13 +5,12 @@ import { api } from '../api/client';
 import type { NodeData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import JsonEditor from '../components/JsonEditor.vue';
-import ResultPanel from '../components/ResultPanel.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
 import { nodeStatusLabel, prettyJson, statusTone } from '../utils/status';
 
 const loading = ref(false);
 const error = ref('');
-const result = ref<unknown>({});
 const nodes = ref<NodeData[]>([]);
 const selected = ref<NodeData | null>(null);
 const showCreate = ref(false);
@@ -34,10 +33,13 @@ const confirmDialog = reactive({
 async function run(action: () => Promise<unknown>, refresh = false) {
   error.value = '';
   try {
-    result.value = await action();
+    await action();
     if (refresh) await loadNodes();
+    notifySuccess();
+    return true;
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '操作失败';
+    notifyError(errorMessage(err));
+    return false;
   }
 }
 
@@ -92,13 +94,13 @@ function closeNodeDialog() {
 }
 
 async function createNode() {
-  await run(() => api.createNode({ device_code: createForm.device_code, metadata: createForm.metadata }), true);
-  showCreate.value = false;
+  const ok = await run(() => api.createNode({ device_code: createForm.device_code, metadata: createForm.metadata }), true);
+  if (ok) showCreate.value = false;
 }
 
 async function saveNode() {
-  await run(() => api.updateNode(editForm.id, { device_code: editForm.device_code || null, metadata: editForm.metadata }), true);
-  closeNodeDialog();
+  const ok = await run(() => api.updateNode(editForm.id, { device_code: editForm.device_code || null, metadata: editForm.metadata }), true);
+  if (ok) closeNodeDialog();
 }
 
 function confirmBanNode(nodeID: number, deviceCode?: string, reason?: string | null) {
@@ -233,7 +235,6 @@ onMounted(loadNodes);
       </form>
     </div>
 
-    <ResultPanel :value="result" />
     <ConfirmDialog
       :open="confirmDialog.open"
       :title="confirmDialog.title"

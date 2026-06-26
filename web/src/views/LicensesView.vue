@@ -5,12 +5,11 @@ import { api } from '../api/client';
 import type { LicenseData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import StatusBadge from '../components/StatusBadge.vue';
-import ResultPanel from '../components/ResultPanel.vue';
+import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
 import { licenseStatusLabel, statusTone } from '../utils/status';
 
 const loading = ref(false);
 const error = ref('');
-const result = ref<unknown>({});
 const licenses = ref<LicenseData[]>([]);
 const selected = ref<LicenseData | null>(null);
 const showCreate = ref(false);
@@ -38,10 +37,13 @@ const confirmDialog = reactive({
 async function run(action: () => Promise<unknown>, refresh = false) {
   error.value = '';
   try {
-    result.value = await action();
+    await action();
     if (refresh) await loadLicenses();
+    notifySuccess();
+    return true;
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '操作失败';
+    notifyError(errorMessage(err));
+    return false;
   }
 }
 
@@ -93,21 +95,22 @@ function closeLicenseDialog() {
 
 async function copyKey(key: string) {
   await navigator.clipboard.writeText(key);
+  notifySuccess('License Key 已复制');
 }
 
 async function createLicense() {
-  await run(() => api.createLicense({ ...createForm, remark: createForm.remark || null }), true);
-  showCreate.value = false;
+  const ok = await run(() => api.createLicense({ ...createForm, remark: createForm.remark || null }), true);
+  if (ok) showCreate.value = false;
 }
 
 async function saveLicense() {
-  await run(() => api.updateLicense(editForm.id, {
+  const ok = await run(() => api.updateLicense(editForm.id, {
     max_nodes: editForm.max_nodes,
     max_concurrent: editForm.max_concurrent,
     feature_mask: editForm.feature_mask,
     remark: editForm.remark || null,
   }), true);
-  closeLicenseDialog();
+  if (ok) closeLicenseDialog();
 }
 
 function confirmRevokeLicense(license: LicenseData) {
@@ -259,7 +262,6 @@ onMounted(loadLicenses);
       </form>
     </div>
 
-    <ResultPanel :value="result" />
     <ConfirmDialog
       :open="confirmDialog.open"
       :title="confirmDialog.title"

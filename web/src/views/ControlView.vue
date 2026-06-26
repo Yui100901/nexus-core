@@ -5,13 +5,12 @@ import { api } from '../api/client';
 import type { ControlCommandData, ControlServiceData, NodeCapabilityData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import JsonEditor from '../components/JsonEditor.vue';
-import ResultPanel from '../components/ResultPanel.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
 import { controlCommandStatusLabel, enabledStatusLabel, prettyJson, statusTone } from '../utils/status';
 
 const activeTab = ref<'services' | 'capabilities' | 'commands'>('services');
 const error = ref('');
-const result = ref<unknown>({});
 const showCreateService = ref(false);
 const showCreateCapability = ref(false);
 const showCreateCommand = ref(false);
@@ -80,10 +79,13 @@ function parseJson(text: string) {
 async function run(action: () => Promise<unknown>, refresh?: () => Promise<void>) {
   error.value = '';
   try {
-    result.value = await action();
+    await action();
     if (refresh) await refresh();
+    notifySuccess();
+    return true;
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '操作失败';
+    notifyError(errorMessage(err));
+    return false;
   }
 }
 
@@ -152,7 +154,7 @@ function closeServiceEditDialog() {
 }
 
 async function saveControlService() {
-  await run(() => api.updateControlService(serviceEdit.id, {
+  const ok = await run(() => api.updateControlService(serviceEdit.id, {
     product_id: serviceEdit.product_id || null,
     name: serviceEdit.name,
     description: serviceEdit.description || null,
@@ -160,7 +162,7 @@ async function saveControlService() {
     input_schema: parseJson(serviceEdit.input_schema),
     output_schema: parseJson(serviceEdit.output_schema),
   }), loadServices);
-  closeServiceEditDialog();
+  if (ok) closeServiceEditDialog();
 }
 
 function useCapability(capability: NodeCapabilityData) {
@@ -415,7 +417,6 @@ onMounted(() => {
       </form>
     </template>
 
-    <ResultPanel :value="result" />
     <div v-if="serviceEditDialogOpen" class="modal-backdrop" @click.self="closeServiceEditDialog">
       <form class="modal-panel form-panel" @submit.prevent="saveControlService">
         <div class="modal-head">

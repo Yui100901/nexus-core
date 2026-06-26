@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive } from 'vue';
 import { HeartPulse, PlugZap } from 'lucide-vue-next';
 import { api } from '../api/client';
-import ResultPanel from '../components/ResultPanel.vue';
+import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
 
-const error = ref('');
-const result = ref<unknown>({});
 const form = reactive({
   device_code: 'demo-node-001',
   license_key: '',
@@ -13,12 +11,12 @@ const form = reactive({
   version_code: '1.0.0',
 });
 
-async function run(action: () => Promise<unknown>) {
-  error.value = '';
+async function run(action: () => Promise<unknown>, successMessage: string) {
   try {
-    result.value = await action();
+    await action();
+    notifySuccess(successMessage);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '操作失败';
+    notifyError(errorMessage(err));
   }
 }
 </script>
@@ -32,8 +30,6 @@ async function run(action: () => Promise<unknown>) {
       </div>
     </div>
 
-    <p v-if="error" class="alert bad">{{ error }}</p>
-
     <form class="panel form-panel wide-form">
       <h2>客户端参数</h2>
       <div class="grid two compact">
@@ -43,11 +39,9 @@ async function run(action: () => Promise<unknown>) {
         <label>版本号<input v-model="form.version_code" required /></label>
       </div>
       <div class="button-row">
-        <button class="primary-button" type="button" @click="run(() => api.registerAccess(form))"><PlugZap :size="16" /> 注册</button>
-        <button class="secondary-button" type="button" @click="run(() => api.heartbeat(form))"><HeartPulse :size="16" /> 心跳</button>
+        <button class="primary-button" type="button" @click="run(() => api.registerAccess(form), '注册成功')"><PlugZap :size="16" /> 注册</button>
+        <button class="secondary-button" type="button" @click="run(() => api.heartbeat(form), '心跳成功')"><HeartPulse :size="16" /> 心跳</button>
       </div>
     </form>
-
-    <ResultPanel :value="result" />
   </section>
 </template>

@@ -14,6 +14,8 @@ import {
   Save,
 } from 'lucide-vue-next';
 import { getApiBase, setApiBase, api } from './api/client';
+import ToastHost from './components/ToastHost.vue';
+import { notifyError, notifySuccess } from './composables/useToast';
 
 const apiBase = ref(getApiBase());
 const health = ref<'idle' | 'ok' | 'bad'>('idle');
@@ -32,6 +34,7 @@ const navItems = [
 function saveApiBase() {
   setApiBase(apiBase.value);
   apiBase.value = getApiBase();
+  notifySuccess('API 地址已保存');
 }
 
 async function checkHealth() {
@@ -42,6 +45,7 @@ async function checkHealth() {
   } catch (err) {
     health.value = 'bad';
     healthMessage.value = err instanceof Error ? err.message : '连接失败';
+    notifyError(healthMessage.value);
   }
 }
 
@@ -87,5 +91,6 @@ checkHealth();
 
       <RouterView />
     </main>
+    <ToastHost />
   </div>
 </template>
