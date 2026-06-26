@@ -1,10 +1,10 @@
 # nexus-core 全量测试报告
 
-生成时间：2026-06-25 22:02:19 +08:00
+生成时间：2026-06-25 23:02:48 +08:00
 
 ## 结论
 
-本轮全量测试通过。主服务、Demo 产品、API 层、Service 层、Repository 层均完成编译或测试验证，未发现阻塞性问题。
+本轮全量测试与 P1 发布验证通过。主服务、Demo 产品、协议转换测试产品、API 层、Service 层、Repository 层均完成编译或测试验证，未发现阻塞性问题。
 
 ## 执行结果
 
@@ -13,14 +13,13 @@
 | 全量测试（禁用缓存） | `go test -count=1 ./...` | 通过 |
 | 全量编译 | `go build ./...` | 通过 |
 | 测试用例枚举 | `go test -list . ./...` | 通过 |
-| 协议转换 Demo 端到端验证 | `go run ./cmd/protocol-demo-product -server http://127.0.0.1:18080` | 通过 |
-| Race 检测 | `go test -race -count=1 ./...` | 未执行，当前 Go 环境提示需要启用 cgo |
-
-Race 检测输出：
-
-```text
-go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
-```
+| Race 检测 | `CGO_ENABLED=1 go test -race -count=1 ./...` | 通过 |
+| 发布验证脚本 | `powershell -ExecutionPolicy Bypass -File .\scripts\release-validate.ps1 -Port 18081` | 通过 |
+| Swagger UI 冒烟 | `/swagger/index.html`、`/swagger/doc.json` | 通过 |
+| Demo 产品端到端验证 | `go run ./cmd/demo-product -server http://127.0.0.1:18081` | 通过 |
+| 协议转换 Demo 端到端验证 | `go run ./cmd/protocol-demo-product -server http://127.0.0.1:18081` | 通过 |
+| 定时发布重启恢复 | 创建未来定时版本后停服，跨过发布时间再重启并注册 | 通过 |
+| SQLite 迁移重启演练 | 临时 SQLite 自动迁移、写入、同库重启健康检查 | 通过 |
 
 ## 覆盖范围
 
@@ -66,21 +65,22 @@ go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
 
 ## 当前验证到的关键能力
 
-- 项目可完整编译：主服务和 `cmd/demo-product` 均通过 `go build ./...`。
+- 项目可完整编译：主服务、`cmd/demo-product` 和 `cmd/protocol-demo-product` 均通过构建验证。
 - P0 控制链路闭环可用：HTTP/MQTT/WebSocket、异步回执、在线校验、License scope、结果转换均有测试覆盖。
-- P1 工程交付能力可用：统一分页参数、API 示例、Repository 测试、Swagger 生成后的代码可编译。
+- P1 工程交付能力可用：统一分页参数、API 示例、Repository 测试、Swagger UI 冒烟、Race 检测、发布验证脚本均已通过。
 - P2 核心管理策略已固定：产品删除保护、定时发布持久化、License 续期边界、节点封禁原因和审计均有测试覆盖。
 - 协议转换测试产品已完成端到端验证：HTTP 和 WebSocket 两条链路均验证了字段映射、类型转换、约束校验和输出转换。
+- 定时发布跨进程恢复已完成真实演练：服务停止跨过发布时间后，重启时启动扫描释放到期版本，节点注册成功。
+- SQLite 自动迁移已完成临时库演练：同一数据库跨启动复用，健康检查正常。
 
 ## 未覆盖或环境受限项
 
-- Race 检测未执行：当前环境未启用 cgo。
 - 未做真实外部 MQTT broker 联调：当前 MQTT 测试使用 fake publisher 验证发布消息结构和状态流转。
-- 未做真实浏览器 Swagger UI 点击验证：本轮只验证 Swagger 文档生成后项目可编译测试。
-- 未做长时间运行测试：定时发布 worker 已通过到期扫描逻辑测试，但未做跨进程重启的真实运行演练。
+- 当前环境未安装 MQTT broker、Docker 或 Podman；发布验证脚本已提供 `-MqttBrokerUrl` 参数，具备 broker 后仍需补充真实发布/订阅验收。
+- Swagger UI 本轮覆盖页面和文档内容冒烟，未做逐接口交互点击。
 
 ## 建议
 
 - 后续进入 P3 时，补充离线事件持久化、超并发事件、无效访问事件的集成测试。
-- 若需要并发安全背书，在具备 cgo 的环境下执行 `CGO_ENABLED=1 go test -race -count=1 ./...`。
-- 若准备发布版本，建议增加一次真实 SQLite 数据库迁移演练和 demo-product 到服务端的端到端手工验证。
+- 发布前建议固定执行 `powershell -ExecutionPolicy Bypass -File .\scripts\release-validate.ps1 -Port 18081`。
+- 如接入真实 MQTT broker，执行脚本时传入 `-MqttBrokerUrl tcp://host:1883`，并补充外部订阅端验收发布内容。

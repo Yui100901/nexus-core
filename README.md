@@ -371,6 +371,24 @@ go run ./cmd/protocol-demo-product -server http://localhost:8080
 6. 创建 WebSocket 控制服务，模拟节点长连接，验证 WebSocket 下发消息转换。
 7. 验证节点返回结果会按控制服务 `output_schema` 转换。
 
+## 发布验证
+
+发布前可以执行一键验证脚本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-validate.ps1 -Port 18081
+```
+
+该脚本会使用临时 SQLite 数据库和临时服务端口，依次执行全量测试、Race 检测、服务端与 Demo 构建、Swagger UI 冒烟、简易 Demo 端到端、协议转换 Demo 端到端、定时发布跨进程重启恢复、SQLite 同库重启演练，并在结束后恢复 `config-dev.yml`。
+
+如需在具备真实 MQTT broker 的环境做配置冒烟，可传入：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\release-validate.ps1 -Port 18081 -MqttBrokerUrl tcp://127.0.0.1:1883
+```
+
+当前脚本会把 broker 配置注入临时服务；真实发布/订阅内容验收仍需要外部 MQTT 订阅端配合。
+
 ## 节点控制接口示例
 
 控制服务、节点能力上报、HTTP/MQTT/WebSocket 下发和结果查询的最小调用顺序见 [docs/control-examples.md](docs/control-examples.md)。

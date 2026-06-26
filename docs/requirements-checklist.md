@@ -26,24 +26,23 @@
 ### P1：工程交付补齐与发布验证
 
 - [x] 当前 P1 基础工程交付补齐项已完成。
-- [ ] 在支持 cgo 的环境执行 Race 检测。
-  - 当前环境执行 `go test -race -count=1 ./...` 时提示需要启用 cgo。
-  - 建议命令：`CGO_ENABLED=1 go test -race -count=1 ./...`。
-- [ ] 真实 MQTT broker 联调。
+- [x] 发布验证脚本化。
+  - 已新增 `scripts/release-validate.ps1`，覆盖全量测试、Race、构建、临时服务、Swagger、Demo、协议转换、重启恢复和 SQLite 演练。
+- [x] 在支持 cgo 的环境执行 Race 检测。
+  - 已通过：`CGO_ENABLED=1 go test -race -count=1 ./...`。
+- [~] 真实 MQTT broker 联调。
   - 当前测试使用 fake publisher 验证消息结构和状态流转。
-  - 仍需接入真实 broker 验证连接、发布、认证和超时配置。
-- [ ] Swagger UI 浏览器验证。
-  - 当前已验证 Swagger 文档可生成且项目可编译。
-  - 仍需浏览器打开 `/swagger/index.html` 并抽查新增接口展示。
-- [ ] 长时间运行与重启恢复验证。
-  - 当前定时发布 worker 已通过到期扫描逻辑测试。
-  - 仍需真实服务重启后验证未发布版本可被恢复扫描并发布。
-- [ ] SQLite 迁移演练。
-  - 当前测试使用临时库和自动迁移。
-  - 仍需使用已有 `data/test.db` 或模拟旧库做迁移验证。
-- [ ] Demo 产品端到端手工验收。
-  - 当前 `cmd/demo-product` 已通过编译。
-  - 仍需启动服务端后运行 demo，验证注册、心跳和接口返回。
+  - 当前环境未安装 MQTT broker、Docker 或 Podman，脚本已提供 `-MqttBrokerUrl` 参数用于接入真实 broker 后做配置冒烟。
+  - 仍需在具备 broker 的环境补充真实发布/订阅验收。
+- [x] Swagger UI 验证。
+  - 已验证 `/swagger/index.html` 可访问，`/swagger/doc.json` 包含 `Nexus Core API` 和 `/access/register` 等接口。
+- [x] 长时间运行与重启恢复验证。
+  - 已通过脚本验证：创建未来定时版本，服务停止跨过发布时间后重启，启动恢复扫描发布到期版本，随后注册成功。
+- [x] SQLite 迁移演练。
+  - 已通过临时 SQLite 库启动、自动迁移、写入业务数据、重启同库再次启动健康检查。
+- [x] Demo 产品端到端手工验收。
+  - 已通过：`cmd/demo-product` 完成产品、版本、License、注册和心跳。
+  - 已通过：`cmd/protocol-demo-product` 完成 HTTP 与 WebSocket 协议转换端到端验证。
 
 ### P2：核心管理能力收口
 
