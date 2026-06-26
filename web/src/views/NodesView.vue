@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { Ban, Edit3, Link2, Plus, RefreshCw, Save, ShieldCheck, Trash2 } from 'lucide-vue-next';
+import { Ban, Edit3, Link2, Plus, PowerOff, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2 } from 'lucide-vue-next';
 import { api } from '../api/client';
 import type { NodeData } from '../api/types';
 import JsonEditor from '../components/JsonEditor.vue';
@@ -20,6 +20,7 @@ const createForm = reactive({ device_code: 'demo-node-001', metadata: '{\n  "os"
 const editForm = reactive({ id: 0, device_code: '', metadata: '{}' });
 const bindingForm = reactive({ node_id: 0, license_id: 1 });
 const banForm = reactive({ node_id: 0, reason: '' });
+const forceOfflineForm = reactive({ node_id: 0, reason: '' });
 
 async function run(action: () => Promise<unknown>, refresh = false) {
   error.value = '';
@@ -50,6 +51,7 @@ function selectNode(node: NodeData) {
   editForm.metadata = prettyJson(node.metadata || '{}');
   bindingForm.node_id = node.id;
   banForm.node_id = node.id;
+  forceOfflineForm.node_id = node.id;
 }
 
 async function createNode() {
@@ -65,7 +67,7 @@ onMounted(loadNodes);
     <div class="page-head">
       <div>
         <h1>节点管理</h1>
-        <p>围绕节点列表维护元数据、绑定关系和封禁状态。</p>
+        <p>围绕节点列表维护元数据、绑定关系、封禁状态和强制下线状态。</p>
       </div>
       <button class="primary-button" type="button" @click="showCreate = !showCreate">
         <Plus :size="16" />
@@ -100,6 +102,7 @@ onMounted(loadNodes);
             <option :value="0">正常</option>
             <option :value="1">离线</option>
             <option :value="2">封禁</option>
+            <option :value="3">强制下线</option>
           </select>
         </label>
         <label>页码<input v-model.number="filters.page" type="number" min="1" /></label>
@@ -126,8 +129,10 @@ onMounted(loadNodes);
             <td>
               <div class="button-row wrap">
                 <button class="secondary-button" type="button" @click="selectNode(node)"><Edit3 :size="15" /> 编辑</button>
-                <button class="danger-button" type="button" @click="run(() => api.banNode(node.id, banForm.reason || null), true)"><Ban :size="15" /> 封禁</button>
+                <button class="danger-button" type="button" @click="run(() => api.banNode(node.id, null), true)"><Ban :size="15" /> 封禁</button>
                 <button class="primary-button" type="button" @click="run(() => api.unbanNode(node.id), true)"><ShieldCheck :size="15" /> 解封</button>
+                <button class="danger-button" type="button" @click="run(() => api.forceOfflineNode(node.id, null), true)"><PowerOff :size="15" /> 强制下线</button>
+                <button class="primary-button" type="button" @click="run(() => api.restoreOnlineNode(node.id), true)"><RotateCcw :size="15" /> 恢复</button>
                 <button class="danger-button" type="button" @click="run(() => api.deleteNode(node.id), true)"><Trash2 :size="15" /> 删除</button>
               </div>
             </td>
@@ -151,11 +156,14 @@ onMounted(loadNodes);
         <h2>绑定与状态 #{{ bindingForm.node_id }}</h2>
         <label>License ID<input v-model.number="bindingForm.license_id" type="number" min="1" /></label>
         <label>封禁原因<input v-model="banForm.reason" /></label>
+        <label>强制下线原因<input v-model="forceOfflineForm.reason" /></label>
         <div class="button-row wrap">
           <button class="primary-button" type="button" @click="run(() => api.bindNode(bindingForm.node_id, bindingForm.license_id), true)"><Link2 :size="16" /> 绑定</button>
           <button class="danger-button" type="button" @click="run(() => api.unbindNode(bindingForm.node_id, bindingForm.license_id), true)">解绑</button>
           <button class="danger-button" type="button" @click="run(() => api.banNode(banForm.node_id, banForm.reason || null), true)"><Ban :size="16" /> 封禁</button>
           <button class="primary-button" type="button" @click="run(() => api.unbanNode(banForm.node_id), true)"><ShieldCheck :size="16" /> 解封</button>
+          <button class="danger-button" type="button" @click="run(() => api.forceOfflineNode(forceOfflineForm.node_id, forceOfflineForm.reason || null), true)"><PowerOff :size="16" /> 强制下线</button>
+          <button class="primary-button" type="button" @click="run(() => api.restoreOnlineNode(forceOfflineForm.node_id), true)"><RotateCcw :size="16" /> 恢复上线</button>
           <button class="danger-button" type="button" @click="run(() => api.cleanUnboundNodes(), true)">清理无绑定节点</button>
         </div>
       </form>

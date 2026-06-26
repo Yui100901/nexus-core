@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"nexus-core/domain/entity"
 	"sync"
 	"testing"
 
@@ -207,6 +208,74 @@ func TestSimpleProductBindingAndConcurrentLimitsAPI(t *testing.T) {
 	licenses := doJSON(t, scenario.router, http.MethodGet, "/licenses?product_id="+uintString(scenario.productID)+"&page=1&page_size=10", nil)
 	if rows := licenses.Data.([]interface{}); len(rows) != 1 {
 		t.Fatalf("license list length = %d, want 1", len(rows))
+	}
+}
+
+func TestForceOfflineRejectsHeartbeatAndRegisterRestoresNodeAPI(t *testing.T) {
+	scenario := newSimpleProductScenario(t, 1, 1)
+	const deviceCode = "force-offline-node"
+
+	register := scenario.register(t, deviceCode)
+	nodeID := uint(register["node_id"].(float64))
+
+	status, response, err := scenario.heartbeatRaw(deviceCode)
+	if err != nil {
+		t.Fatalf("heartbeat response decode failed: %v", err)
+	}
+	if status != http.StatusOK || response.Code != CodeOK {
+		t.Fatalf("heartbeat before force offline should succeed, status=%d response=%#v", status, response)
+	}
+
+	forced := doJSON(t, scenario.router, http.MethodPost, "/nodes/"+uintString(nodeID)+"/force-offline", map[string]interface{}{
+		"reason": "operator test",
+	})
+	if forced.Code != CodeOK {
+		t.Fatalf("force offline should succeed: %#v", forced)
+	}
+
+	node := doJSON(t, scenario.router, http.MethodGet, "/nodes/"+uintString(nodeID), nil)
+	nodeData := node.Data.(map[string]interface{})
+	if got := int(nodeData["status"].(float64)); got != entity.NodeStatusForcedOffline {
+		t.Fatalf("node status = %d, want forced offline: %#v", got, nodeData)
+	}
+
+	online := doJSON(t, scenario.router, http.MethodGet, "/monitor/online", nil)
+	onlineData := online.Data.(map[string]interface{})
+	if got := int(onlineData["total_online"].(float64)); got != 0 {
+		t.Fatalf("total online after force offline = %d, want 0: %#v", got, onlineData)
+	}
+
+	status, response, err = scenario.heartbeatRaw(deviceCode)
+	if err != nil {
+		t.Fatalf("heartbeat after force offline response decode failed: %v", err)
+	}
+	if status != http.StatusForbidden || response.Code != CodeForbidden {
+		t.Fatalf("heartbeat after force offline should be rejected, status=%d response=%#v", status, response)
+	}
+
+	restored := doJSON(t, scenario.router, http.MethodPost, "/access/register", map[string]interface{}{
+		"device_code":  deviceCode,
+		"license_key":  scenario.licenseKey,
+		"product_id":   scenario.productID,
+		"version_code": "1.0.0",
+	})
+	restoredData := restored.Data.(map[string]interface{})
+	if got := uint(restoredData["node_id"].(float64)); got != nodeID {
+		t.Fatalf("register should restore same node id = %d, want %d: %#v", got, nodeID, restoredData)
+	}
+
+	node = doJSON(t, scenario.router, http.MethodGet, "/nodes/"+uintString(nodeID), nil)
+	nodeData = node.Data.(map[string]interface{})
+	if got := int(nodeData["status"].(float64)); got != entity.NodeStatusNormal {
+		t.Fatalf("node status after register = %d, want normal: %#v", got, nodeData)
+	}
+
+	status, response, err = scenario.heartbeatRaw(deviceCode)
+	if err != nil {
+		t.Fatalf("heartbeat after register response decode failed: %v", err)
+	}
+	if status != http.StatusOK || response.Code != CodeOK {
+		t.Fatalf("heartbeat after register should succeed, status=%d response=%#v", status, response)
 	}
 }
 

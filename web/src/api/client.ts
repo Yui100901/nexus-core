@@ -131,6 +131,9 @@ export const api = {
   banNode: (id: number, reason?: string | null) =>
     request<void>(`/nodes/${id}/ban`, { method: 'POST', ...jsonBody({ reason }) }),
   unbanNode: (id: number) => request<void>(`/nodes/${id}/unban`, { method: 'POST' }),
+  forceOfflineNode: (id: number, reason?: string | null) =>
+    request<void>(`/nodes/${id}/force-offline`, { method: 'POST', ...jsonBody({ reason }) }),
+  restoreOnlineNode: (id: number) => request<void>(`/nodes/${id}/restore-online`, { method: 'POST' }),
   bindNode: (node_id: number, license_id: number) =>
     request<string>('/node-bindings', { method: 'POST', ...jsonBody({ node_id, license_id }) }),
   unbindNode: (node_id: number, license_id: number) =>

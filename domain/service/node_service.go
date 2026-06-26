@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"nexus-core/domain/entity"
 	"nexus-core/global"
+	"nexus-core/monitor"
 	"nexus-core/persistence/model"
 	"strings"
 	"time"
@@ -200,6 +202,58 @@ func (s *NodeService) UnbanNode(ctx context.Context, cmd UpdateNodeStatusCommand
 	return s.updateNodeStatus(ctx, cmd.NodeID, entity.NodeStatusNormal, cmd.Reason)
 }
 
+func (s *NodeService) ForceOfflineNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
+	now := time.Now()
+	reason := normalizeOptionalReason(cmd.Reason)
+	onlineKeys := make([]string, 0)
+
+	err := global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var node model.Node
+		if err := tx.Where("id = ?", cmd.NodeID).First(&node).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrNotFound("node not found")
+			}
+			return WrapInternal("get node failed", err)
+		}
+
+		if err := tx.Model(&model.Node{}).Where("id = ?", cmd.NodeID).Updates(map[string]interface{}{
+			"status":                entity.NodeStatusForcedOffline,
+			"offline_at":            now,
+			"forced_offline_at":     now,
+			"forced_offline_reason": reason,
+		}).Error; err != nil {
+			return WrapInternal("force offline node failed", err)
+		}
+
+		keys, err := onlineKeysForNode(ctx, tx, cmd.NodeID, node.DeviceCode)
+		if err != nil {
+			return err
+		}
+		onlineKeys = keys
+
+		auditData := map[string]interface{}{
+			"status": entity.NodeStatusForcedOffline,
+		}
+		if reason != nil {
+			auditData["reason"] = *reason
+		}
+		recordAuditLog(ctx, tx, "node", cmd.NodeID, "force_offline", auditData)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, key := range onlineKeys {
+		monitor.GlobalStat.RemoveOnlineNode(key)
+	}
+	return nil
+}
+
+func (s *NodeService) RestoreOnlineNode(ctx context.Context, cmd UpdateNodeStatusCommand) error {
+	return restoreNodeOnline(ctx, global.DB.WithContext(ctx), cmd.NodeID, cmd.Reason, "restore_online")
+}
+
 func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status int, reason *string) error {
 	now := time.Now()
 	updates := map[string]interface{}{
@@ -219,7 +273,7 @@ func (s *NodeService) updateNodeStatus(ctx context.Context, nodeID uint, status 
 	}
 	if status == entity.NodeStatusNormal {
 		result := global.DB.WithContext(ctx).
-			Exec("UPDATE node SET status = ?, banned_at = NULL, ban_reason = NULL WHERE id = ? AND deleted_at IS NULL", status, nodeID)
+			Exec("UPDATE node SET status = ?, banned_at = NULL, ban_reason = NULL, forced_offline_at = NULL, forced_offline_reason = NULL WHERE id = ? AND deleted_at IS NULL", status, nodeID)
 		if result.Error != nil {
 			return WrapInternal("update node status failed", result.Error)
 		}
@@ -339,6 +393,11 @@ func (s *NodeService) AutoBind(ctx context.Context, cmd AutoBindCommand) error {
 				Status:     0,
 				Metadata:   &metadata,
 			}
+		} else if node.Status == entity.NodeStatusForcedOffline {
+			if err := restoreNodeOnline(ctx, tx, node.ID, nil, "auto_bind_restore_online"); err != nil {
+				return err
+			}
+			node.Status = entity.NodeStatusNormal
 		} else if !node.IsValid() {
 			return ErrForbidden("invalid node")
 		}
@@ -421,6 +480,63 @@ func (s *NodeService) CleanUnboundNode(ctx context.Context) error {
 
 		return nil
 	})
+}
+
+func restoreNodeOnline(ctx context.Context, db *gorm.DB, nodeID uint, reason *string, action string) error {
+	normalizedReason := normalizeOptionalReason(reason)
+	updates := map[string]interface{}{
+		"status":                entity.NodeStatusNormal,
+		"forced_offline_at":     nil,
+		"forced_offline_reason": nil,
+	}
+	result := db.WithContext(ctx).Model(&model.Node{}).Where("id = ?", nodeID).Updates(updates)
+	if result.Error != nil {
+		return WrapInternal("restore node online failed", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound("node not found")
+	}
+
+	auditData := map[string]interface{}{
+		"status": entity.NodeStatusNormal,
+	}
+	if normalizedReason != nil {
+		auditData["reason"] = *normalizedReason
+	}
+	recordAuditLog(ctx, db.WithContext(ctx), "node", nodeID, action, auditData)
+	return nil
+}
+
+func normalizeOptionalReason(reason *string) *string {
+	if reason == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*reason)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func onlineKeysForNode(ctx context.Context, db *gorm.DB, nodeID uint, deviceCode string) ([]string, error) {
+	type bindingKey struct {
+		ProductID  uint
+		LicenseKey string
+	}
+	var rows []bindingKey
+	if err := db.WithContext(ctx).Table("node_license_binding AS b").
+		Select("b.product_id, l.license_key").
+		Joins("JOIN license AS l ON l.id = b.license_id").
+		Where("b.node_id = ? AND b.status = ? AND b.deleted_at IS NULL AND l.deleted_at IS NULL", nodeID, entity.BindingStatusBound).
+		Scan(&rows).Error; err != nil {
+		return nil, WrapInternal("get node online keys failed", err)
+	}
+
+	keys := make([]string, 0, len(rows))
+	for _, row := range rows {
+		keys = append(keys, fmt.Sprintf("%d|%s|%s", row.ProductID, deviceCode, row.LicenseKey))
+	}
+	return keys, nil
 }
 
 func normalizeNodeMetadata(metadata string) (datatypes.JSON, error) {

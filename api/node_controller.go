@@ -30,6 +30,8 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		nodes.DELETE("/:id", c.DeleteNode)
 		nodes.POST("/:id/ban", c.BanNode)
 		nodes.POST("/:id/unban", c.UnbanNode)
+		nodes.POST("/:id/force-offline", c.ForceOfflineNode)
+		nodes.POST("/:id/restore-online", c.RestoreOnlineNode)
 	}
 	r.GET("/node-devices/:device_code", c.GetByDeviceCode)
 	r.POST("/node-bindings", c.AddBinding)
@@ -46,6 +48,8 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		g.POST("/delete", c.DeleteNode)          // 删除节点
 		g.POST("/ban", c.BanNode)                // 封禁节点
 		g.POST("/unban", c.UnbanNode)            // 解封节点
+		g.POST("/forceOffline", c.ForceOfflineNode)
+		g.POST("/restoreOnline", c.RestoreOnlineNode)
 		g.POST("/cleanUnboundNode", c.CleanUnboundNode)
 	}
 }
@@ -300,6 +304,36 @@ func (c *NodeController) UnbanNode(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "node unbanned")
+}
+
+func (c *NodeController) ForceOfflineNode(ctx *gin.Context) {
+	cmd, ok := c.nodeStatusCommandFromParamOrBody(ctx)
+	if !ok {
+		return
+	}
+	if err := c.ns.ForceOfflineNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{
+		NodeID: cmd.NodeID,
+		Reason: cmd.Reason,
+	}); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "node forced offline")
+}
+
+func (c *NodeController) RestoreOnlineNode(ctx *gin.Context) {
+	cmd, ok := c.nodeStatusCommandFromParamOrBody(ctx)
+	if !ok {
+		return
+	}
+	if err := c.ns.RestoreOnlineNode(ctx.Request.Context(), service.UpdateNodeStatusCommand{
+		NodeID: cmd.NodeID,
+		Reason: cmd.Reason,
+	}); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "node restored online")
 }
 
 func (c *NodeController) nodeStatusCommandFromParamOrBody(ctx *gin.Context) (dto.UpdateNodeStatusCommand, bool) {

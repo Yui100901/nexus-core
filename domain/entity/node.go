@@ -11,6 +11,7 @@ const (
 	NodeStatusNormal = iota
 	NodeStatusOffline
 	NodeStatusBanned
+	NodeStatusForcedOffline
 )
 
 // Node 表示用户环境的抽象节点

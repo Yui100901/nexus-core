@@ -3,7 +3,7 @@ export function licenseStatusLabel(status: number) {
 }
 
 export function nodeStatusLabel(status: number) {
-  return ({ 0: '正常', 1: '离线', 2: '封禁' } as Record<number, string>)[status] || `未知 ${status}`;
+  return ({ 0: '正常', 1: '离线', 2: '封禁', 3: '强制下线' } as Record<number, string>)[status] || `未知 ${status}`;
 }
 
 export function controlCommandStatusLabel(status: number) {
@@ -19,7 +19,7 @@ export function statusTone(status: number, type: 'license' | 'node' | 'command' 
     return status === 1 ? 'good' : status === 0 ? 'idle' : status === 2 ? 'warn' : 'bad';
   }
   if (type === 'node') {
-    return status === 0 ? 'good' : status === 1 ? 'idle' : 'bad';
+    return status === 0 ? 'good' : status === 1 ? 'idle' : status === 3 ? 'warn' : 'bad';
   }
   if (type === 'command') {
     return status === 3 ? 'good' : status === 4 || status === 5 ? 'bad' : status === 2 ? 'warn' : 'idle';

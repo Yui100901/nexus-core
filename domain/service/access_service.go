@@ -83,10 +83,6 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) (*Regis
 		}
 
 		// 检查当前绑定数量是否超过 MaxNodes
-		if !license.ValidateNodeLimit() {
-			return ErrConflict("license has reached max nodes")
-		}
-
 		// 检查 Node 是否存在
 		node, err := GetNodeEntityByCode(ctx, tx, deviceCode)
 		if err != nil {
@@ -109,6 +105,11 @@ func (s *AccessService) Register(ctx context.Context, cmd AccessCommand) (*Regis
 				Status:     0,
 				Metadata:   &metadata,
 			}
+		} else if node.Status == entity.NodeStatusForcedOffline {
+			if err := restoreNodeOnline(ctx, tx, node.ID, nil, "register_restore_online"); err != nil {
+				return err
+			}
+			node.Status = entity.NodeStatusNormal
 		} else if !node.IsValid() {
 			return ErrForbidden("invalid node")
 		}
@@ -196,6 +197,9 @@ func (s *AccessService) Heartbeat(ctx context.Context, deviceCode string, produc
 	}
 	if node == nil {
 		return nil, ErrNotFound("node not found")
+	}
+	if node.Status == entity.NodeStatusForcedOffline {
+		return nil, ErrForbidden("node forced offline")
 	}
 	if !node.IsValid() {
 		return nil, ErrForbidden("invalid node")

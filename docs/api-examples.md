@@ -184,3 +184,15 @@ curl "http://localhost:8080/monitor/nodes/heartbeats?page=1&page_size=20"
 ```bash
 curl "http://localhost:8080/audit-logs?resource_type=license&resource_id=1&page=1&page_size=20"
 ```
+
+## 节点强制下线
+
+服务端可以将任意节点置为强制下线状态。强制下线后，节点继续发送心跳会收到 `403`；节点重新执行 `/access/register` 注册或握手时，服务端会恢复节点为正常状态并允许后续心跳。产品侧检测到 `403` 后的退出、重试或提示策略由产品自行实现。
+
+```bash
+curl -X POST http://localhost:8080/nodes/1/force-offline \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "operator requested"}'
+
+curl -X POST http://localhost:8080/nodes/1/restore-online
+```
