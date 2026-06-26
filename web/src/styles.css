@@ -222,6 +222,11 @@ textarea {
   margin-bottom: 0;
 }
 
+.drawer-panel,
+.page-actions {
+  margin-bottom: 16px;
+}
+
 .panel,
 .metric,
 .result-panel {
@@ -417,6 +422,10 @@ th {
   color: #5d6d69;
   background: #f4f7f6;
   font-weight: 700;
+}
+
+tr.selected td {
+  background: #eef8f4;
 }
 
 .empty-cell {

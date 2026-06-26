@@ -39,6 +39,18 @@ func IntQuery(ctx *gin.Context, name string) (int, error) {
 	return parsed, nil
 }
 
+func IntQueryPtr(ctx *gin.Context, name string) (*int, error) {
+	value := ctx.Query(name)
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
+}
+
 func UintQuery(ctx *gin.Context, name string) (*uint, error) {
 	value := ctx.Query(name)
 	if value == "" {

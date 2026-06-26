@@ -29,6 +29,7 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 	{
 		licenses.POST("", c.CreateLicense)
 		licenses.POST("/batch", c.BatchCreateLicenses)
+		licenses.GET("", c.ListLicenses)
 		licenses.GET("/:id", c.GetByID)
 		licenses.PATCH("/:id", c.UpdateLicense)
 		licenses.DELETE("/:id", c.DeleteLicense)
@@ -52,6 +53,51 @@ func (c *LicenseController) RegisterRoutes(r *gin.Engine) {
 		licenseGroup.POST("/update", c.UpdateLicense)                      // 更新许可证信息
 		licenseGroup.POST("/cleanInvalidLicense", c.CleanInvalidLicense)   // 清理过期的许可证
 	}
+}
+
+// ListLicenses 查询 License 列表
+// @Summary List licenses
+// @Tags licenses
+// @Accept json
+// @Produce json
+// @Param product_id query uint false "Product ID"
+// @Param status query int false "License status"
+// @Param license_key query string false "License key fuzzy filter"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /licenses [get]
+func (c *LicenseController) ListLicenses(ctx *gin.Context) {
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	productID, err := UintQuery(ctx, "product_id")
+	if err != nil {
+		BadRequest(ctx, "invalid product_id")
+		return
+	}
+	status, err := IntQueryPtr(ctx, "status")
+	if err != nil {
+		BadRequest(ctx, "invalid status")
+		return
+	}
+	data, err := c.ls.ListLicenses(ctx.Request.Context(), service.ListLicensesCommand{
+		ProductID:  productID,
+		Status:     status,
+		LicenseKey: StringQuery(ctx, "license_key"),
+		Limit:      page.Limit,
+		Offset:     page.Offset,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }
 
 // CreateLicense 创建 License

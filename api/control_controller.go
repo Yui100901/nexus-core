@@ -35,6 +35,7 @@ func (c *ControlController) RegisterRoutes(r *gin.Engine) {
 	commands := r.Group("/control-commands")
 	{
 		commands.POST("", c.CreateControlCommand)
+		commands.GET("", c.ListControlCommands)
 		commands.GET("/:id", c.GetControlCommandByID)
 		commands.POST("/:id/complete", c.CompleteControlCommand)
 	}
@@ -43,6 +44,52 @@ func (c *ControlController) RegisterRoutes(r *gin.Engine) {
 	{
 		nodeControl.GET("/ws", c.ConnectNodeControlWebSocket)
 	}
+}
+
+// ListControlCommands 查询控制指令列表
+// @Summary List control commands
+// @Tags control-commands
+// @Accept json
+// @Produce json
+// @Param node_id query uint false "Node ID"
+// @Param service_identifier query string false "Service identifier fuzzy filter"
+// @Param status query int false "Command status"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /control-commands [get]
+func (c *ControlController) ListControlCommands(ctx *gin.Context) {
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	nodeID, err := UintQuery(ctx, "node_id")
+	if err != nil {
+		BadRequest(ctx, "invalid node_id")
+		return
+	}
+	status, err := IntQueryPtr(ctx, "status")
+	if err != nil {
+		BadRequest(ctx, "invalid status")
+		return
+	}
+
+	data, err := c.cs.ListControlCommandsPage(ctx.Request.Context(), service.ListControlCommandsCommand{
+		NodeID:            nodeID,
+		ServiceIdentifier: StringQuery(ctx, "service_identifier"),
+		Status:            status,
+		Limit:             page.Limit,
+		Offset:            page.Offset,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }
 
 // CreateControlService 创建控制服务定义

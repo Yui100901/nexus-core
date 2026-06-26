@@ -50,6 +50,9 @@ type LicenseData struct {
 	ValidityHours int     `json:"validity_hours"`
 	Status        int     `json:"status"`
 	Remark        *string `json:"remark"`
+	MaxNodes      int     `json:"max_nodes"`
+	MaxConcurrent int     `json:"max_concurrent"`
+	FeatureMask   string  `json:"feature_mask"`
 }
 
 type UpdateLicenseCommand struct {
@@ -85,6 +88,28 @@ type NodeData struct {
 	DeviceCode string  `json:"device_code"`
 	Status     int     `json:"status"`
 	Metadata   *string `json:"metadata"`
+}
+
+type ListProductsCommand struct {
+	Name   *string
+	Status *int
+	Limit  int
+	Offset int
+}
+
+type ListLicensesCommand struct {
+	ProductID  *uint
+	Status     *int
+	LicenseKey *string
+	Limit      int
+	Offset     int
+}
+
+type ListNodesCommand struct {
+	DeviceCode *string
+	Status     *int
+	Limit      int
+	Offset     int
 }
 
 type AddBindingCommand struct {
@@ -204,6 +229,14 @@ type ListControlServicesCommand struct {
 	ProductID *uint
 	Limit     int
 	Offset    int
+}
+
+type ListControlCommandsCommand struct {
+	NodeID            *uint
+	ServiceIdentifier *string
+	Status            *int
+	Limit             int
+	Offset            int
 }
 
 type ReportNodeCapabilityCommand struct {

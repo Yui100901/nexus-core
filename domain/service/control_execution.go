@@ -187,6 +187,35 @@ func (s *ControlService) GetControlCommandByID(ctx context.Context, id uint) (*C
 	return toControlCommandData(&command), nil
 }
 
+func (s *ControlService) ListControlCommandsPage(ctx context.Context, cmd ListControlCommandsCommand) ([]ControlCommandData, error) {
+	query := global.DB.WithContext(ctx).Model(&model.ControlCommand{}).Order("id DESC")
+	if cmd.NodeID != nil {
+		query = query.Where("node_id = ?", *cmd.NodeID)
+	}
+	if cmd.ServiceIdentifier != nil && strings.TrimSpace(*cmd.ServiceIdentifier) != "" {
+		query = query.Where("service_identifier LIKE ?", "%"+strings.TrimSpace(*cmd.ServiceIdentifier)+"%")
+	}
+	if cmd.Status != nil {
+		query = query.Where("status = ?", *cmd.Status)
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
+	}
+
+	var commands []model.ControlCommand
+	if err := query.Find(&commands).Error; err != nil {
+		return nil, WrapInternal("list control commands failed", err)
+	}
+	data := make([]ControlCommandData, 0, len(commands))
+	for i := range commands {
+		data = append(data, *toControlCommandData(&commands[i]))
+	}
+	return data, nil
+}
+
 func (s *ControlService) CompleteControlCommand(ctx context.Context, cmd CompleteControlCommandCommand) (*ControlCommandData, error) {
 	if cmd.CommandID == 0 {
 		return nil, ErrBadRequest("command_id is required")

@@ -129,6 +129,39 @@ func (s *NodeService) GetByDeviceCode(ctx context.Context, code string) (*NodeDa
 	}, nil
 }
 
+func (s *NodeService) ListNodes(ctx context.Context, cmd ListNodesCommand) ([]NodeData, error) {
+	query := global.DB.WithContext(ctx).Model(&model.Node{}).Order("id DESC")
+	if cmd.DeviceCode != nil && strings.TrimSpace(*cmd.DeviceCode) != "" {
+		query = query.Where("device_code LIKE ?", "%"+strings.TrimSpace(*cmd.DeviceCode)+"%")
+	}
+	if cmd.Status != nil {
+		query = query.Where("status = ?", *cmd.Status)
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
+	}
+
+	var nodes []model.Node
+	if err := query.Find(&nodes).Error; err != nil {
+		return nil, WrapInternal("list nodes failed", err)
+	}
+
+	data := make([]NodeData, 0, len(nodes))
+	for i := range nodes {
+		metadata := string(nodes[i].Metadata)
+		data = append(data, NodeData{
+			ID:         nodes[i].ID,
+			DeviceCode: nodes[i].DeviceCode,
+			Status:     nodes[i].Status,
+			Metadata:   &metadata,
+		})
+	}
+	return data, nil
+}
+
 // DeleteNode 删除节点，并移除所有绑定
 func (s *NodeService) DeleteNode(ctx context.Context, id uint) error {
 	return global.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

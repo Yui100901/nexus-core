@@ -26,6 +26,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 	products := r.Group("/products")
 	{
 		products.POST("", c.CreateProduct)
+		products.GET("", c.ListProducts)
 		products.GET("/:id", c.GetByID)
 		products.PATCH("/:id", c.UpdateProduct)
 		products.DELETE("/:id", c.DeleteProduct)
@@ -45,6 +46,44 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 		g.POST("deprecateVersion", c.DeprecateVersion)          // 废弃版本
 		g.POST("/deleteProduct", c.DeleteProduct)               // 删除产品
 	}
+}
+
+// ListProducts 查询产品列表
+// @Summary List products
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param name query string false "Product name fuzzy filter"
+// @Param status query int false "Product status"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /products [get]
+func (c *ProductController) ListProducts(ctx *gin.Context) {
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	status, err := IntQueryPtr(ctx, "status")
+	if err != nil {
+		BadRequest(ctx, "invalid status")
+		return
+	}
+	data, err := c.ps.ListProducts(ctx.Request.Context(), service.ListProductsCommand{
+		Name:   StringQuery(ctx, "name"),
+		Status: status,
+		Limit:  page.Limit,
+		Offset: page.Offset,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }
 
 // CreateProduct 创建产品

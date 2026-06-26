@@ -24,6 +24,9 @@ export interface LicenseData {
   validity_hours: number;
   status: number;
   remark?: string | null;
+  max_nodes: number;
+  max_concurrent: number;
+  feature_mask: string;
 }
 
 export interface NodeData {

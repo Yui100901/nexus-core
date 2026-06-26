@@ -60,6 +60,37 @@ func (s *ProductService) GetProductDataByID(ctx context.Context, id uint) (*Prod
 	}, nil
 }
 
+func (s *ProductService) ListProducts(ctx context.Context, cmd ListProductsCommand) ([]ProductData, error) {
+	query := global.DB.WithContext(ctx).Model(&model.Product{}).Order("id DESC")
+	if cmd.Name != nil && strings.TrimSpace(*cmd.Name) != "" {
+		query = query.Where("name LIKE ?", "%"+strings.TrimSpace(*cmd.Name)+"%")
+	}
+	if cmd.Status != nil {
+		query = query.Where("status = ?", *cmd.Status)
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
+	}
+
+	var products []model.Product
+	if err := query.Find(&products).Error; err != nil {
+		return nil, WrapInternal("list products failed", err)
+	}
+
+	data := make([]ProductData, 0, len(products))
+	for i := range products {
+		data = append(data, ProductData{
+			ID:          products[i].ID,
+			Name:        products[i].Name,
+			Description: products[i].Description,
+		})
+	}
+	return data, nil
+}
+
 func (s *ProductService) UpdateProduct(ctx context.Context, cmd UpdateProductCommand) (*ProductData, error) {
 	if cmd.ID == 0 {
 		return nil, ErrBadRequest("id is required")

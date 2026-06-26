@@ -284,6 +284,9 @@ func (s *LicenseService) GetLicenseDataByID(ctx context.Context, id uint) (*Lice
 		ValidityHours: license.ValidityHours,
 		Status:        int(license.Status),
 		Remark:        license.Remark,
+		MaxNodes:      license.MaxNodes,
+		MaxConcurrent: license.MaxConcurrent,
+		FeatureMask:   license.FeatureMask,
 	}, nil
 }
 
@@ -303,7 +306,52 @@ func (s *LicenseService) GetLicenseDataByKey(ctx context.Context, key string) (*
 		ValidityHours: license.ValidityHours,
 		Status:        int(license.Status),
 		Remark:        license.Remark,
+		MaxNodes:      license.MaxNodes,
+		MaxConcurrent: license.MaxConcurrent,
+		FeatureMask:   license.FeatureMask,
 	}, nil
+}
+
+func (s *LicenseService) ListLicenses(ctx context.Context, cmd ListLicensesCommand) ([]LicenseData, error) {
+	query := global.DB.WithContext(ctx).Model(&model.License{}).Order("id DESC")
+	if cmd.ProductID != nil {
+		query = query.Where("product_id = ?", *cmd.ProductID)
+	}
+	if cmd.Status != nil {
+		query = query.Where("status = ?", *cmd.Status)
+	}
+	if cmd.LicenseKey != nil && strings.TrimSpace(*cmd.LicenseKey) != "" {
+		query = query.Where("license_key LIKE ?", "%"+strings.TrimSpace(*cmd.LicenseKey)+"%")
+	}
+	if cmd.Limit > 0 {
+		query = query.Limit(cmd.Limit)
+	}
+	if cmd.Offset > 0 {
+		query = query.Offset(cmd.Offset)
+	}
+
+	var licenses []model.License
+	if err := query.Find(&licenses).Error; err != nil {
+		return nil, WrapInternal("list licenses failed", err)
+	}
+
+	data := make([]LicenseData, 0, len(licenses))
+	for i := range licenses {
+		entityLicense := ToEntityLicense(&licenses[i])
+		status := int(entityLicense.CalculateStatus(time.Now()))
+		data = append(data, LicenseData{
+			ID:            licenses[i].ID,
+			ProductID:     licenses[i].ProductID,
+			LicenseKey:    licenses[i].LicenseKey,
+			ValidityHours: licenses[i].ValidityHours,
+			Status:        status,
+			Remark:        licenses[i].Remark,
+			MaxNodes:      licenses[i].MaxNodes,
+			MaxConcurrent: licenses[i].MaxConcurrent,
+			FeatureMask:   licenses[i].FeatureMask,
+		})
+	}
+	return data, nil
 }
 
 // CleanInvalidLicense 删除所有过期的许可证，同时删除节点许可证绑定
@@ -394,5 +442,8 @@ func toLicenseData(license *model.License) *LicenseData {
 		ValidityHours: license.ValidityHours,
 		Status:        license.Status,
 		Remark:        license.Remark,
+		MaxNodes:      license.MaxNodes,
+		MaxConcurrent: license.MaxConcurrent,
+		FeatureMask:   license.FeatureMask,
 	}
 }

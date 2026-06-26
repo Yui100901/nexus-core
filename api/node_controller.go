@@ -24,6 +24,7 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 	nodes := r.Group("/nodes")
 	{
 		nodes.POST("", c.CreateNode)
+		nodes.GET("", c.ListNodes)
 		nodes.GET("/:id", c.GetByID)
 		nodes.PATCH("/:id", c.UpdateNode)
 		nodes.DELETE("/:id", c.DeleteNode)
@@ -47,6 +48,44 @@ func (c *NodeController) RegisterRoutes(r *gin.Engine) {
 		g.POST("/unban", c.UnbanNode)            // 解封节点
 		g.POST("/cleanUnboundNode", c.CleanUnboundNode)
 	}
+}
+
+// ListNodes 查询节点列表
+// @Summary List nodes
+// @Tags nodes
+// @Accept json
+// @Produce json
+// @Param device_code query string false "Device code fuzzy filter"
+// @Param status query int false "Node status"
+// @Param page query int false "Page"
+// @Param page_size query int false "Page Size"
+// @Param limit query int false "Limit"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 500 {object} api.CommonResponse
+// @Router /nodes [get]
+func (c *NodeController) ListNodes(ctx *gin.Context) {
+	page, err := PaginationQuery(ctx)
+	if err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	status, err := IntQueryPtr(ctx, "status")
+	if err != nil {
+		BadRequest(ctx, "invalid status")
+		return
+	}
+	data, err := c.ns.ListNodes(ctx.Request.Context(), service.ListNodesCommand{
+		DeviceCode: StringQuery(ctx, "device_code"),
+		Status:     status,
+		Limit:      page.Limit,
+		Offset:     page.Offset,
+	})
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	Success(ctx, data)
 }
 
 // CreateNode 创建节点

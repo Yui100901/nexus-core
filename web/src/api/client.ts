@@ -81,6 +81,8 @@ export const api = {
 
   createProduct: (data: { name: string; description?: string | null }) =>
     request<ProductData>('/products', { method: 'POST', ...jsonBody(data) }),
+  listProducts: (query: { name?: string; status?: number; page?: number; page_size?: number }) =>
+    request<ProductData[]>(withQuery('/products', query)),
   getProduct: (id: number) => request<ProductData>(`/products/${id}`),
   updateProduct: (id: number, data: { name?: string | null; description?: string | null }) =>
     request<ProductData>(`/products/${id}`, { method: 'PATCH', ...jsonBody(data) }),
@@ -103,6 +105,8 @@ export const api = {
     request<LicenseData>('/licenses', { method: 'POST', ...jsonBody(data) }),
   batchCreateLicenses: (data: { product_id: number; validity_hours: number; max_nodes: number; max_concurrent: number; count: number; remark?: string | null }) =>
     request<LicenseData[]>('/licenses/batch', { method: 'POST', ...jsonBody(data) }),
+  listLicenses: (query: { product_id?: number; status?: number; license_key?: string; page?: number; page_size?: number }) =>
+    request<LicenseData[]>(withQuery('/licenses', query)),
   getLicense: (id: number) => request<LicenseData>(`/licenses/${id}`),
   getLicenseByKey: (key: string) => request<LicenseData>(`/license-keys/${encodeURIComponent(key)}`),
   updateLicense: (id: number, data: { max_nodes: number; max_concurrent: number; feature_mask: string; remark?: string | null }) =>
@@ -117,6 +121,8 @@ export const api = {
 
   createNode: (data: { device_code: string; metadata?: string | null }) =>
     request<NodeData>('/nodes', { method: 'POST', ...jsonBody(data) }),
+  listNodes: (query: { device_code?: string; status?: number; page?: number; page_size?: number }) =>
+    request<NodeData[]>(withQuery('/nodes', query)),
   getNode: (id: number) => request<NodeData>(`/nodes/${id}`),
   getNodeByDeviceCode: (deviceCode: string) => request<NodeData>(`/node-devices/${encodeURIComponent(deviceCode)}`),
   updateNode: (id: number, data: { device_code?: string | null; metadata?: string | null }) =>
@@ -156,6 +162,8 @@ export const api = {
 
   createControlCommand: (data: { node_id: number; service_identifier: string; payload: unknown }) =>
     request<ControlCommandData>('/control-commands', { method: 'POST', ...jsonBody(data) }),
+  listControlCommands: (query: { node_id?: number; service_identifier?: string; status?: number; page?: number; page_size?: number }) =>
+    request<ControlCommandData[]>(withQuery('/control-commands', query)),
   getControlCommand: (id: number) => request<ControlCommandData>(`/control-commands/${id}`),
   completeControlCommand: (id: number, data: { status: string; result?: unknown; error_message?: string | null }) =>
     request<ControlCommandData>(`/control-commands/${id}/complete`, { method: 'POST', ...jsonBody(data) }),
