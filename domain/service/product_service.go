@@ -38,9 +38,12 @@ func (s *ProductService) CreateProduct(ctx context.Context, cmd CreateProductCom
 		"name": pProduct.Name,
 	})
 	return &ProductData{
-		ID:          pProduct.ID,
-		Name:        pProduct.Name,
-		Description: pProduct.Description,
+		ID:                    pProduct.ID,
+		Name:                  pProduct.Name,
+		Description:           pProduct.Description,
+		Status:                pProduct.Status,
+		MinSupportedVersionID: pProduct.MinSupportedVersionID,
+		Versions:              []ProductVersionData{},
 	}, nil
 }
 
@@ -53,11 +56,7 @@ func (s *ProductService) GetProductDataByID(ctx context.Context, id uint) (*Prod
 	if pProduct == nil {
 		return nil, ErrNotFound("product not found")
 	}
-	return &ProductData{
-		ID:          pProduct.ID,
-		Name:        pProduct.Name,
-		Description: pProduct.Description,
-	}, nil
+	return s.productDataFromModel(ctx, global.DB.WithContext(ctx), pProduct)
 }
 
 func (s *ProductService) ListProducts(ctx context.Context, cmd ListProductsCommand) ([]ProductData, error) {
@@ -80,12 +79,35 @@ func (s *ProductService) ListProducts(ctx context.Context, cmd ListProductsComma
 		return nil, WrapInternal("list products failed", err)
 	}
 
+	productIDs := make([]uint, 0, len(products))
+	for i := range products {
+		productIDs = append(productIDs, products[i].ID)
+	}
+
+	versionsByProduct := map[uint][]ProductVersionData{}
+	if len(productIDs) > 0 {
+		var versions []model.ProductVersion
+		if err := global.DB.WithContext(ctx).
+			Where("product_id IN ?", productIDs).
+			Order("product_id ASC, release_date ASC, id ASC").
+			Find(&versions).Error; err != nil {
+			return nil, WrapInternal("list product versions failed", err)
+		}
+		for i := range versions {
+			item := toProductVersionData(&versions[i])
+			versionsByProduct[versions[i].ProductID] = append(versionsByProduct[versions[i].ProductID], *item)
+		}
+	}
+
 	data := make([]ProductData, 0, len(products))
 	for i := range products {
 		data = append(data, ProductData{
-			ID:          products[i].ID,
-			Name:        products[i].Name,
-			Description: products[i].Description,
+			ID:                    products[i].ID,
+			Name:                  products[i].Name,
+			Description:           products[i].Description,
+			Status:                products[i].Status,
+			MinSupportedVersionID: products[i].MinSupportedVersionID,
+			Versions:              versionsByProduct[products[i].ID],
 		})
 	}
 	return data, nil
@@ -238,11 +260,13 @@ func (s *ProductService) CreateProductVersion(ctx context.Context, cmd CreatePro
 		}
 	}
 
-	return &ProductVersionData{
-		ID:          newVersion.ID,
-		ProductID:   newVersion.ProductID,
-		VersionCode: newVersion.VersionCode,
-	}, nil
+	if cmd.Method == ReleaseImmediate {
+		newVersion.Status = int(entity.VersionStatusAvailable)
+		now := time.Now()
+		newVersion.ReleaseDate = &now
+	}
+
+	return toProductVersionData(newVersion), nil
 }
 
 // ReleaseVersion 发布指定产品的指定版本
@@ -382,4 +406,38 @@ func (s *ProductService) DeprecateVersion(ctx context.Context, cmd DeprecateVers
 		"version_id": cmd.VersionID,
 	})
 	return nil
+}
+
+func (s *ProductService) productDataFromModel(ctx context.Context, db *gorm.DB, product *model.Product) (*ProductData, error) {
+	var versions []model.ProductVersion
+	if err := db.WithContext(ctx).
+		Where("product_id = ?", product.ID).
+		Order("release_date ASC, id ASC").
+		Find(&versions).Error; err != nil {
+		return nil, WrapInternal("list product versions failed", err)
+	}
+
+	data := &ProductData{
+		ID:                    product.ID,
+		Name:                  product.Name,
+		Description:           product.Description,
+		Status:                product.Status,
+		MinSupportedVersionID: product.MinSupportedVersionID,
+		Versions:              make([]ProductVersionData, 0, len(versions)),
+	}
+	for i := range versions {
+		data.Versions = append(data.Versions, *toProductVersionData(&versions[i]))
+	}
+	return data, nil
+}
+
+func toProductVersionData(version *model.ProductVersion) *ProductVersionData {
+	return &ProductVersionData{
+		ID:          version.ID,
+		ProductID:   version.ProductID,
+		VersionCode: version.VersionCode,
+		ReleaseDate: version.ReleaseDate,
+		Description: version.Description,
+		Status:      version.Status,
+	}
 }

@@ -138,9 +138,12 @@ type CreateProductCommand struct {
 }
 
 type ProductData struct {
-	ID          uint    `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
+	ID                    uint                 `json:"id"`
+	Name                  string               `json:"name"`
+	Description           *string              `json:"description"`
+	Status                int                  `json:"status"`
+	MinSupportedVersionID *uint                `json:"min_supported_version_id"`
+	Versions              []ProductVersionData `json:"versions"`
 }
 
 type UpdateProductCommand struct {
@@ -170,6 +173,8 @@ type ProductVersionData struct {
 	ProductID   uint       `json:"product_id"`
 	VersionCode string     `json:"version_code"`
 	ReleaseDate *time.Time `json:"release_date"`
+	Description *string    `json:"description"`
+	Status      int        `json:"status"`
 }
 
 type ReleaseNewVersionCommand struct {

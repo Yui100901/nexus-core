@@ -8,6 +8,9 @@ export interface ProductData {
   id: number;
   name: string;
   description?: string | null;
+  status: number;
+  min_supported_version_id?: number | null;
+  versions?: ProductVersionData[];
 }
 
 export interface ProductVersionData {
@@ -15,6 +18,8 @@ export interface ProductVersionData {
   product_id: number;
   version_code: string;
   release_date?: string | null;
+  description?: string | null;
+  status: number;
 }
 
 export interface LicenseData {

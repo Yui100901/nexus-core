@@ -260,6 +260,40 @@ textarea {
   margin-bottom: 14px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(14, 24, 28, 0.42);
+}
+
+.modal-panel {
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: auto;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dce4e1;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(15, 33, 38, 0.24);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
 .form-panel {
   display: grid;
   gap: 12px;
@@ -408,6 +442,31 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+}
+
+.cell-tight {
+  width: 44px;
+  white-space: nowrap;
+}
+
+.nested-row td {
+  background: #f8faf9;
+  padding: 12px;
+}
+
+.nested-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.nested-table {
+  background: #ffffff;
+  border: 1px solid #e1e9e6;
+  border-radius: 7px;
+  overflow: hidden;
 }
 
 th,
