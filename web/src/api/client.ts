@@ -98,6 +98,8 @@ export const api = {
     request<number>('/products/versions/release', { method: 'POST', ...jsonBody(data) }),
   deprecateVersion: (data: { product_id: number; version_id: number }) =>
     request<void>('/products/versions/deprecate', { method: 'POST', ...jsonBody(data) }),
+  deleteProductVersion: (data: { product_id: number; version_id: number }) =>
+    request<void>('/products/versions/delete', { method: 'POST', ...jsonBody(data) }),
   setMinVersion: (data: { product_id: number; version_id: number }) =>
     request<void>('/products/min-supported-version', { method: 'POST', ...jsonBody(data) }),
 

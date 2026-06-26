@@ -162,6 +162,11 @@ func TestP2VersionScheduleAndVersionGuards(t *testing.T) {
 	if stored.Status != int(entity.VersionStatusAvailable) {
 		t.Fatalf("due scheduled version should be released, got %d", stored.Status)
 	}
+	err = fixture.productService.ReleaseVersion(fixture.ctx, ReleaseNewVersionCommand{
+		ProductID: fixture.product.ID,
+		VersionID: scheduled.ID,
+	})
+	assertAppErrorKind(t, err, ErrorKindConflict)
 
 	futureAt := time.Now().Add(time.Hour)
 	future, err := fixture.productService.CreateProductVersion(fixture.ctx, CreateProductVersionCommand{
@@ -191,6 +196,70 @@ func TestP2VersionScheduleAndVersionGuards(t *testing.T) {
 		VersionID: *product.MinSupportedVersionID,
 	})
 	assertAppErrorKind(t, err, ErrorKindConflict)
+
+	err = fixture.productService.DeprecateVersion(fixture.ctx, DeprecateVersionCommand{
+		ProductID: fixture.product.ID,
+		VersionID: scheduled.ID,
+	})
+	if err != nil {
+		t.Fatalf("deprecate non-min version: %v", err)
+	}
+	data, err := fixture.productService.GetProductDataByID(fixture.ctx, fixture.product.ID)
+	if err != nil {
+		t.Fatalf("get product data after deprecate: %v", err)
+	}
+	foundDeprecated := false
+	for _, version := range data.Versions {
+		if version.ID == scheduled.ID && version.Status == int(entity.VersionStatusDeprecated) {
+			foundDeprecated = true
+			break
+		}
+	}
+	if !foundDeprecated {
+		t.Fatalf("deprecated version should still appear in product versions: %#v", data.Versions)
+	}
+
+	_, err = fixture.accessService.Register(fixture.ctx, AccessCommand{
+		DeviceCode:  "deprecated-version-node",
+		LicenseKey:  fixture.license.LicenseKey,
+		ProductID:   fixture.product.ID,
+		VersionCode: scheduled.VersionCode,
+	})
+	assertAppErrorKind(t, err, ErrorKindBadRequest)
+	bound := fixture.register(t, "deprecated-version-heartbeat-node")
+	_, err = fixture.accessService.Heartbeat(
+		fixture.ctx,
+		"deprecated-version-heartbeat-node",
+		fixture.product.ID,
+		scheduled.VersionCode,
+		fixture.license.LicenseKey,
+	)
+	assertAppErrorKind(t, err, ErrorKindBadRequest)
+	if bound.NodeID == 0 {
+		t.Fatal("registered node should have id")
+	}
+	err = fixture.productService.ReleaseVersion(fixture.ctx, ReleaseNewVersionCommand{
+		ProductID: fixture.product.ID,
+		VersionID: scheduled.ID,
+	})
+	assertAppErrorKind(t, err, ErrorKindConflict)
+
+	err = fixture.productService.DeleteProductVersion(fixture.ctx, DeleteProductVersionCommand{
+		ProductID: fixture.product.ID,
+		VersionID: scheduled.ID,
+	})
+	if err != nil {
+		t.Fatalf("delete deprecated version: %v", err)
+	}
+	data, err = fixture.productService.GetProductDataByID(fixture.ctx, fixture.product.ID)
+	if err != nil {
+		t.Fatalf("get product data after delete version: %v", err)
+	}
+	for _, version := range data.Versions {
+		if version.ID == scheduled.ID {
+			t.Fatalf("deleted version should not appear in product versions: %#v", data.Versions)
+		}
+	}
 }
 
 func TestP2LicenseRenewAndCleanupPolicy(t *testing.T) {

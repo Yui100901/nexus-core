@@ -61,6 +61,11 @@ type DeprecateVersionCommand struct {
 	VersionID uint `json:"version_id" binding:"required"`
 }
 
+type DeleteProductVersionCommand struct {
+	ProductID uint `json:"product_id" binding:"required"`
+	VersionID uint `json:"version_id" binding:"required"`
+}
+
 // Query DTOs
 
 // GetProductByIDQuery 根据ID查询产品的查询对象

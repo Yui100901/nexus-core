@@ -193,6 +193,11 @@ type DeprecateVersionCommand struct {
 	VersionID uint
 }
 
+type DeleteProductVersionCommand struct {
+	ProductID uint
+	VersionID uint
+}
+
 type CreateControlServiceCommand struct {
 	ProductID    *uint
 	Identifier   string

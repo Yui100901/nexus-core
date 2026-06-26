@@ -58,6 +58,14 @@ function versionTone(status: number) {
   return status === 1 ? 'good' : status === 0 ? 'idle' : 'bad';
 }
 
+function canRelease(version: ProductVersionData) {
+  return version.status === 0;
+}
+
+function canSetMinVersion(version: ProductVersionData) {
+  return version.status === 1;
+}
+
 function resetProductForm() {
   productForm.id = 0;
   productForm.name = '';
@@ -211,6 +219,15 @@ function confirmDeprecateVersion(product: ProductData, version: ProductVersionDa
   );
 }
 
+function confirmDeleteVersion(product: ProductData, version: ProductVersionData) {
+  askConfirm(
+    '删除版本',
+    `确认删除产品「${product.name}」的版本 ${version.version_code}？删除后该版本不会再出现在版本列表中。`,
+    '确认删除',
+    () => api.deleteProductVersion({ product_id: product.id, version_id: version.id }),
+  );
+}
+
 onMounted(loadProducts);
 </script>
 
@@ -318,10 +335,11 @@ onMounted(loadProducts);
                       <td>{{ version.description || '-' }}</td>
                       <td>
                         <div class="button-row wrap">
-                          <button class="primary-button" type="button" @click="releaseNow(product, version)"><CheckCircle2 :size="15" /> 发布</button>
-                          <button class="secondary-button" type="button" @click="openScheduleRelease(product, version)"><CalendarClock :size="15" /> 定时</button>
-                          <button class="secondary-button" type="button" @click="setMinVersion(product, version)"><ShieldCheck :size="15" /> 最低</button>
-                          <button class="danger-button" type="button" @click="confirmDeprecateVersion(product, version)"><Trash2 :size="15" /> 废弃</button>
+                          <button class="primary-button" type="button" :disabled="!canRelease(version)" @click="releaseNow(product, version)"><CheckCircle2 :size="15" /> 发布</button>
+                          <button class="secondary-button" type="button" :disabled="!canRelease(version)" @click="openScheduleRelease(product, version)"><CalendarClock :size="15" /> 定时</button>
+                          <button class="secondary-button" type="button" :disabled="!canSetMinVersion(version)" @click="setMinVersion(product, version)"><ShieldCheck :size="15" /> 最低</button>
+                          <button class="danger-button" type="button" :disabled="version.status === 2" @click="confirmDeprecateVersion(product, version)"><Trash2 :size="15" /> 废弃</button>
+                          <button class="danger-button" type="button" @click="confirmDeleteVersion(product, version)"><Trash2 :size="15" /> 删除</button>
                         </div>
                       </td>
                     </tr>

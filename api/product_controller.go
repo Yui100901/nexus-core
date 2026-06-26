@@ -33,6 +33,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 		products.POST("/versions", c.CreateProductVersion)
 		products.POST("/versions/release", c.ReleaseNewVersion)
 		products.POST("/versions/deprecate", c.DeprecateVersion)
+		products.POST("/versions/delete", c.DeleteVersion)
 		products.POST("/min-supported-version", c.SetMinVersion)
 	}
 
@@ -44,6 +45,7 @@ func (c *ProductController) RegisterRoutes(r *gin.Engine) {
 		g.GET("/getByID", c.GetByID)                            // 根据ID获取产品
 		g.POST("/setMinVersion", c.SetMinVersion)               // 设置最小支持版本
 		g.POST("deprecateVersion", c.DeprecateVersion)          // 废弃版本
+		g.POST("/deleteVersion", c.DeleteVersion)               // 删除版本
 		g.POST("/deleteProduct", c.DeleteProduct)               // 删除产品
 	}
 }
@@ -244,6 +246,33 @@ func (c *ProductController) DeprecateVersion(ctx *gin.Context) {
 		return
 	}
 	SuccessMsg(ctx, "version deprecated")
+}
+
+// DeleteVersion 删除产品版本
+// @Summary Delete a product version
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param body body dto.DeleteProductVersionCommand true "Delete Product Version"
+// @Success 200 {object} api.CommonResponse
+// @Failure 400 {object} api.CommonResponse
+// @Failure 404 {object} api.CommonResponse
+// @Failure 409 {object} api.CommonResponse
+// @Router /products/versions/delete [post]
+func (c *ProductController) DeleteVersion(ctx *gin.Context) {
+	var cmd dto.DeleteProductVersionCommand
+	if err := ctx.ShouldBindJSON(&cmd); err != nil {
+		BadRequest(ctx, err.Error())
+		return
+	}
+	if err := c.ps.DeleteProductVersion(ctx.Request.Context(), service.DeleteProductVersionCommand{
+		ProductID: cmd.ProductID,
+		VersionID: cmd.VersionID,
+	}); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	SuccessMsg(ctx, "version deleted")
 }
 
 // DeleteProduct 删除产品
