@@ -16,6 +16,7 @@ import {
 } from 'lucide-vue-next';
 import { api } from '../api/client';
 import type { ProductData, ProductVersionData } from '../api/types';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import ResultPanel from '../components/ResultPanel.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import { formatDate, statusTone } from '../utils/status';
@@ -35,6 +36,13 @@ const filters = reactive({ name: '', status: undefined as number | undefined, pa
 const productForm = reactive({ id: 0, name: '', description: '' });
 const versionForm = reactive({ product_id: 0, version_code: '1.0.0', description: '', release_method: 0, release_date: '' });
 const releaseForm = reactive({ product_id: 0, version_id: 0, release_date: '' });
+const confirmDialog = reactive({
+  open: false,
+  title: '',
+  message: '',
+  confirmLabel: '确认执行',
+  action: null as null | (() => Promise<unknown>),
+});
 
 const activeProduct = computed(() => products.value.find((item) => item.id === expandedProductId.value) || null);
 
@@ -112,6 +120,27 @@ async function run(action: () => Promise<unknown>, refresh = false) {
   }
 }
 
+function askConfirm(title: string, message: string, confirmLabel: string, action: () => Promise<unknown>) {
+  confirmDialog.title = title;
+  confirmDialog.message = message;
+  confirmDialog.confirmLabel = confirmLabel;
+  confirmDialog.action = action;
+  confirmDialog.open = true;
+}
+
+function closeConfirm() {
+  confirmDialog.open = false;
+  confirmDialog.action = null;
+}
+
+async function confirmDangerAction() {
+  const action = confirmDialog.action;
+  closeConfirm();
+  if (action) {
+    await run(action, true);
+  }
+}
+
 async function loadProducts() {
   loading.value = true;
   error.value = '';
@@ -164,8 +193,22 @@ async function setMinVersion(product: ProductData, version: ProductVersionData) 
   await run(() => api.setMinVersion({ product_id: product.id, version_id: version.id }), true);
 }
 
-async function deprecateVersion(product: ProductData, version: ProductVersionData) {
-  await run(() => api.deprecateVersion({ product_id: product.id, version_id: version.id }), true);
+function confirmDeleteProduct(product: ProductData) {
+  askConfirm(
+    '删除产品',
+    `确认删除产品「${product.name}」？该操作会同时删除该产品下的版本，且不可撤销。`,
+    '确认删除',
+    () => api.deleteProduct(product.id),
+  );
+}
+
+function confirmDeprecateVersion(product: ProductData, version: ProductVersionData) {
+  askConfirm(
+    '废弃版本',
+    `确认废弃产品「${product.name}」的版本 ${version.version_code}？废弃后客户端不能再用该版本注册或心跳。`,
+    '确认废弃',
+    () => api.deprecateVersion({ product_id: product.id, version_id: version.id }),
+  );
 }
 
 onMounted(loadProducts);
@@ -236,7 +279,7 @@ onMounted(loadProducts);
                 <div class="button-row wrap">
                   <button class="secondary-button" type="button" @click="openEditProduct(product)"><Edit3 :size="15" /> 编辑</button>
                   <button class="primary-button" type="button" @click="openCreateVersion(product)"><UploadCloud :size="15" /> 新增版本</button>
-                  <button class="danger-button" type="button" @click="run(() => api.deleteProduct(product.id), true)"><Trash2 :size="15" /> 删除</button>
+                  <button class="danger-button" type="button" @click="confirmDeleteProduct(product)"><Trash2 :size="15" /> 删除</button>
                 </div>
               </td>
             </tr>
@@ -278,7 +321,7 @@ onMounted(loadProducts);
                           <button class="primary-button" type="button" @click="releaseNow(product, version)"><CheckCircle2 :size="15" /> 发布</button>
                           <button class="secondary-button" type="button" @click="openScheduleRelease(product, version)"><CalendarClock :size="15" /> 定时</button>
                           <button class="secondary-button" type="button" @click="setMinVersion(product, version)"><ShieldCheck :size="15" /> 最低</button>
-                          <button class="danger-button" type="button" @click="deprecateVersion(product, version)"><Trash2 :size="15" /> 废弃</button>
+                          <button class="danger-button" type="button" @click="confirmDeprecateVersion(product, version)"><Trash2 :size="15" /> 废弃</button>
                         </div>
                       </td>
                     </tr>
@@ -350,5 +393,13 @@ onMounted(loadProducts);
     </div>
 
     <ResultPanel :value="result" />
+    <ConfirmDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      @confirm="confirmDangerAction"
+      @cancel="closeConfirm"
+    />
   </section>
 </template>

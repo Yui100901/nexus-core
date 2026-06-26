@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { Copy, Edit3, KeyRound, Plus, RefreshCw, Save, Trash2 } from 'lucide-vue-next';
 import { api } from '../api/client';
 import type { LicenseData } from '../api/types';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import ResultPanel from '../components/ResultPanel.vue';
 import { licenseStatusLabel, statusTone } from '../utils/status';
@@ -25,6 +26,13 @@ const createForm = reactive({ product_id: 1, validity_hours: 720, max_nodes: 2, 
 const batchForm = reactive({ product_id: 1, validity_hours: 720, max_nodes: 2, max_concurrent: 1, count: 10, remark: '' });
 const editForm = reactive({ id: 0, max_nodes: 0, max_concurrent: 0, feature_mask: '', remark: '' });
 const renewForm = reactive({ id: 0, extra_hours: 168 });
+const confirmDialog = reactive({
+  open: false,
+  title: '',
+  message: '',
+  confirmLabel: '确认执行',
+  action: null as null | (() => Promise<unknown>),
+});
 
 async function run(action: () => Promise<unknown>, refresh = false) {
   error.value = '';
@@ -34,6 +42,25 @@ async function run(action: () => Promise<unknown>, refresh = false) {
   } catch (err) {
     error.value = err instanceof Error ? err.message : '操作失败';
   }
+}
+
+function askConfirm(title: string, message: string, confirmLabel: string, action: () => Promise<unknown>) {
+  confirmDialog.title = title;
+  confirmDialog.message = message;
+  confirmDialog.confirmLabel = confirmLabel;
+  confirmDialog.action = action;
+  confirmDialog.open = true;
+}
+
+function closeConfirm() {
+  confirmDialog.open = false;
+  confirmDialog.action = null;
+}
+
+async function confirmDangerAction() {
+  const action = confirmDialog.action;
+  closeConfirm();
+  if (action) await run(action, true);
 }
 
 async function loadLicenses() {
@@ -65,6 +92,22 @@ async function copyKey(key: string) {
 async function createLicense() {
   await run(() => api.createLicense({ ...createForm, remark: createForm.remark || null }), true);
   showCreate.value = false;
+}
+
+function confirmRevokeLicense(license: LicenseData) {
+  askConfirm('吊销 License', `确认吊销 License #${license.id}？吊销后客户端注册和心跳会被拒绝。`, '确认吊销', () => api.revokeLicense(license.id));
+}
+
+function confirmDeleteLicense(license: LicenseData) {
+  askConfirm('删除 License', `确认删除 License #${license.id}？该操作不可撤销。`, '确认删除', () => api.deleteLicense(license.id));
+}
+
+function confirmCleanLicenseBindings(id: number) {
+  askConfirm('清理绑定', `确认清理 License #${id} 的绑定关系？`, '确认清理', () => api.cleanLicenseBindings(id));
+}
+
+function confirmCleanInvalidLicenses() {
+  askConfirm('清理无效 License', '确认清理所有无效或过期 License？该操作不可撤销。', '确认清理', () => api.cleanInvalidLicenses());
 }
 
 onMounted(loadLicenses);
@@ -162,9 +205,9 @@ onMounted(loadLicenses);
             <td>
               <div class="button-row wrap">
                 <button class="secondary-button" type="button" @click="selectLicense(license)"><Edit3 :size="15" /> 编辑</button>
-                <button class="danger-button" type="button" @click="run(() => api.revokeLicense(license.id), true)">吊销</button>
+                <button class="danger-button" type="button" @click="confirmRevokeLicense(license)">吊销</button>
                 <button class="secondary-button" type="button" @click="run(() => api.restoreLicense(license.id), true)">恢复</button>
-                <button class="danger-button" type="button" @click="run(() => api.deleteLicense(license.id), true)"><Trash2 :size="15" /> 删除</button>
+                <button class="danger-button" type="button" @click="confirmDeleteLicense(license)"><Trash2 :size="15" /> 删除</button>
               </div>
             </td>
           </tr>
@@ -192,12 +235,20 @@ onMounted(loadLicenses);
         <label>续期小时<input v-model.number="renewForm.extra_hours" type="number" required /></label>
         <div class="button-row wrap">
           <button class="primary-button" type="button" @click="run(() => api.renewLicense(renewForm.id, renewForm.extra_hours), true)">续期</button>
-          <button class="danger-button" type="button" @click="run(() => api.cleanLicenseBindings(renewForm.id), true)">清理绑定</button>
-          <button class="danger-button" type="button" @click="run(() => api.cleanInvalidLicenses(), true)">清理无效 License</button>
+          <button class="danger-button" type="button" @click="confirmCleanLicenseBindings(renewForm.id)">清理绑定</button>
+          <button class="danger-button" type="button" @click="confirmCleanInvalidLicenses">清理无效 License</button>
         </div>
       </form>
     </div>
 
     <ResultPanel :value="result" />
+    <ConfirmDialog
+      :open="confirmDialog.open"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      :confirm-label="confirmDialog.confirmLabel"
+      @confirm="confirmDangerAction"
+      @cancel="closeConfirm"
+    />
   </section>
 </template>
