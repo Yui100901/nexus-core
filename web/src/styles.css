@@ -266,6 +266,10 @@ textarea {
   margin-bottom: 14px;
 }
 
+.compact-head {
+  margin-bottom: 0;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -285,6 +289,10 @@ textarea {
   border: 1px solid #dce4e1;
   border-radius: 8px;
   box-shadow: 0 24px 70px rgba(15, 33, 38, 0.24);
+}
+
+.modal-panel-wide {
+  width: min(1080px, 100%);
 }
 
 .modal-head {
@@ -540,6 +548,58 @@ pre,
 .detail-list strong {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.service-list {
+  display: grid;
+  gap: 12px;
+}
+
+.service-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e1e9e6;
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.service-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-card__head strong,
+.service-card__head span {
+  display: block;
+}
+
+.service-card__head span {
+  margin-top: 3px;
+  color: #66736f;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.service-card__result {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.service-card__result pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #dce4e1;
+  border-radius: 7px;
+  background: #ffffff;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .text-copy {

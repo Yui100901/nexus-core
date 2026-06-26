@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { Ban, Edit3, Link2, Plus, PowerOff, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2, X } from 'lucide-vue-next';
+import { Ban, Edit3, Link2, Play, Plus, PowerOff, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2, X } from 'lucide-vue-next';
 import { api } from '../api/client';
-import type { NodeData } from '../api/types';
+import type { ControlCommandData, NodeCapabilityData, NodeData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import JsonEditor from '../components/JsonEditor.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import { errorMessage, notifyError, notifySuccess } from '../composables/useToast';
-import { nodeStatusLabel, prettyJson, statusTone } from '../utils/status';
+import { controlCommandStatusLabel, enabledStatusLabel, prettyJson, nodeStatusLabel, statusTone } from '../utils/status';
 
 const loading = ref(false);
 const error = ref('');
@@ -15,6 +15,9 @@ const nodes = ref<NodeData[]>([]);
 const selected = ref<NodeData | null>(null);
 const showCreate = ref(false);
 const nodeDialogOpen = ref(false);
+const serviceLoading = ref(false);
+const nodeCapabilities = ref<NodeCapabilityData[]>([]);
+const nodeServiceCounts = reactive<Record<number, number>>({});
 
 const filters = reactive({ device_code: '', status: undefined as number | undefined, page: 1, page_size: 20 });
 const createForm = reactive({ device_code: 'demo-node-001', metadata: '{\n  "os": "windows"\n}' });
@@ -22,6 +25,8 @@ const editForm = reactive({ id: 0, device_code: '', metadata: '{}' });
 const bindingForm = reactive({ node_id: 0, license_id: 1 });
 const banForm = reactive({ node_id: 0, reason: '' });
 const forceOfflineForm = reactive({ node_id: 0, reason: '' });
+const commandPayloads = reactive<Record<number, string>>({});
+const commandResults = reactive<Record<number, ControlCommandData | undefined>>({});
 const confirmDialog = reactive({
   open: false,
   title: '',
@@ -67,10 +72,80 @@ async function loadNodes() {
   error.value = '';
   try {
     nodes.value = await api.listNodes(filters);
+    await loadNodeServiceCounts();
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载失败';
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadNodeServiceCounts() {
+  const nodeIDs = new Set(nodes.value.map((node) => node.id));
+  for (const key of Object.keys(nodeServiceCounts)) {
+    delete nodeServiceCounts[Number(key)];
+  }
+  if (!nodeIDs.size) return;
+  try {
+    const capabilities = await api.listNodeCapabilities({ page: 1, page_size: 500 });
+    for (const capability of capabilities) {
+      if (nodeIDs.has(capability.node_id) && capability.status === 1) {
+        nodeServiceCounts[capability.node_id] = (nodeServiceCounts[capability.node_id] || 0) + 1;
+      }
+    }
+  } catch {
+    for (const node of nodes.value) {
+      nodeServiceCounts[node.id] = 0;
+    }
+  }
+}
+
+function parseJson(text: string) {
+  return JSON.parse(text || '{}');
+}
+
+function defaultValueForField(field: Record<string, unknown>) {
+  if ('default' in field) return field.default;
+  switch (field.type) {
+    case 'integer':
+    case 'number':
+      return 0;
+    case 'boolean':
+      return false;
+    case 'array':
+      return [];
+    case 'object':
+      return {};
+    default:
+      return '';
+  }
+}
+
+function defaultPayloadForCapability(capability: NodeCapabilityData) {
+  const schema = capability.schema as { fields?: Record<string, Record<string, unknown>> };
+  const fields = schema?.fields;
+  if (!fields || typeof fields !== 'object') return '{}';
+  const payload: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(fields)) {
+    const source = typeof field.source === 'string' && field.source ? field.source : key;
+    payload[source] = defaultValueForField(field);
+  }
+  return prettyJson(payload);
+}
+
+async function loadNodeCapabilities(nodeID: number) {
+  serviceLoading.value = true;
+  try {
+    nodeCapabilities.value = await api.listNodeCapabilities({ node_id: nodeID, page: 1, page_size: 100 });
+    for (const capability of nodeCapabilities.value) {
+      if (!commandPayloads[capability.id]) {
+        commandPayloads[capability.id] = defaultPayloadForCapability(capability);
+      }
+    }
+  } catch (err) {
+    notifyError(errorMessage(err, '加载节点服务失败'));
+  } finally {
+    serviceLoading.value = false;
   }
 }
 
@@ -87,6 +162,8 @@ function fillNodeForms(node: NodeData) {
 function openNodeDialog(node: NodeData) {
   fillNodeForms(node);
   nodeDialogOpen.value = true;
+  nodeCapabilities.value = [];
+  void loadNodeCapabilities(node.id);
 }
 
 function closeNodeDialog() {
@@ -101,6 +178,35 @@ async function createNode() {
 async function saveNode() {
   const ok = await run(() => api.updateNode(editForm.id, { device_code: editForm.device_code || null, metadata: editForm.metadata }), true);
   if (ok) closeNodeDialog();
+}
+
+async function invokeCapability(capability: NodeCapabilityData) {
+  try {
+    const command = await api.createControlCommand({
+      node_id: capability.node_id,
+      service_identifier: capability.service_identifier,
+      payload: parseJson(commandPayloads[capability.id] || '{}'),
+    });
+    commandResults[capability.id] = command;
+    if (command.status === 4 || command.status === 5) {
+      notifyError(command.error_message || `服务调用${controlCommandStatusLabel(command.status)}`);
+    } else {
+      notifySuccess(`已调用 ${capability.service_identifier}`);
+    }
+  } catch (err) {
+    notifyError(errorMessage(err));
+  }
+}
+
+async function refreshCapabilityCommand(capability: NodeCapabilityData) {
+  const last = commandResults[capability.id];
+  if (!last) return;
+  try {
+    commandResults[capability.id] = await api.getControlCommand(last.id);
+    notifySuccess('指令状态已刷新');
+  } catch (err) {
+    notifyError(errorMessage(err));
+  }
 }
 
 function confirmBanNode(nodeID: number, deviceCode?: string, reason?: string | null) {
@@ -180,6 +286,7 @@ onMounted(loadNodes);
             <th>ID</th>
             <th>设备码</th>
             <th>状态</th>
+            <th>服务</th>
             <th>元数据</th>
             <th>操作</th>
           </tr>
@@ -189,6 +296,7 @@ onMounted(loadNodes);
             <td>{{ node.id }}</td>
             <td>{{ node.device_code }}</td>
             <td><StatusBadge :label="nodeStatusLabel(node.status)" :tone="statusTone(node.status, 'node')" /></td>
+            <td>{{ nodeServiceCounts[node.id] || 0 }}</td>
             <td><code>{{ node.metadata || '{}' }}</code></td>
             <td>
               <div class="button-row wrap">
@@ -202,14 +310,14 @@ onMounted(loadNodes);
             </td>
           </tr>
           <tr v-if="!nodes.length">
-            <td colspan="5" class="empty-cell">{{ loading ? '加载中' : '暂无节点' }}</td>
+            <td colspan="6" class="empty-cell">{{ loading ? '加载中' : '暂无节点' }}</td>
           </tr>
         </tbody>
       </table>
     </section>
 
     <div v-if="nodeDialogOpen" class="modal-backdrop" @click.self="closeNodeDialog">
-      <form class="modal-panel form-panel" @submit.prevent="saveNode">
+      <form class="modal-panel modal-panel-wide form-panel" @submit.prevent="saveNode">
         <div class="modal-head">
           <h2>编辑节点 #{{ editForm.id }}</h2>
           <button class="icon-button" type="button" title="关闭" @click="closeNodeDialog"><X :size="16" /></button>
@@ -231,6 +339,56 @@ onMounted(loadNodes);
           <button class="danger-button" type="button" @click="confirmForceOfflineNode(forceOfflineForm.node_id, selected?.device_code, forceOfflineForm.reason || null)"><PowerOff :size="16" /> 强制下线</button>
           <button class="primary-button" type="button" @click="run(() => api.restoreOnlineNode(forceOfflineForm.node_id), true)"><RotateCcw :size="16" /> 恢复上线</button>
           <button class="danger-button" type="button" @click="confirmCleanUnboundNodes">清理无绑定节点</button>
+        </div>
+
+        <div class="section-divider"></div>
+        <div class="panel-head compact-head">
+          <h2>可用服务</h2>
+          <button class="icon-button" type="button" title="刷新可用服务" @click="loadNodeCapabilities(editForm.id)">
+            <RefreshCw :size="16" />
+          </button>
+        </div>
+
+        <div v-if="serviceLoading" class="empty-cell">服务加载中</div>
+        <div v-else-if="!nodeCapabilities.length" class="empty-cell">该节点暂无可用服务</div>
+        <div v-else class="service-list">
+          <section v-for="capability in nodeCapabilities" :key="capability.id" class="service-card">
+            <div class="service-card__head">
+              <div>
+                <strong>{{ capability.service_identifier }}</strong>
+                <span>{{ capability.protocol }}{{ capability.endpoint ? ` · ${capability.endpoint}` : '' }}</span>
+              </div>
+              <StatusBadge :label="enabledStatusLabel(capability.status)" :tone="statusTone(capability.status, 'enabled')" />
+            </div>
+
+            <div class="grid two compact">
+              <JsonEditor v-model="commandPayloads[capability.id]" :rows="8" />
+              <div class="service-card__result">
+                <strong>能力 Schema</strong>
+                <pre>{{ prettyJson(capability.schema) }}</pre>
+                <template v-if="commandResults[capability.id]">
+                  <div class="section-divider"></div>
+                  <div class="button-row wrap">
+                    <StatusBadge
+                      :label="controlCommandStatusLabel(commandResults[capability.id]!.status)"
+                      :tone="statusTone(commandResults[capability.id]!.status, 'command')"
+                    />
+                    <span>指令 #{{ commandResults[capability.id]!.id }}</span>
+                  </div>
+                  <pre>{{ prettyJson(commandResults[capability.id]) }}</pre>
+                </template>
+              </div>
+            </div>
+
+            <div class="button-row wrap">
+              <button class="primary-button" type="button" :disabled="capability.status !== 1" @click="invokeCapability(capability)">
+                <Play :size="16" /> 调用服务
+              </button>
+              <button class="secondary-button" type="button" :disabled="!commandResults[capability.id]" @click="refreshCapabilityCommand(capability)">
+                <RefreshCw :size="16" /> 刷新结果
+              </button>
+            </div>
+          </section>
         </div>
       </form>
     </div>
