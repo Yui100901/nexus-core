@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { Cpu, Edit3, Play, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
+import { Cpu, Edit3, Play, Plus, RefreshCw, Save, Search, Trash2, X } from 'lucide-vue-next';
 import { api } from '../api/client';
 import type { ControlCommandData, ControlServiceData, NodeCapabilityData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
@@ -15,6 +15,7 @@ const result = ref<unknown>({});
 const showCreateService = ref(false);
 const showCreateCapability = ref(false);
 const showCreateCommand = ref(false);
+const serviceEditDialogOpen = ref(false);
 
 const services = ref<ControlServiceData[]>([]);
 const capabilities = ref<NodeCapabilityData[]>([]);
@@ -143,6 +144,23 @@ function selectService(service: ControlServiceData) {
   serviceEdit.service_type = service.service_type;
   serviceEdit.input_schema = prettyJson(service.input_schema);
   serviceEdit.output_schema = prettyJson(service.output_schema);
+  serviceEditDialogOpen.value = true;
+}
+
+function closeServiceEditDialog() {
+  serviceEditDialogOpen.value = false;
+}
+
+async function saveControlService() {
+  await run(() => api.updateControlService(serviceEdit.id, {
+    product_id: serviceEdit.product_id || null,
+    name: serviceEdit.name,
+    description: serviceEdit.description || null,
+    service_type: serviceEdit.service_type,
+    input_schema: parseJson(serviceEdit.input_schema),
+    output_schema: parseJson(serviceEdit.output_schema),
+  }), loadServices);
+  closeServiceEditDialog();
 }
 
 function useCapability(capability: NodeCapabilityData) {
@@ -252,34 +270,6 @@ onMounted(() => {
         </table>
       </section>
 
-      <form v-if="selectedService" class="panel form-panel" @submit.prevent="run(() => api.updateControlService(serviceEdit.id, {
-        product_id: serviceEdit.product_id || null,
-        name: serviceEdit.name,
-        description: serviceEdit.description || null,
-        service_type: serviceEdit.service_type,
-        input_schema: parseJson(serviceEdit.input_schema),
-        output_schema: parseJson(serviceEdit.output_schema)
-      }), loadServices)">
-        <h2>编辑控制服务 #{{ serviceEdit.id }}</h2>
-        <div class="grid three compact">
-          <label>产品 ID<input v-model.number="serviceEdit.product_id" type="number" min="1" /></label>
-          <label>名称<input v-model="serviceEdit.name" /></label>
-          <label>服务类型
-            <select v-model="serviceEdit.service_type">
-              <option>command</option>
-              <option>config</option>
-              <option>query</option>
-              <option>action</option>
-            </select>
-          </label>
-          <label>描述<input v-model="serviceEdit.description" /></label>
-        </div>
-        <div class="grid two compact">
-          <JsonEditor v-model="serviceEdit.input_schema" />
-          <JsonEditor v-model="serviceEdit.output_schema" />
-        </div>
-        <button class="primary-button" type="submit"><Save :size="16" /> 保存修改</button>
-      </form>
     </template>
 
     <template v-if="activeTab === 'capabilities'">
@@ -426,6 +416,35 @@ onMounted(() => {
     </template>
 
     <ResultPanel :value="result" />
+    <div v-if="serviceEditDialogOpen" class="modal-backdrop" @click.self="closeServiceEditDialog">
+      <form class="modal-panel form-panel" @submit.prevent="saveControlService">
+        <div class="modal-head">
+          <h2>编辑控制服务 #{{ serviceEdit.id }}</h2>
+          <button class="icon-button" type="button" title="关闭" @click="closeServiceEditDialog"><X :size="16" /></button>
+        </div>
+        <div class="grid three compact">
+          <label>产品 ID<input v-model.number="serviceEdit.product_id" type="number" min="1" /></label>
+          <label>名称<input v-model="serviceEdit.name" /></label>
+          <label>服务类型
+            <select v-model="serviceEdit.service_type">
+              <option>command</option>
+              <option>config</option>
+              <option>query</option>
+              <option>action</option>
+            </select>
+          </label>
+          <label>描述<input v-model="serviceEdit.description" /></label>
+        </div>
+        <div class="grid two compact">
+          <JsonEditor v-model="serviceEdit.input_schema" />
+          <JsonEditor v-model="serviceEdit.output_schema" />
+        </div>
+        <div class="button-row">
+          <button class="primary-button" type="submit"><Save :size="16" /> 保存修改</button>
+          <button class="secondary-button" type="button" @click="closeServiceEditDialog">取消</button>
+        </div>
+      </form>
+    </div>
     <ConfirmDialog
       :open="confirmDialog.open"
       :title="confirmDialog.title"

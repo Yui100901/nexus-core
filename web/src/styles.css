@@ -271,7 +271,7 @@ textarea {
 }
 
 .modal-panel {
-  width: min(560px, 100%);
+  width: min(760px, 100%);
   max-height: min(720px, calc(100vh - 36px));
   overflow: auto;
   padding: 16px;
@@ -296,6 +296,12 @@ textarea {
 
 .confirm-dialog {
   width: min(420px, 100%);
+}
+
+.section-divider {
+  height: 1px;
+  background: #e1e9e6;
+  margin: 4px 0;
 }
 
 .confirm-dialog p {

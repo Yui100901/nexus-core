@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { Copy, Edit3, KeyRound, Plus, RefreshCw, Save, Trash2 } from 'lucide-vue-next';
+import { Copy, Edit3, KeyRound, Plus, RefreshCw, Save, Trash2, X } from 'lucide-vue-next';
 import { api } from '../api/client';
 import type { LicenseData } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
@@ -14,6 +14,7 @@ const result = ref<unknown>({});
 const licenses = ref<LicenseData[]>([]);
 const selected = ref<LicenseData | null>(null);
 const showCreate = ref(false);
+const licenseDialogOpen = ref(false);
 
 const filters = reactive({
   product_id: undefined as number | undefined,
@@ -75,7 +76,7 @@ async function loadLicenses() {
   }
 }
 
-function selectLicense(license: LicenseData) {
+function openLicenseDialog(license: LicenseData) {
   selected.value = license;
   editForm.id = license.id;
   editForm.max_nodes = license.max_nodes ?? 0;
@@ -83,6 +84,11 @@ function selectLicense(license: LicenseData) {
   editForm.feature_mask = license.feature_mask || '';
   editForm.remark = license.remark || '';
   renewForm.id = license.id;
+  licenseDialogOpen.value = true;
+}
+
+function closeLicenseDialog() {
+  licenseDialogOpen.value = false;
 }
 
 async function copyKey(key: string) {
@@ -92,6 +98,16 @@ async function copyKey(key: string) {
 async function createLicense() {
   await run(() => api.createLicense({ ...createForm, remark: createForm.remark || null }), true);
   showCreate.value = false;
+}
+
+async function saveLicense() {
+  await run(() => api.updateLicense(editForm.id, {
+    max_nodes: editForm.max_nodes,
+    max_concurrent: editForm.max_concurrent,
+    feature_mask: editForm.feature_mask,
+    remark: editForm.remark || null,
+  }), true);
+  closeLicenseDialog();
 }
 
 function confirmRevokeLicense(license: LicenseData) {
@@ -190,7 +206,7 @@ onMounted(loadLicenses);
           </tr>
         </thead>
         <tbody>
-          <tr v-for="license in licenses" :key="license.id" :class="{ selected: selected?.id === license.id }">
+          <tr v-for="license in licenses" :key="license.id">
             <td>{{ license.id }}</td>
             <td>{{ license.product_id }}</td>
             <td>
@@ -204,7 +220,7 @@ onMounted(loadLicenses);
             <td>{{ license.validity_hours }}</td>
             <td>
               <div class="button-row wrap">
-                <button class="secondary-button" type="button" @click="selectLicense(license)"><Edit3 :size="15" /> 编辑</button>
+                <button class="secondary-button" type="button" @click="openLicenseDialog(license)"><Edit3 :size="15" /> 编辑</button>
                 <button class="danger-button" type="button" @click="confirmRevokeLicense(license)">吊销</button>
                 <button class="secondary-button" type="button" @click="run(() => api.restoreLicense(license.id), true)">恢复</button>
                 <button class="danger-button" type="button" @click="confirmDeleteLicense(license)"><Trash2 :size="15" /> 删除</button>
@@ -218,22 +234,24 @@ onMounted(loadLicenses);
       </table>
     </section>
 
-    <div v-if="selected" class="grid two">
-      <form class="panel form-panel" @submit.prevent="run(() => api.updateLicense(editForm.id, { max_nodes: editForm.max_nodes, max_concurrent: editForm.max_concurrent, feature_mask: editForm.feature_mask, remark: editForm.remark || null }), true)">
-        <h2>编辑 License #{{ editForm.id }}</h2>
+    <div v-if="licenseDialogOpen" class="modal-backdrop" @click.self="closeLicenseDialog">
+      <form class="modal-panel form-panel" @submit.prevent="saveLicense">
+        <div class="modal-head">
+          <h2>编辑 License #{{ editForm.id }}</h2>
+          <button class="icon-button" type="button" title="关闭" @click="closeLicenseDialog"><X :size="16" /></button>
+        </div>
         <div class="grid two compact">
           <label>最大节点<input v-model.number="editForm.max_nodes" type="number" min="0" /></label>
           <label>最大并发<input v-model.number="editForm.max_concurrent" type="number" min="0" /></label>
         </div>
         <label>功能掩码<input v-model="editForm.feature_mask" placeholder="control" /></label>
         <label>备注<input v-model="editForm.remark" /></label>
-        <button class="primary-button" type="submit"><Save :size="16" /> 保存修改</button>
-      </form>
 
-      <form class="panel form-panel">
-        <h2>续期与清理 #{{ renewForm.id }}</h2>
+        <div class="section-divider"></div>
+        <h2>续期与清理</h2>
         <label>续期小时<input v-model.number="renewForm.extra_hours" type="number" required /></label>
         <div class="button-row wrap">
+          <button class="primary-button" type="submit"><Save :size="16" /> 保存修改</button>
           <button class="primary-button" type="button" @click="run(() => api.renewLicense(renewForm.id, renewForm.extra_hours), true)">续期</button>
           <button class="danger-button" type="button" @click="confirmCleanLicenseBindings(renewForm.id)">清理绑定</button>
           <button class="danger-button" type="button" @click="confirmCleanInvalidLicenses">清理无效 License</button>
